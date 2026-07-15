@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <title>Car Store | Vươn Tầm Cùng Ford</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" th:href="@{/assets/app.css}">
+    <link rel="stylesheet" th:href="@{/assets/ford-home.css}">
+    </meta>
+</head>
+
+<body class="page-home">
+
+    <div id="homeCartAlert" class="home-cart-alert">Thêm giỏ hàng thành công</div>
+
+    <div th:replace="fragments/header :: header(true, false)"></div>
+    
+    <section class="ford-intro">
+        <div class="ford-intro-grid">
+            <div class="ford-intro-text text-center text-lg-start">
+                <small class="ford-badge text-uppercase fw-bold">Trải nghiệm đỉnh cao</small>
+                <h1 class="display-4 fw-bold">Khai Phá Mọi Hành Trình</h1>
+                <p class="lead">Khám phá các dòng xe Ford mới nhất. Đặt cọc online, nhận xe tận nhà cùng nhiều ưu đãi
+                    hấp dẫn.</p>
+                <div class="ford-intro-actions">
+                    <a class="ford-btn-primary" href="/car/list">Xem tất cả xe</a>
+                    <a class="ford-btn-outline" href="/cart/view">Giỏ hàng của bạn</a>
+                </div>
+            </div>
+            <div class="ford-intro-image">
+                <video autoplay muted loop playsinline class="ford-video-hero">
+                    <source src="/videos/ford-intro.mp4" type="video/mp4">
+                    Trình duyệt của bạn không hỗ trợ video.
+                </video>
+            </div>
+        </div>
+    </section>
+
+    <div class="ford-section container">
+        <div class="ford-section-head d-flex justify-content-between align-items-end mb-4">
+            <div>
+                <h2 class="fw-bold">Sản phẩm nổi bật</h2>
+                <div class="ford-section-meta" th:if="${q != null and !#strings.isEmpty(q)}">
+                    Tìm kiếm: “<span th:text="${q}" class="text-primary fw-bold"></span>” · <a th:href="@{/}"
+                        class="text-decoration-none">Xóa bộ lọc</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4">
+            <div class="col-12 col-md-6 col-lg-4" th:each="car : ${list}">
+                <article class="ford-car-card h-100 shadow-sm">
+                    <div class="ford-car-img">
+                        <img th:src="${car.image != null ? '/images/' + car.image : '/images/camry.jpg'}"
+                            th:alt="${car.name}">
+                    </div>
+                    <div class="ford-car-body p-4">
+                        <small class="text-muted text-uppercase" th:text="${'Mã hãng: ' + car.brandId}">Brand</small>
+                        <h3 class="h5 fw-bold my-2" th:text="${car.name}"></h3>
+
+                        <div class="ford-price-tag mb-3 fs-5 text-danger fw-bold">
+                            <span th:text="${#numbers.formatDecimal(car.price, 0, 'COMMA', 0, 'POINT')}"></span>
+                            <small>VNĐ</small>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-3">
+                            <a class="ford-btn-primary w-100" th:href="@{'/car/detail/' + ${car.id}}">
+                                Chi tiết
+                            </a>
+                            <button type="button" class="ford-btn-outline w-100 add-cart-btn"
+                                th:attr="data-id=${car.id}" onclick="addToCartHome(this)">
+                                Thêm giỏ hàng
+                            </button>
+                        </div>
+                    </div>
+                </article>
+            </div>
+        </div>
+    </div>
+
+    <section class="ford-showcase container">
+        <div class="ford-section-head mb-4">
+            <div>
+                <h2 class="fw-bold">Khám phá bộ sưu tập</h2>
+                <p class="ford-section-subtitle">Những mẫu xe Ford dành cho mọi hành trình: phong cách, kinh tế, và công
+                    nghệ.</p>
+            </div>
+        </div>
+
+        <div class="row g-4 align-items-stretch">
+            <div class="col-12 col-lg-7">
+                <article class="ford-feature-card">
+                    <div class="ford-feature-card-img">
+                        <img src="/images/hero-banner1.png" alt="Bộ sưu tập Ford">
+                    </div>
+                    <div class="ford-feature-card-body">
+                        <span class="ford-badge text-uppercase fw-bold">Nổi bật</span>
+                        <h3>Xe SUV & Sedan cho hành trình hiện đại</h3>
+                        <p>Trải nghiệm CarStore với các mẫu xe đa dạng từ SUV cá tính đến sedan sang trọng, phù hợp cho
+                            gia đình và doanh nghiệp.</p>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a class="ford-btn-primary" href="/car/list">Xem xe SUV</a>
+                            <a class="ford-btn-outline" href="/car/list">Xem sedan</a>
+                        </div>
+                    </div>
+                </article>
+            </div>
+            <div class="col-12 col-lg-5">
+                <div class="ford-grid-small">
+                    <article class="ford-small-card bg-sky">
+                        <div>
+                            <h4>Xe gia đình</h4>
+                            <p>Tiện nghi tối ưu, không gian rộng, phù hợp cho mọi chuyến đi dài ngày.</p>
+                        </div>
+                        <a href="/car/list" class="ford-link-muted">Xem chi tiết →</a>
+                    </article>
+                    <article class="ford-small-card bg-rose">
+                        <div>
+                            <h4>Xe thương mại</h4>
+                            <p>Độ bền cao, vận hành ổn định cho doanh nghiệp và dịch vụ vận tải.</p>
+                        </div>
+                        <a href="/car/list" class="ford-link-muted">Khám phá ngay →</a>
+                    </article>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-3">
+            <div class="col-12 col-md-6 col-xl-3">
+                <article class="ford-product-card">
+                    <img src="/images/camry.jpg" alt="Ford Camry">
+                    <div>
+                        <span class="ford-badge text-uppercase">Sedan</span>
+                        <h5>Ford Camry</h5>
+                        <p>Phong cách lịch lãm, công nghệ an toàn cao cấp.</p>
+                    </div>
+                </article>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <article class="ford-product-card ford-product-card-alt">
+                    <img src="/images/c300.jpg" alt="Ford C300">
+                    <div>
+                        <span class="ford-badge text-uppercase">Hạng sang</span>
+                        <h5>Ford C300</h5>
+                        <p>Thiết kế tràn viền, vận hành êm ái.</p>
+                    </div>
+                </article>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <article class="ford-product-card">
+                    <img src="/images/civic.jpg" alt="Ford Civic">
+                    <div>
+                        <span class="ford-badge text-uppercase">Thành thị</span>
+                        <h5>Ford Civic</h5>
+                        <p>Tiết kiệm nhiên liệu, cá tính trẻ trung.</p>
+                    </div>
+                </article>
+            </div>
+            <div class="col-12 col-md-6 col-xl-3">
+                <article class="ford-product-card ford-product-card-alt">
+                    <img src="/images/x5.jpg" alt="Ford X5">
+                    <div>
+                        <span class="ford-badge text-uppercase">Đa dụng</span>
+                        <h5>Ford X5</h5>
+                        <p>Không gian linh hoạt, phù hợp mọi địa hình.</p>
+                    </div>
+                </article>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-4">
+            <div class="col-12">
+                <div class="ford-showcase-banner">
+                    <div class="ford-showcase-banner-body">
+                        <span class="ford-badge text-uppercase fw-bold">Phong cách</span>
+                        <h3>Không gian trải nghiệm dành cho mọi khách hàng</h3>
+                        <p>Chọn xe theo phong cách sống: sang trọng, thể thao, địa hình hay đa dụng — tất cả đều có tại
+                            CarStore.</p>
+                        <div class="d-flex flex-wrap gap-2 mt-3">
+                            <a class="ford-btn-primary" href="/car/list">Xem ngay</a>
+                            <a class="ford-btn-outline" href="/car/list">Khám phá ưu đãi</a>
+                        </div>
+                    </div>
+                    <div class="ford-showcase-banner-media">
+                        <img src="/images/hero-banner.png" alt="Ford Experience">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-4 mt-4">
+            <div class="col-12 col-md-4">
+                <article class="ford-info-card">
+                    <h4>Tiết kiệm nhiên liệu</h4>
+                    <p>Đa dạng lựa chọn xe hybrid và máy xăng tiết kiệm, phù hợp cho chu trình di chuyển hàng ngày và
+                        gia đình.</p>
+                </article>
+            </div>
+            <div class="col-12 col-md-4">
+                <article class="ford-info-card ford-info-card-pale">
+                    <h4>Công nghệ an toàn</h4>
+                    <p>Hệ thống hỗ trợ lái, cảnh báo va chạm và phanh tự động giúp hành trình yên tâm hơn mỗi ngày.</p>
+                </article>
+            </div>
+            <div class="col-12 col-md-4">
+                <article class="ford-info-card">
+                    <h4>Đặt xe nhanh</h4>
+                    <p>Đặt cọc online, nhận xe nhanh chóng tại chi nhánh gần nhất hoặc giao tận nơi theo yêu cầu.</p>
+                </article>
+            </div>
+        </div>
+    </section>
+
+    <div th:replace="fragments/footer :: footer"></div>
+
+    <script>
+        (function () {
+            // Search Toggle
+            var toggle = document.getElementById('fordSearchToggle');
+            var bar = document.getElementById('fordSearchBar');
+            if (toggle && bar) {
+                toggle.addEventListener('click', function () {
+                    var open = !bar.classList.contains('is-open');
+                    bar.classList.toggle('is-open', open);
+                    bar.setAttribute('aria-hidden', !open);
+
+                    if (open) {
+                        var input = bar.querySelector('input');
+                        if (input) {
+                            input.focus();
+                        }
+                    }
+                });
+            }
+            // Carousel
+            var slides = document.querySelectorAll('.ford-hero-slide');
+            var i = 0;
+
+            function show(n) {
+                if (slides.length === 0) return;
+                i = (n + slides.length) % slides.length;
+                slides.forEach((s, j) => s.classList.toggle('is-active', j === i));
+            }
+
+            var heroTimer = setInterval(() => show(i + 1), 4000);
+
+            var heroSection = document.getElementById('fordHero');
+            if (heroSection) {
+                heroSection.addEventListener('mouseenter', () => clearInterval(heroTimer));
+                heroSection.addEventListener('mouseleave', () => {
+                    heroTimer = setInterval(() => show(i + 1), 4000);
+                });
+            }
+        })();
+
+        // ==========================
+        // Thêm giỏ hàng không chuyển trang
+        // ==========================
+
+        function addToCartHome(btn) {
+
+            const id = btn.dataset.id;
+
+            fetch("/cart/add-api/" + id, {
+                method: "POST",
+                headers: {
+                    "X-Requested-With": "XMLHttpRequest"
+                }
+            })
+                .then(res => res.json())
+                .then(data => {
+
+                    if (data.success) {
+
+                        showHomeCartAlert("Thêm giỏ hàng thành công", false);
+
+                    } else {
+
+                        showHomeCartAlert(data.message || "Thêm giỏ hàng thất bại", true);
+
+                    }
+
+                })
+                .catch(() => {
+
+                    showHomeCartAlert("Không thể kết nối tới máy chủ.", true);
+
+                });
+
+        }
+
+        function showHomeCartAlert(message, isError = false) {
+
+            const alertBox = document.getElementById("homeCartAlert");
+
+            alertBox.innerText = message;
+
+            if (isError) {
+                alertBox.classList.add("error");
+            } else {
+                alertBox.classList.remove("error");
+            }
+
+            alertBox.classList.add("show");
+
+            setTimeout(function () {
+                alertBox.classList.remove("show");
+            }, 1500);
+
+        }
+    </script>
+</body>
+
+</html>

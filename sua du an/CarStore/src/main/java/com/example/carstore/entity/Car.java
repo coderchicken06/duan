@@ -1,0 +1,119 @@
+package com.example.carstore.entity;
+
+import javax.persistence.*;
+
+@Entity
+@Table(name = "car")
+public class Car {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Integer id;
+
+    private String name;
+    private Double price;
+    private String image;
+    private String description;
+    private Integer brandId;
+
+    @Column(name = "year")
+    private Integer year;
+
+    private String color;
+
+    @Column(nullable = false)
+    private Integer stock = 0;
+
+    public Car() {
+    }
+
+    public Car(Integer id, String name, Double price, String image, String description,
+            Integer brandId, Integer year, String color) {
+        this(id, name, price, image, description, brandId, year, color, 0);
+    }
+
+    public Car(Integer id, String name, Double price, String image, String description,
+            Integer brandId, Integer year, String color, Integer stock) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.image = image;
+        this.description = description;
+        this.brandId = brandId;
+        this.year = year;
+        this.color = color;
+        this.stock = stock == null ? 0 : stock;
+    }
+
+    public Integer getId() {
+        return id;
+    }
+
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Double getPrice() {
+        return price;
+    }
+
+    public void setPrice(Double price) {
+        this.price = price;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public Integer getBrandId() {
+        return brandId;
+    }
+
+    public void setBrandId(Integer brandId) {
+        this.brandId = brandId;
+    }
+
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    public Integer getStock() {
+        return stock == null ? 0 : stock;
+    }
+
+    public void setStock(Integer stock) {
+        this.stock = stock == null ? 0 : stock;
+    }
+}
