@@ -1,17 +1,22 @@
 <template>
-  <article class="ford-car-card h-100 shadow-sm">
+  <article class="ford-car-card h-100">
     <div class="ford-car-img">
       <img :src="carImageUrl(car.image)" :alt="car.name" />
+      <span class="ford-car-chip">Mới</span>
     </div>
-    <div class="ford-car-body p-4">
-      <small class="text-muted text-uppercase">Mã hãng: {{ car.brandId }}</small>
-      <h3 class="h5 fw-bold my-2">{{ car.name }}</h3>
-      <div class="ford-price-tag mb-3 fs-5 text-danger fw-bold">
+    <div class="ford-car-body">
+      <div class="ford-car-meta">
+        <span class="ford-car-badge">Mã hãng: {{ car.brandId }}</span>
+        <span class="ford-car-year">2026</span>
+      </div>
+      <h3>{{ car.name }}</h3>
+      <p class="ford-car-description">Thiết kế hiện đại, vận hành êm và phù hợp cho cả thành phố lẫn hành trình dài.</p>
+      <div class="ford-price-tag">
         {{ formatPrice(car.price) }} <small>VNĐ</small>
       </div>
-      <div class="d-flex gap-2 mt-3">
-        <router-link class="ford-btn-primary w-100 text-center" :to="`/car/detail/${car.id}`">Chi tiết</router-link>
-        <button type="button" class="ford-btn-outline w-100" @click="$emit('add-cart', car.id)">Thêm giỏ hàng</button>
+      <div class="ford-car-actions">
+        <router-link class="ford-btn-primary text-center" :to="`/car/detail/${car.id}`">Chi tiết</router-link>
+        <button type="button" class="ford-btn-outline" @click="$emit('add-cart', car.id)">Thêm giỏ</button>
       </div>
     </div>
   </article>

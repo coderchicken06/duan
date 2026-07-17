@@ -13,28 +13,28 @@ public class SupportRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(length = 255)
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String name;
 
-    @Column(length = 50)
+    @Column(columnDefinition = "NVARCHAR(50)")
     private String phone;
 
-    @Column(length = 100)
+    @Column(columnDefinition = "NVARCHAR(100)")
     private String username;
 
-    @Column(length = 255)
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String type;
 
-    @Column(length = 1000)
+    @Column(columnDefinition = "NVARCHAR(1000)")
     private String content;
 
-    @Column(length = 255)
+    @Column(columnDefinition = "NVARCHAR(255)")
     private String status;
 
-    @Column(name = "car_info", length = 255)
+    @Column(name = "car_info", columnDefinition = "NVARCHAR(255)")
     private String carInfo;
 
-    @Column(name = "service_type", length = 255)
+    @Column(name = "service_type", columnDefinition = "NVARCHAR(255)")
     private String serviceType;
 
     @Column(name = "appointment_date")

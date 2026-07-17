@@ -1,6 +1,5 @@
 package com.example.carstore.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -20,16 +19,13 @@ public class SecurityConfig {
 
         private final CustomOAuth2UserService oAuth2UserService;
         private final AccountUserDetailsService accountUserDetailsService;
-        private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
 
         public SecurityConfig(
                         CustomOAuth2UserService oAuth2UserService,
-                        AccountUserDetailsService accountUserDetailsService,
-                        OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler) {
+                        AccountUserDetailsService accountUserDetailsService) {
 
                 this.oAuth2UserService = oAuth2UserService;
                 this.accountUserDetailsService = accountUserDetailsService;
-                this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
         }
 
         @Bean
@@ -37,47 +33,68 @@ public class SecurityConfig {
 
                 http
                                 .csrf().disable()
-                                .cors().and()
 
                                 .authorizeRequests()
 
+                                // PUBLIC
                                 .antMatchers(
                                                 "/",
-                                                "/index.html",
-                                                "/assets/**",
+                                                "/login/**",
+                                                "/signup/**",
+                                                "/forgot-password",
+                                                "/verify-otp",
+                                                "/reset-password",
                                                 "/css/**",
                                                 "/js/**",
+                                                "/assets/**",
                                                 "/images/**",
                                                 "/videos/**",
-                                                "/oauth2/**",
-                                                "/error")
+                                                "/oauth2/**")
                                 .permitAll()
 
-                                .antMatchers("/api/auth/**")
+                                .antMatchers(
+                                                "/api/auth/**")
                                 .permitAll()
 
+                                // CAR PAGE
+                                .antMatchers(
+                                                "/car/list",
+                                                "/car/detail/**",
+                                                "/car/inventory")
+                                .permitAll()
+
+                                // API XE
                                 .antMatchers(HttpMethod.GET, "/api/cars/**")
                                 .permitAll()
 
-                                .antMatchers("/api/cart/**")
+                                // GIỎ HÀNG VUE API
+                                .antMatchers("/api/cart/**", "/cart/**")
                                 .permitAll()
 
+                                // HISTORY: người dùng đăng nhập xem được lịch sử yêu cầu
+                                .antMatchers("/history")
+                                .authenticated()
+
+                                // DONE: chỉ admin được đánh dấu đã xử lý
+                                .antMatchers("/done/**")
+                                .hasRole("ADMIN")
+
+                                // ADMIN
                                 .antMatchers(
+                                                "/car/create",
+                                                "/car/save",
+                                                "/car/edit/**",
+                                                "/car/delete/**",
                                                 "/admin/**",
                                                 "/api/admin/**",
                                                 "/api/upload",
                                                 "/api/upload/**")
                                 .hasRole("ADMIN")
 
-                                .antMatchers(HttpMethod.POST, "/api/cars/**")
+                                .antMatchers("/api/cars/**")
                                 .hasRole("ADMIN")
 
-                                .antMatchers(HttpMethod.PUT, "/api/cars/**")
-                                .hasRole("ADMIN")
-
-                                .antMatchers(HttpMethod.DELETE, "/api/cars/**")
-                                .hasRole("ADMIN")
-
+                                // SUPPORT API
                                 .antMatchers(HttpMethod.POST, "/api/support")
                                 .authenticated()
 
@@ -93,22 +110,31 @@ public class SecurityConfig {
                                 .antMatchers(HttpMethod.DELETE, "/api/support/**")
                                 .hasRole("ADMIN")
 
+                                // USER API
                                 .antMatchers(
                                                 "/api/orders/**",
                                                 "/api/profile/**")
                                 .authenticated()
 
                                 .anyRequest()
+                                .authenticated()
+
+                                .and()
+
+                                .formLogin()
+                                .loginPage("/login/form")
+                                .loginProcessingUrl("/login")
+                                .defaultSuccessUrl("/", true)
                                 .permitAll()
 
                                 .and()
 
                                 .oauth2Login()
-                                .loginPage("/login")
+                                .loginPage("/login/form")
                                 .userInfoEndpoint()
                                 .userService(oAuth2UserService)
                                 .and()
-                                .successHandler(oAuth2LoginSuccessHandler)
+                                .defaultSuccessUrl("/", true)
 
                                 .and()
 

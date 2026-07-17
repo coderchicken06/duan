@@ -1,9 +1,11 @@
 <template>
-  <AppHeader />
-  <main>
-    <router-view />
-  </main>
-  <AppFooter />
+  <div class="app-shell">
+    <AppHeader />
+    <main class="page-content">
+      <router-view />
+    </main>
+    <AppFooter />
+  </div>
 </template>
 
 <script setup>

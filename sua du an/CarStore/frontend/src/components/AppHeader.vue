@@ -2,6 +2,7 @@
   <header class="ford-header">
     <div class="ford-header-inner">
       <nav class="ford-nav-left">
+        <router-link class="ford-brand-mark" to="/">CarStore</router-link>
         <router-link to="/car/list">Sản phẩm</router-link>
         <router-link to="/cart/view">Mua xe</router-link>
         <router-link to="/service">Dịch vụ</router-link>
