@@ -72,6 +72,28 @@
                             <span th:text="${#numbers.formatDecimal(total,0,'COMMA',0,'POINT')} + ' VNĐ'"></span>
                         </div>
                     </div>
+                    <div th:if="${message}" class="alert alert-success" th:text="${message}"></div>
+                    <div th:if="${error}" class="alert alert-danger" th:text="${error}"></div>
+                    <div class="mb-3">
+                        <span class="cs-muted">Trạng thái tiền cọc:</span>
+                        <strong th:text="${order.depositStatus != null ? order.depositStatus : 'UNPAID'}"></strong>
+                    </div>
+                    <div th:if="${order.depositAmount != null}" class="mb-3">
+                        <span class="cs-muted">Tiền cọc đã thanh toán:</span>
+                        <strong th:text="${#numbers.formatDecimal(order.depositAmount,0,'COMMA',0,'POINT')} + ' VNĐ'"></strong>
+                    </div>
+                    <form th:if="${order.status == 'CONFIRMED' and order.depositStatus != 'PAID'}"
+                          th:action="@{'/order/deposit/' + ${order.id}}" method="post" class="border-top pt-3 mb-3">
+                        <label class="form-label fw-bold">Thanh toán tiền cọc 10%</label>
+                        <div class="text-danger fw-bold mb-2"
+                             th:text="${#numbers.formatDecimal(depositAmount,0,'COMMA',0,'POINT')} + ' VNĐ'"></div>
+                        <select name="method" class="form-select mb-2" required>
+                            <option value="BANK_TRANSFER">Chuyển khoản ngân hàng</option>
+                            <option value="VNPAY">VNPay mô phỏng</option>
+                            <option value="CASH_AT_SHOWROOM">Thanh toán tại showroom</option>
+                        </select>
+                        <button class="btn cs-btn cs-btn-primary w-100" type="submit">Thanh toán tiền cọc</button>
+                    </form>
                     <a href="/order/my-orders" class="btn cs-btn cs-btn-ghost w-100">Quay lại danh sách</a>
                 </div>
             </div>

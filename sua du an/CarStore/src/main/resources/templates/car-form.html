@@ -97,6 +97,26 @@
                             <input class="form-control" min="0" placeholder="VD: 10" required="" th:field="*{stock}"
                                 type="number" />
                         </div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Đăng ký lần đầu</label><input class="form-control" placeholder="Tháng 11 Năm 2023" th:field="*{firstRegistration}" type="text" /></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Số km đã đi</label><input class="form-control" min="0" th:field="*{mileage}" type="number" /></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Loại động cơ</label><input class="form-control" placeholder="Xăng" th:field="*{engineType}" type="text" /></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Dung tích động cơ</label><input class="form-control" placeholder="1.5L Turbo" th:field="*{engineCapacity}" type="text" /></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Màu nội thất</label><input class="form-control" placeholder="Đen" th:field="*{interiorColor}" type="text" /></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Loại xe</label><input class="form-control" placeholder="SUV" th:field="*{bodyType}" type="text" /></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Số chỗ ngồi</label><input class="form-control" min="1" th:field="*{seats}" type="number" /></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Hệ dẫn động</label><input class="form-control" placeholder="FWD" th:field="*{drivetrain}" type="text" /></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Hộp số</label><input class="form-control" placeholder="CVT" th:field="*{transmission}" type="text" /></div>
+                        <div class="col-12 col-md-4"><label class="form-label cs-muted">Công suất (HP)</label><input class="form-control" min="0" th:field="*{horsepower}" type="number" /></div>
+                        <div class="col-12 col-md-4"><label class="form-label cs-muted">Mô-men xoắn</label><input class="form-control" placeholder="240 Nm" th:field="*{torque}" type="text" /></div>
+                        <div class="col-12 col-md-4"><label class="form-label cs-muted">Nhiên liệu</label><input class="form-control" placeholder="Xăng" th:field="*{fuelType}" type="text" /></div>
+                        <div class="col-12 col-md-4"><label class="form-label cs-muted">Tiêu hao nhiên liệu</label><input class="form-control" placeholder="6.8 L/100km" th:field="*{fuelConsumption}" type="text" /></div>
+                        <div class="col-12 col-md-4"><label class="form-label cs-muted">Bảo hành</label><input class="form-control" placeholder="12 tháng" th:field="*{warranty}" type="text" /></div>
+                        <div class="col-12 col-md-4"><label class="form-label cs-muted">Mức kiểm định</label><input class="form-control" placeholder="CarStore Certified" th:field="*{inspectionLevel}" type="text" /></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Tên đại lý</label><input class="form-control" th:field="*{dealerName}" type="text" /></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Địa chỉ đại lý</label><input class="form-control" th:field="*{dealerAddress}" type="text" /></div>
+                        <div class="col-12"><label class="form-label cs-muted">Ghi chú kiểm định</label><textarea class="form-control" rows="2" th:field="*{inspectionNote}"></textarea></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Trang bị an toàn</label><textarea class="form-control" rows="3" th:field="*{safetyFeatures}"></textarea></div>
+                        <div class="col-12 col-md-6"><label class="form-label cs-muted">Tiện nghi</label><textarea class="form-control" rows="3" th:field="*{comfortFeatures}"></textarea></div>
                         <div class="col-12">
                             <label class="form-label cs-muted">Ảnh xe</label>
                             <input accept="image/*" class="form-control" id="imageInput" name="file" type="file" />

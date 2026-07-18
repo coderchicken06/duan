@@ -73,11 +73,20 @@ public class RestServiceController {
             request.setType("chat");
         }
 
-        SupportRequest saved = supportRequestService.createFromRequest(request, auth);
+        SupportRequest saved;
+        if ("service".equalsIgnoreCase(request.getType())) {
+            saved = supportRequestService.createServiceBooking(
+                    request.getName(), request.getPhone(), request.getCarInfo(), request.getServiceType(),
+                    request.getAppointmentDate() == null ? null : request.getAppointmentDate().toString(),
+                    request.getAppointmentTime() == null ? null : request.getAppointmentTime().toString(), auth);
+        } else {
+            saved = supportRequestService.createFromRequest(request, auth);
+        }
 
         return Map.of(
                 "success", true,
-                "message", "Support request created successfully",
+                "message", "service".equalsIgnoreCase(saved.getType())
+                        ? "Đặt lịch dịch vụ thành công" : "Gửi yêu cầu hỗ trợ thành công",
                 "id", saved.getId()
         );
     }

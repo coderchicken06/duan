@@ -78,6 +78,7 @@
       <p v-if="!loading && filteredCars.length === 0" class="ford-empty-state">Không có xe nào phù hợp với bộ lọc.</p>
       <div v-if="message" class="alert alert-success mt-3">{{ message }}</div>
     </div>
+    <CompareBar :cars="allCars" />
   </div>
 </template>
 
@@ -86,6 +87,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
+import CompareBar from '../components/CompareBar.vue'
 
 const route = useRoute()
 const allCars = ref([])

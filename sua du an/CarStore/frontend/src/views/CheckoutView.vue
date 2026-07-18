@@ -1,16 +1,16 @@
 <template>
   <div class="container cs-container py-5">
     <div class="cs-card p-4">
-      <h2 class="cs-page-title mb-4">Thanh toán</h2>
+      <h2 class="cs-page-title mb-4">Gửi yêu cầu đặt xe</h2>
       <form class="vstack gap-3" @submit.prevent="submit">
         <div>
           <label class="form-label cs-muted">Địa chỉ giao hàng</label>
           <textarea v-model="address" class="form-control" rows="3" required placeholder="Nhập địa chỉ nhận xe"></textarea>
         </div>
-        <p>Tổng thanh toán: <strong class="text-danger">{{ formatPrice(total) }} VNĐ</strong></p>
+        <p>Tổng giá trị xe: <strong class="text-danger">{{ formatPrice(total) }} VNĐ</strong></p>
         <div v-if="error" class="alert alert-danger">{{ error }}</div>
-        <div v-if="success" class="alert alert-success">Đặt hàng thành công! Mã đơn: #{{ orderId }}</div>
-        <button type="submit" class="btn cs-btn cs-btn-primary" :disabled="submitting">Xác nhận đặt hàng</button>
+        <div v-if="success" class="alert alert-success">Gửi yêu cầu đặt xe thành công! Mã đơn: #{{ orderId }}</div>
+        <button type="submit" class="btn cs-btn cs-btn-primary" :disabled="submitting">Xác nhận gửi yêu cầu</button>
       </form>
     </div>
   </div>

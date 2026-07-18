@@ -11,10 +11,11 @@
             <td>{{ o.address }}</td>
             <td>
               <select v-model="o.status" class="form-select form-select-sm" @change="updateStatus(o)">
-                <option>Chờ xử lý</option>
-                <option>Đang giao</option>
-                <option>Hoàn thành</option>
-                <option>Đã hủy</option>
+                <option value="PENDING">PENDING - Chờ duyệt</option>
+                <option value="CONFIRMED">CONFIRMED - Đã duyệt, chờ cọc</option>
+                <option value="PROCESSING">PROCESSING - Đã cọc, xử lý xe</option>
+                <option value="DELIVERED">DELIVERED - Hoàn thành</option>
+                <option value="CANCELLED">CANCELLED - Đã hủy</option>
               </select>
             </td>
             <td><button class="btn btn-sm cs-btn-danger" @click="remove(o.id)">Xóa</button></td>

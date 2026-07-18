@@ -43,6 +43,19 @@ public class RestCarController {
                 .orElse(ResponseUtils.fail("Car not found"));
     }
 
+
+    @GetMapping("/{id}/similar")
+    public List<Car> getSimilar(@PathVariable int id) {
+        return carRepo.findById(id).map(car -> {
+            List<Car> similar = car.getBodyType() == null ? List.of()
+                    : carRepo.findTop6ByBodyTypeAndIdNotOrderByPriceAsc(car.getBodyType(), id);
+            if (similar.isEmpty() && car.getBrandId() != null) {
+                similar = carRepo.findTop6ByBrandIdAndIdNotOrderByPriceAsc(car.getBrandId(), id);
+            }
+            return similar;
+        }).orElse(List.of());
+    }
+
     @GetMapping("/search")
     public Map<String, Object> searchCars(@RequestParam String keyword) {
         List<Car> cars = carRepo.findByNameContainingIgnoreCase(keyword);
@@ -99,5 +112,26 @@ public class RestCarController {
         if (source.getYear() != null) target.setYear(source.getYear());
         if (source.getColor() != null) target.setColor(source.getColor());
         if (source.getStock() != null) target.setStock(source.getStock());
+        if (source.getFirstRegistration() != null) target.setFirstRegistration(source.getFirstRegistration());
+        if (source.getMileage() != null) target.setMileage(source.getMileage());
+        if (source.getEngineType() != null) target.setEngineType(source.getEngineType());
+        if (source.getEngineCapacity() != null) target.setEngineCapacity(source.getEngineCapacity());
+        if (source.getInteriorColor() != null) target.setInteriorColor(source.getInteriorColor());
+        if (source.getBodyType() != null) target.setBodyType(source.getBodyType());
+        if (source.getSeats() != null) target.setSeats(source.getSeats());
+        if (source.getDrivetrain() != null) target.setDrivetrain(source.getDrivetrain());
+        if (source.getTransmission() != null) target.setTransmission(source.getTransmission());
+
+        if (source.getHorsepower() != null) target.setHorsepower(source.getHorsepower());
+        if (source.getTorque() != null) target.setTorque(source.getTorque());
+        if (source.getFuelType() != null) target.setFuelType(source.getFuelType());
+        if (source.getFuelConsumption() != null) target.setFuelConsumption(source.getFuelConsumption());
+        if (source.getWarranty() != null) target.setWarranty(source.getWarranty());
+        if (source.getDealerName() != null) target.setDealerName(source.getDealerName());
+        if (source.getDealerAddress() != null) target.setDealerAddress(source.getDealerAddress());
+        if (source.getInspectionLevel() != null) target.setInspectionLevel(source.getInspectionLevel());
+        if (source.getInspectionNote() != null) target.setInspectionNote(source.getInspectionNote());
+        if (source.getSafetyFeatures() != null) target.setSafetyFeatures(source.getSafetyFeatures());
+        if (source.getComfortFeatures() != null) target.setComfortFeatures(source.getComfortFeatures());
     }
 }

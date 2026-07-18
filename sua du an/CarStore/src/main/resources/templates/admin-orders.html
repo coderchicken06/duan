@@ -86,8 +86,10 @@
                                                 onchange="this.form.submit()">
                                                 <option th:selected="${order.status == 'PENDING'}" th:value="'PENDING'">
                                                     PENDING</option>
-                                                <option th:selected="${order.status == 'SHIPPED'}" th:value="'SHIPPED'">
-                                                    SHIPPED</option>
+                                                <option th:selected="${order.status == 'CONFIRMED'}" th:value="'CONFIRMED'">
+                                                    CONFIRMED - Đã duyệt, chờ cọc</option>
+                                                <option th:selected="${order.status == 'PROCESSING'}" th:value="'PROCESSING'">
+                                                    PROCESSING - Đã cọc</option>
                                                 <option th:selected="${order.status == 'DELIVERED'}"
                                                     th:value="'DELIVERED'">DELIVERED</option>
                                                 <option th:selected="${order.status == 'CANCELLED'}"

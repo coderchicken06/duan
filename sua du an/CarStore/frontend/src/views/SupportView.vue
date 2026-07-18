@@ -10,8 +10,8 @@
             <label class="form-label">Loại yêu cầu</label>
             <select v-model="form.type" class="form-select">
               <option value="chat">Chat hỗ trợ</option>
-              <option value="service">Đặt lịch dịch vụ</option>
-              <option value="warranty">Bảo hành</option>
+              <option value="consulting">Tư vấn mua xe</option>
+              <option value="warranty">Bảo hành / khiếu nại</option>
             </select>
           </div>
           <div class="col-md-6"><label class="form-label">Thông tin xe</label><input v-model="form.carInfo" class="form-control" /></div>

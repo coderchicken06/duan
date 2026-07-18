@@ -1,64 +1,129 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title th:text="${car.name}">Car Detail</title>
+    <title th:text="${car.name}">Chi tiết xe</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" th:href="@{/assets/app.css}">
     <link rel="stylesheet" th:href="@{/assets/ford-home.css}">
+    <style>
+        .detail-main-image{width:100%;max-height:520px;object-fit:cover}.detail-title{border-top:3px solid #d71920;padding-top:28px}
+        .detail-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}.detail-cell{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding:22px 28px}
+        .detail-cell:nth-child(4n+1),.detail-cell:nth-child(4n+2){background:#f3f3f3}.compare-table th{background:#f3f3f3}
+        @media(max-width:768px){.detail-grid{grid-template-columns:1fr}.detail-cell:nth-child(odd){background:#f3f3f3}.detail-cell:nth-child(even){background:#fff}}
+    </style>
 </head>
-
 <body>
-
-    <div th:replace="fragments/header :: header(false, false)"></div>
-
-    <div class="container cs-container py-4">
-        <div class="cs-hero mb-4">
-            <div class="cs-badge mb-3">🚗 Chi tiết xe</div>
-            <h1 class="cs-page-title mb-0" th:text="${car.name}">Car Name</h1>
-        </div>
-
-        <div class="row g-4">
-            <div class="col-12 col-md-6">
-                <div class="cs-card p-3">
-                    <img th:if="${car.image} != null" th:src="@{'/images/' + ${car.image}}" class="img-fluid rounded-3"
-                        alt="Car Image">
-                    <img th:if="${car.image} == null" th:src="@{/images/camry.jpg}" class="img-fluid rounded-3"
-                        alt="Car Image">
-                </div>
+<div th:replace="fragments/header :: header(false, false)"></div>
+<main class="container cs-container py-4">
+    <div class="row g-4">
+        <div class="col-12 col-md-6"><div class="cs-card p-3">
+            <img th:src="${car.image != null and !#strings.isEmpty(car.image)} ? @{'/images/' + ${car.image}} : @{/images/camry.jpg}" class="img-fluid rounded-3 detail-main-image" th:alt="${car.name}">
+        </div></div>
+        <div class="col-12 col-md-6"><div class="cs-card p-4 h-100">
+            <h1 class="fw-bold" th:text="${car.name}">Tên xe</h1>
+            <p class="fs-4 text-danger fw-bold" th:text="${#numbers.formatDecimal(car.price,0,'COMMA',0,'POINT')} + ' VNĐ'">Giá</p>
+            <p><strong>Năm:</strong> <span th:text="${car.year != null ? car.year : 'Chưa cập nhật'}"></span> |
+               <strong>Màu:</strong> <span th:text="${car.color != null ? car.color : 'Chưa cập nhật'}"></span> |
+               <strong>Tồn kho:</strong> <span th:text="${car.stock}"></span></p>
+            <p class="text-muted" th:text="${car.description != null ? car.description : 'Chưa cập nhật'}"></p>
+            <div class="d-flex gap-2 flex-wrap mt-4">
+                <a class="btn cs-btn cs-btn-primary" th:href="@{'/cart/add/' + ${car.id}}">Thêm vào giỏ hàng</a>
+                <a class="btn cs-btn cs-btn-outline" href="/car/list">Quay lại</a>
+                <a class="btn cs-btn cs-btn-warning" th:href="@{'/car/edit/' + ${car.id}}" sec:authorize="hasRole('ADMIN')">Sửa</a>
             </div>
-            <div class="col-12 col-md-6">
-                <div class="cs-card p-4">
-                    <h3 class="h4 mb-3" th:text="${car.name}">Car Name</h3>
-                    <div class="mb-3">
-                        <span class="cs-muted">Giá:</span>
-                        <span class="h5 fw-bold text-primary" th:text="${car.price} + ' VND'">Price</span>
-                    </div>
-                    <div class="mb-3">
-                        <span class="cs-muted">Mô tả:</span>
-                        <p th:text="${car.description}">Description</p>
-                    </div>
-                    <div class="mb-3">
-                        <span class="cs-muted">Năm sản xuất:</span>
-                        <span th:text="${car.year}">Year</span>
-                    </div>
-                    <div class="mb-3">
-                        <span class="cs-muted">Màu sắc:</span>
-                        <span th:text="${car.color}">Color</span>
-                    </div>
-                    <div class="d-flex gap-2">
-                        <a class="btn cs-btn cs-btn-primary" th:href="@{'/cart/add/' + ${car.id}}">Thêm vào giỏ</a>
-                        <a class="btn cs-btn cs-btn-outline" href="/car/list">Quay lại danh sách</a>
-                        <a class="btn cs-btn cs-btn-warning" th:href="@{'/car/edit/' + ${car.id}}"
-                            sec:authorize="hasRole('ADMIN')">Sửa</a>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </div></div>
     </div>
-    <div th:replace="fragments/footer :: footer"></div>
-</body>
 
+    <section class="mt-5">
+        <h2 class="fw-bold mb-3 detail-title">THÔNG TIN CHI TIẾT</h2>
+        <p class="fs-5 lh-lg" th:text="${car.description != null ? car.description : 'Chưa cập nhật mô tả chi tiết.'}"></p>
+        <div class="detail-grid mt-4">
+            <div class="detail-cell"><span>Đăng ký lần đầu</span><strong th:text="${car.firstRegistration != null ? car.firstRegistration : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Số km đã đi</span><strong th:text="${car.mileage != null ? #numbers.formatInteger(car.mileage,0,'COMMA') + ' km' : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Loại động cơ</span><strong th:text="${car.engineType != null ? car.engineType : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Dung tích động cơ</span><strong th:text="${car.engineCapacity != null ? car.engineCapacity : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Màu ngoại thất</span><strong th:text="${car.color != null ? car.color : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Màu nội thất</span><strong th:text="${car.interiorColor != null ? car.interiorColor : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Loại xe</span><strong th:text="${car.bodyType != null ? car.bodyType : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Số chỗ ngồi</span><strong th:text="${car.seats != null ? car.seats : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Hệ dẫn động</span><strong th:text="${car.drivetrain != null ? car.drivetrain : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Hộp số</span><strong th:text="${car.transmission != null ? car.transmission : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Năm sản xuất</span><strong th:text="${car.year != null ? car.year : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Tồn kho</span><strong th:text="${car.stock}"></strong></div>
+            <div class="detail-cell"><span>Công suất</span><strong th:text="${car.horsepower != null ? car.horsepower + ' HP' : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Mô-men xoắn</span><strong th:text="${car.torque != null ? car.torque : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Nhiên liệu</span><strong th:text="${car.fuelType != null ? car.fuelType : car.engineType}"></strong></div>
+            <div class="detail-cell"><span>Tiêu hao nhiên liệu</span><strong th:text="${car.fuelConsumption != null ? car.fuelConsumption : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Bảo hành</span><strong th:text="${car.warranty != null ? car.warranty : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Kiểm định</span><strong th:text="${car.inspectionLevel != null ? car.inspectionLevel : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Đại lý</span><strong th:text="${car.dealerName != null ? car.dealerName : 'Chưa cập nhật'}"></strong></div>
+            <div class="detail-cell"><span>Địa chỉ đại lý</span><strong th:text="${car.dealerAddress != null ? car.dealerAddress : 'Chưa cập nhật'}"></strong></div>
+        </div>
+    </section>
+
+
+    <section class="mt-5">
+        <h2 class="fw-bold mb-3 detail-title">KIỂM ĐỊNH & TRANG BỊ</h2>
+        <div class="row g-4">
+            <div class="col-md-4"><div class="cs-card p-4 h-100"><h4>Kiểm định CarStore</h4><p th:text="${car.inspectionNote != null ? car.inspectionNote : 'Đã kiểm tra kỹ thuật, pháp lý và ODO.'}"></p><ul class="list-unstyled"><li>✓ Không ngập nước</li><li>✓ ODO xác thực</li><li>✓ Hồ sơ minh bạch</li></ul></div></div>
+            <div class="col-md-4"><div class="cs-card p-4 h-100"><h4>Trang bị an toàn</h4><p style="white-space:pre-line" th:text="${car.safetyFeatures != null ? car.safetyFeatures : 'ABS, cân bằng điện tử, camera lùi, túi khí'}"></p></div></div>
+            <div class="col-md-4"><div class="cs-card p-4 h-100"><h4>Tiện nghi</h4><p style="white-space:pre-line" th:text="${car.comfortFeatures != null ? car.comfortFeatures : 'Điều hòa tự động, màn hình trung tâm, kết nối điện thoại'}"></p></div></div>
+        </div>
+    </section>
+
+    <section class="mt-5">
+        <h2 class="fw-bold mb-3 detail-title">XE TƯƠNG TỰ</h2>
+        <div class="row g-4">
+            <div class="col-12 col-md-6 col-lg-4" th:each="item : ${similarCars}">
+                <div class="cs-card h-100 overflow-hidden"><img class="w-100" style="height:210px;object-fit:cover" th:src="${item.image != null} ? @{'/images/' + ${item.image}} : @{/images/camry.jpg}"><div class="p-3"><h4 th:text="${item.name}"></h4><p class="text-danger fw-bold" th:text="${#numbers.formatDecimal(item.price,0,'COMMA',0,'POINT')} + ' VNĐ'"></p><a class="btn cs-btn cs-btn-outline" th:href="@{'/car/detail/' + ${item.id}}">Xem chi tiết</a></div></div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mt-5 mb-4">
+        <h2 class="fw-bold mb-3 detail-title">SO SÁNH XE</h2>
+        <div class="cs-card p-4">
+            <label class="form-label fw-bold">Chọn xe muốn so sánh</label>
+            <select id="compareSelect" class="form-select mb-4">
+                <option value="">-- Chọn xe --</option>
+                <option th:each="item : ${comparisonCars}" th:value="${item.id}" th:text="${item.name}"
+                    th:attr="data-name=${item.name},data-price=${item.price},data-year=${item.year},data-mileage=${item.mileage},data-engine=${item.engineType},data-capacity=${item.engineCapacity},data-body=${item.bodyType},data-seats=${item.seats},data-drive=${item.drivetrain},data-transmission=${item.transmission},data-color=${item.color}"></option>
+            </select>
+            <div id="compareEmpty" class="text-muted">Chọn một xe để hiển thị bảng so sánh.</div>
+            <div id="compareBox" class="table-responsive d-none">
+                <table class="table table-bordered align-middle compare-table">
+                    <thead><tr><th>Tiêu chí</th><th th:text="${car.name}"></th><th id="otherName"></th></tr></thead>
+                    <tbody id="compareBody"></tbody>
+                </table>
+                <a id="otherLink" class="btn cs-btn cs-btn-outline">Xem chi tiết xe được chọn</a>
+            </div>
+        </div>
+    </section>
+</main>
+<div th:replace="fragments/footer :: footer"></div>
+<script th:inline="javascript">
+const current = {
+ name: /*[[${car.name}]]*/ '', price: /*[[${car.price}]]*/ 0, year: /*[[${car.year}]]*/ null,
+ mileage: /*[[${car.mileage}]]*/ null, engine: /*[[${car.engineType}]]*/ null,
+ capacity: /*[[${car.engineCapacity}]]*/ null, body: /*[[${car.bodyType}]]*/ null,
+ seats: /*[[${car.seats}]]*/ null, drive: /*[[${car.drivetrain}]]*/ null,
+ transmission: /*[[${car.transmission}]]*/ null, color: /*[[${car.color}]]*/ null
+};
+const show = v => (v === null || v === undefined || v === '' || v === 'null') ? 'Chưa cập nhật' : v;
+const money = v => Number(v || 0).toLocaleString('vi-VN') + ' VNĐ';
+const km = v => (v === null || v === undefined || v === '' || v === 'null') ? 'Chưa cập nhật' : Number(v).toLocaleString('vi-VN') + ' km';
+document.getElementById('compareSelect').addEventListener('change', function(){
+ const option=this.options[this.selectedIndex], box=document.getElementById('compareBox'), empty=document.getElementById('compareEmpty');
+ if(!this.value){box.classList.add('d-none');empty.classList.remove('d-none');return;}
+ const d=option.dataset;
+ const rows=[['Giá bán',money(current.price),money(d.price)],['Năm sản xuất',show(current.year),show(d.year)],['Số km đã đi',km(current.mileage),km(d.mileage)],['Động cơ',show(current.engine),show(d.engine)],['Dung tích động cơ',show(current.capacity),show(d.capacity)],['Loại xe',show(current.body),show(d.body)],['Số chỗ',show(current.seats),show(d.seats)],['Hệ dẫn động',show(current.drive),show(d.drive)],['Hộp số',show(current.transmission),show(d.transmission)],['Màu ngoại thất',show(current.color),show(d.color)]];
+ document.getElementById('otherName').textContent=d.name;
+ document.getElementById('compareBody').innerHTML=rows.map(r=>`<tr><td class="fw-bold">${r[0]}</td><td>${r[1]}</td><td>${r[2]}</td></tr>`).join('');
+ document.getElementById('otherLink').href='/car/detail/'+this.value;
+ empty.classList.add('d-none');box.classList.remove('d-none');
+});
+</script>
+</body>
 </html>

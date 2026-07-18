@@ -96,6 +96,10 @@ public class CarController {
             return "redirect:/car/list";
         }
         model.addAttribute("car", carOpt.get());
+        model.addAttribute("similarCars", carService.findSimilar(carOpt.get()));
+        model.addAttribute("comparisonCars", carService.findAll().stream()
+                .filter(item -> !item.getId().equals(id))
+                .collect(java.util.stream.Collectors.toList()));
         return "car-detail";
     }
 
