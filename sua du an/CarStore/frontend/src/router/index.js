@@ -7,6 +7,7 @@ const router = createRouter({
     { path: '/', name: 'home', component: () => import('../views/HomeView.vue') },
     { path: '/car/list', name: 'car-list', component: () => import('../views/CarListView.vue') },
     { path: '/car/detail/:id', name: 'car-detail', component: () => import('../views/CarDetailView.vue') },
+    { path: '/compare', name: 'compare', component: () => import('../views/CompareView.vue') },
     { path: '/car/create', name: 'car-create', meta: { admin: true }, component: () => import('../views/CarFormView.vue') },
     { path: '/car/edit/:id', name: 'car-edit', meta: { admin: true }, component: () => import('../views/CarFormView.vue') },
     { path: '/cart/view', name: 'cart', component: () => import('../views/CartView.vue') },

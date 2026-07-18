@@ -1,0 +1,38 @@
+CARSTORE - SỬA LỖI API ẢNH XE HTTP 500
+======================================
+
+Lỗi quan sát được:
+GET /api/cars/1/images trả về HTTP 500.
+
+Nguyên nhân đã xử lý:
+- Hibernate/Spring có thể đổi tên bảng CarImage thành car_image theo naming strategy.
+- Điều này không khớp SQL Server, nơi bảng thật là dbo.CarImage.
+
+Các thay đổi:
+1. CarImage.java
+   @Table(name = "CarImage", schema = "dbo")
+
+2. CarImageRepository.java
+   API đọc ảnh dùng native SQL truy vấn trực tiếp dbo.CarImage.
+   Vì vậy không còn phụ thuộc quy tắc tự đổi tên bảng của Hibernate.
+
+3. application.properties
+   Dùng PhysicalNamingStrategyStandardImpl để giữ nguyên tên bảng/cột được khai báo.
+
+4. CarDetailView.vue
+   - detail grid dùng align-items: start.
+   - gallery tự co chiều cao.
+   - loại bỏ khoảng trắng lớn dưới thumbnail.
+
+5. Frontend đã build thành công và đã cập nhật vào:
+   src/main/resources/static
+
+Cách chạy lại:
+- Dừng hoàn toàn Spring Boot cũ.
+- Xóa thư mục target nếu có.
+- Chạy lại backend bằng IDE hoặc: mvn clean spring-boot:run
+- Chạy frontend: cd frontend; npm install; npm run dev
+- Kiểm tra trực tiếp: http://localhost:8082/api/cars/1/images
+
+Database cần có:
+SELECT * FROM dbo.CarImage WHERE car_id = 1;

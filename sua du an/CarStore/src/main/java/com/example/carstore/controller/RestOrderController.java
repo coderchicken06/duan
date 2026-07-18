@@ -6,6 +6,7 @@ import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.CartService;
 import com.example.carstore.service.OrderService;
+import com.example.carstore.util.OrderStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -183,7 +184,15 @@ public class RestOrderController {
             return fail("Status is required");
         }
 
-        order.setStatus(status.trim());
+        status = status.trim();
+        if (!OrderStatus.VALID_STATUSES.contains(status)) {
+            return fail("Invalid status");
+        }
+        if (OrderStatus.PROCESSING.equals(status)
+                && !OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
+            return fail("Order must be deposit-paid before processing");
+        }
+        order.setStatus(status);
         orderRepo.save(order);
         return Map.of("success", true, "message", "Order status updated successfully");
     }
@@ -229,6 +238,21 @@ public class RestOrderController {
         summary.put("totalItems", totalItems);
         summary.put("totalAmount", totalAmount);
         return summary;
+    }
+
+    @PostMapping("/{id}/deposit")
+    public Map<String, Object> payDeposit(@PathVariable int id,
+                                          @RequestBody Map<String, String> payload,
+                                          Authentication auth) {
+        if (auth == null) return fail("Not authenticated");
+        try {
+            String method = payload == null ? null : payload.get("method");
+            Orders order = orderService.payDeposit(id, auth.getName(), method, isAdmin(auth));
+            return Map.of("success", true, "message", "Thanh toán tiền cọc thành công",
+                    "data", order, "depositAmount", order.getDepositAmount());
+        } catch (IllegalArgumentException e) {
+            return fail(e.getMessage());
+        }
     }
 
     @GetMapping("/revenue")

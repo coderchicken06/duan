@@ -4,7 +4,7 @@
       <nav class="ford-nav-left">
         <router-link class="ford-brand-mark" to="/">CarStore</router-link>
         <router-link to="/car/list">Sản phẩm</router-link>
-        <router-link to="/cart/view">Mua xe</router-link>
+        <router-link to="/cart/view">Giỏ hàng</router-link>
         <router-link to="/service">Dịch vụ</router-link>
         <router-link to="/support">Hỗ trợ</router-link>
       </nav>

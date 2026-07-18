@@ -30,7 +30,7 @@
         <h4>Tổng: <span class="text-danger">{{ formatPrice(total) }} VNĐ</span></h4>
         <div class="d-flex gap-2">
           <button class="btn cs-btn cs-btn-ghost" @click="clearCart">Xóa giỏ</button>
-          <router-link class="btn cs-btn cs-btn-primary" to="/checkout">Thanh toán</router-link>
+          <router-link class="btn cs-btn cs-btn-primary" to="/checkout">Gửi yêu cầu đặt xe</router-link>
         </div>
       </div>
       <div v-if="message" class="alert alert-danger mt-3">{{ message }}</div>

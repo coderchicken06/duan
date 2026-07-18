@@ -3,6 +3,7 @@ package com.example.carstore.controller;
 import com.example.carstore.entity.Orders;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.OrderService;
+import com.example.carstore.util.OrderStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,7 +32,7 @@ public class AdminOrderController {
 
     @PostMapping("/update-status")
     public String updateStatus(@RequestParam int id, @RequestParam String status) {
-        if (status == null || status.trim().isEmpty()) {
+        if (status == null || !OrderStatus.VALID_STATUSES.contains(status.trim())) {
             return "redirect:/admin/orders";
         }
 

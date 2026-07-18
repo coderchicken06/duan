@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import javax.servlet.http.HttpSession;
 import java.util.List;
@@ -103,6 +104,22 @@ public class OrderController {
         model.addAttribute("order", order);
         model.addAttribute("details", details);
         model.addAttribute("total", total);
+        model.addAttribute("depositAmount", Math.round(total * 0.10D));
         return "order-detail";
     }
+    @PostMapping("/deposit/{id}")
+    public String payDeposit(@PathVariable int id,
+                             @RequestParam String method,
+                             Authentication auth,
+                             RedirectAttributes redirectAttributes) {
+        if (auth == null) return "redirect:/login";
+        try {
+            orderService.payDeposit(id, auth.getName(), method, false);
+            redirectAttributes.addFlashAttribute("message", "Thanh toán tiền cọc thành công!");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/order/detail/" + id;
+    }
+
 }

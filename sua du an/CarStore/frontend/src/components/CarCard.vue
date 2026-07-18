@@ -2,29 +2,24 @@
   <article class="ford-car-card h-100">
     <div class="ford-car-img">
       <img :src="carImageUrl(car.image)" :alt="car.name" />
-      <span class="ford-car-chip">Mới</span>
+      <span class="ford-car-chip">{{ car.inspectionLevel || 'Đã kiểm định' }}</span>
     </div>
     <div class="ford-car-body">
-      <div class="ford-car-meta">
-        <span class="ford-car-badge">Mã hãng: {{ car.brandId }}</span>
-        <span class="ford-car-year">2026</span>
-      </div>
+      <div class="ford-car-meta"><span class="ford-car-badge">{{ car.bodyType || 'Ô tô' }}</span><span class="ford-car-year">{{ car.year || '—' }}</span></div>
       <h3>{{ car.name }}</h3>
-      <p class="ford-car-description">Thiết kế hiện đại, vận hành êm và phù hợp cho cả thành phố lẫn hành trình dài.</p>
-      <div class="ford-price-tag">
-        {{ formatPrice(car.price) }} <small>VNĐ</small>
-      </div>
-      <div class="ford-car-actions">
-        <router-link class="ford-btn-primary text-center" :to="`/car/detail/${car.id}`">Chi tiết</router-link>
-        <button type="button" class="ford-btn-outline" @click="$emit('add-cart', car.id)">Thêm giỏ</button>
-      </div>
+      <p class="ford-car-description">{{ car.mileage != null ? Number(car.mileage).toLocaleString('vi-VN') + ' km' : 'ODO chưa cập nhật' }} · {{ car.transmission || 'Hộp số chưa cập nhật' }}</p>
+      <div class="ford-price-tag">{{ formatPrice(car.price) }} <small>VNĐ</small></div>
+      <label class="compare-check"><input type="checkbox" :checked="has(car.id)" @change="onCompare" /> So sánh xe</label>
+      <div class="ford-car-actions"><router-link class="ford-btn-primary text-center" :to="`/car/detail/${car.id}`">Chi tiết</router-link><button type="button" class="ford-btn-outline" @click="$emit('add-cart', car.id)">Thêm giỏ</button></div>
     </div>
   </article>
 </template>
-
 <script setup>
 import { carImageUrl, formatPrice } from '../api'
-
-defineProps({ car: { type: Object, required: true } })
+import { useCompare } from '../composables/useCompare'
+const props = defineProps({ car: { type: Object, required: true } })
 defineEmits(['add-cart'])
+const { has, toggle, count } = useCompare()
+function onCompare(event){ if (!has(props.car.id) && count.value >= 3){ event.target.checked=false; alert('Chỉ được so sánh tối đa 3 xe.'); return } toggle(props.car.id) }
 </script>
+<style scoped>.compare-check{display:flex;align-items:center;gap:8px;margin:12px 0;font-weight:700;color:#333}.compare-check input{width:18px;height:18px;accent-color:#d71920}</style>

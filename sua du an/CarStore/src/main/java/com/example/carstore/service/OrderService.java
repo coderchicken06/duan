@@ -51,6 +51,7 @@ public class OrderService {
         order.setCreate_date(new Date());
         order.setAddress(address.trim());
         order.setStatus(OrderStatus.PENDING);
+        order.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
         Orders savedOrder = orderRepo.save(order);
 
         for (CartItem item : cart.values()) {
@@ -105,6 +106,46 @@ public class OrderService {
         }
 
         orderRepo.deleteById(orderId);
+    }
+
+    @Transactional
+    public Orders payDeposit(Integer orderId, String username, String method, boolean admin) {
+        Orders order = orderRepo.findById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
+
+        if (!admin && !order.getUsername().equals(username)) {
+            throw new IllegalArgumentException("Bạn không có quyền thanh toán đơn hàng này.");
+        }
+        if (!OrderStatus.CONFIRMED.equals(order.getStatus())) {
+            throw new IllegalArgumentException("Chỉ được thanh toán cọc sau khi đơn hàng đã được duyệt.");
+        }
+        if (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
+            throw new IllegalArgumentException("Đơn hàng này đã thanh toán tiền cọc.");
+        }
+        if (!StringUtils.hasText(method)) {
+            throw new IllegalArgumentException("Vui lòng chọn phương thức thanh toán.");
+        }
+
+        List<OrderDetail> details = detailRepo.findByOrderId(orderId);
+        double total = details.stream()
+                .mapToDouble(d -> d.getPrice() * d.getQuantity())
+                .sum();
+        if (total <= 0) {
+            throw new IllegalArgumentException("Đơn hàng không có giá trị hợp lệ.");
+        }
+
+        order.setDepositAmount((double) Math.round(total * 0.10D));
+        order.setDepositMethod(method.trim());
+        order.setDepositStatus(OrderStatus.DEPOSIT_PAID);
+        order.setDepositPaidAt(new Date());
+        order.setStatus(OrderStatus.PROCESSING);
+        return orderRepo.save(order);
+    }
+
+    public double calculateTotal(Integer orderId) {
+        return detailRepo.findByOrderId(orderId).stream()
+                .mapToDouble(d -> d.getPrice() * d.getQuantity())
+                .sum();
     }
 
     public double getRevenue() {

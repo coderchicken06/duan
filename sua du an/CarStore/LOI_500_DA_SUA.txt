@@ -1,0 +1,17 @@
+NGUYÊN NHÂN LỖI GET /api/cars 500
+
+Car.java dùng field brandId nhưng thiếu @Column(name = "brand_id").
+Do application.properties đang dùng PhysicalNamingStrategyStandardImpl, Hibernate truy vấn cột brandId.
+Trong SQL Server cột thật là dbo.Car.brand_id nên SQL Server trả lỗi Invalid column name brandId.
+
+Đã sửa:
+- Car.java: @Table(name="Car", schema="dbo")
+- Car.java: @Column(name="brand_id") cho brandId
+- Brand.java: @Table(name="Brand", schema="dbo")
+- Giữ đúng một file CarStore.sql, không chia SQL phụ.
+
+Sau khi giải nén:
+1. Chạy CarStore.sql một lần trong SSMS.
+2. Dừng backend cũ.
+3. Chạy: mvn clean spring-boot:run
+4. Mở http://localhost:8082/api/cars

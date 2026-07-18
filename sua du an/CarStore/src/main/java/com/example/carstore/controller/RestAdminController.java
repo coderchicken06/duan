@@ -13,6 +13,7 @@ import com.example.carstore.repository.CarRepository;
 import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.OrderService;
+import com.example.carstore.util.OrderStatus;
 
 import java.util.List;
 import java.util.Map;
@@ -162,8 +163,13 @@ public class RestAdminController {
 
             String status = payload.get("status");
 
-            if (status == null || status.trim().isEmpty()) {
-                return Map.of("success", false, "message", "Status is required");
+            if (status == null || !OrderStatus.VALID_STATUSES.contains(status.trim())) {
+                return Map.of("success", false, "message", "Invalid status");
+            }
+            status = status.trim();
+            if (OrderStatus.PROCESSING.equals(status)
+                    && !OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
+                return Map.of("success", false, "message", "Phải thanh toán cọc trước khi xử lý đơn");
             }
 
             order.setStatus(status);
@@ -252,6 +258,16 @@ public class RestAdminController {
             if (car.getStock() != null) {
                 existing.setStock(car.getStock());
             }
+
+            if (car.getFirstRegistration() != null) existing.setFirstRegistration(car.getFirstRegistration());
+            if (car.getMileage() != null) existing.setMileage(car.getMileage());
+            if (car.getEngineType() != null) existing.setEngineType(car.getEngineType());
+            if (car.getEngineCapacity() != null) existing.setEngineCapacity(car.getEngineCapacity());
+            if (car.getInteriorColor() != null) existing.setInteriorColor(car.getInteriorColor());
+            if (car.getBodyType() != null) existing.setBodyType(car.getBodyType());
+            if (car.getSeats() != null) existing.setSeats(car.getSeats());
+            if (car.getDrivetrain() != null) existing.setDrivetrain(car.getDrivetrain());
+            if (car.getTransmission() != null) existing.setTransmission(car.getTransmission());
 
             Car updated = carRepo.save(existing);
 

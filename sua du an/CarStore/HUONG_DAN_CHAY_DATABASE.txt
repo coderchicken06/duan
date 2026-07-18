@@ -1,0 +1,23 @@
+CARSTORE - HƯỚNG DẪN SỬ DỤNG DATABASE
+=====================================
+
+Chỉ chạy đúng một file:
+    CarStore.sql
+
+Không cần chạy file SQL nào khác.
+
+Cách chạy trong SQL Server Management Studio:
+1. Dừng Spring Boot.
+2. Mở CarStore.sql bằng SSMS.
+3. Nhấn Execute.
+4. Đợi dòng "Setup hoàn thành!".
+5. Kiểm tra hai truy vấn cuối file có trả dữ liệu xe id=1 và ảnh xe.
+6. Khởi động lại backend bằng: mvn clean spring-boot:run
+7. Kiểm tra:
+   http://localhost:8082/api/cars/1
+   http://localhost:8082/api/cars/1/images
+
+Nguyên nhân lỗi 500 cũ:
+Database đang chạy không đồng bộ với entity Car.java. Hibernate đọc các cột chi tiết
+như first_registration, mileage, engine_type, horsepower... nhưng database cũ có thể
+chưa có các cột này. CarStore.sql trong bản này tạo đầy đủ tất cả cột và CarImage.

@@ -15,6 +15,11 @@ export const authApi = {
 export const carApi = {
   getAll: (q) => api.get('/api/cars', { params: q ? { q } : {} }),
   getById: (id) => api.get(`/api/cars/${id}`),
+  getSimilar: (id) => api.get(`/api/cars/${id}/similar`),
+  getImages: (id) => api.get(`/api/cars/${id}/images`),
+  addImage: (id, image) => api.post(`/api/cars/${id}/images`, image),
+  updateImage: (id, imageId, image) => api.put(`/api/cars/${id}/images/${imageId}`, image),
+  deleteImage: (id, imageId) => api.delete(`/api/cars/${id}/images/${imageId}`),
   search: (keyword) => api.get('/api/cars/search', { params: { keyword } }),
   create: (car) => api.post('/api/cars', car),
   update: (id, car) => api.put(`/api/cars/${id}`, car),
@@ -36,6 +41,7 @@ export const orderApi = {
   getById: (id) => api.get(`/api/orders/${id}`),
   getDetails: (id) => api.get(`/api/orders/${id}/details`),
   checkout: (address) => api.post('/api/orders/checkout', { address }),
+  payDeposit: (id, method) => api.post(`/api/orders/${id}/deposit`, { method }),
 }
 
 export const profileApi = {

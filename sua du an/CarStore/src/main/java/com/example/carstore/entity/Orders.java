@@ -21,6 +21,19 @@ public class Orders {
 
     private String status;
 
+    @Column(name = "deposit_status")
+    private String depositStatus;
+
+    @Column(name = "deposit_amount")
+    private Double depositAmount;
+
+    @Column(name = "deposit_method")
+    private String depositMethod;
+
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "deposit_paid_at")
+    private Date depositPaidAt;
+
     public Orders() {
     }
 
@@ -71,4 +84,13 @@ public class Orders {
     public void setStatus(String status) {
         this.status = status;
     }
+
+    public String getDepositStatus() { return depositStatus; }
+    public void setDepositStatus(String depositStatus) { this.depositStatus = depositStatus; }
+    public Double getDepositAmount() { return depositAmount; }
+    public void setDepositAmount(Double depositAmount) { this.depositAmount = depositAmount; }
+    public String getDepositMethod() { return depositMethod; }
+    public void setDepositMethod(String depositMethod) { this.depositMethod = depositMethod; }
+    public Date getDepositPaidAt() { return depositPaidAt; }
+    public void setDepositPaidAt(Date depositPaidAt) { this.depositPaidAt = depositPaidAt; }
 }
