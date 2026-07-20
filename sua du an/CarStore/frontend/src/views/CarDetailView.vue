@@ -28,18 +28,17 @@
           <h1>{{ car.name }}</h1>
 
           <div class="summary-meta">
-            <span>{{ value(car.year) }}</span>
-            <span>{{ km(car.mileage) }}</span>
-            <span>{{ value(car.bodyType) }}</span>
+            <span v-if="hasData(car.year)">{{ car.year }}</span>
+            <span v-if="hasData(car.mileage)">{{ km(car.mileage) }}</span>
+            <span v-if="hasData(car.bodyType)">{{ car.bodyType }}</span>
           </div>
 
           <div class="price">{{ formatPrice(car.price) }} <small>VNĐ</small></div>
 
-          <div class="quick-specs">
-            <div><small>Động cơ</small><strong>{{ value(car.engineCapacity) }}</strong></div>
-            <div><small>Hộp số</small><strong>{{ value(car.transmission) }}</strong></div>
-            <div><small>Dẫn động</small><strong>{{ value(car.drivetrain) }}</strong></div>
-            <div><small>Nhiên liệu</small><strong>{{ value(car.fuelType || car.engineType) }}</strong></div>
+          <div v-if="quickSpecs.length" class="quick-specs">
+            <div v-for="item in quickSpecs" :key="item.label">
+              <small>{{ item.label }}</small><strong>{{ item.value }}</strong>
+            </div>
           </div>
 
           <div v-if="message" :class="['alert', success ? 'alert-success' : 'alert-danger']">
@@ -47,38 +46,38 @@
           </div>
 
           <div class="action-grid">
-            <button class="ford-btn-primary hero-action" type="button" @click="addToCart">
+            <button class="ford-btn-primary hero-action" type="button" :disabled="Number(car.stock || 0) <= 0" @click="addToCart">
               <span class="action-icon" aria-hidden="true">🛒</span>
-              <span>Thêm vào giỏ hàng</span>
+              <span>{{ Number(car.stock || 0) > 0 ? 'Thêm vào giỏ hàng' : 'Xe đã hết hàng' }}</span>
             </button>
             <button class="ford-btn-outline hero-action" type="button" @click="toggleCurrent">
               <span class="action-icon" aria-hidden="true">⚖</span>
               <span>{{ has(car.id) ? 'Bỏ khỏi so sánh' : 'Thêm vào so sánh' }}</span>
             </button>
-            <router-link class="ford-btn-outline hero-action text-center" to="/service">
+            <router-link class="ford-btn-outline hero-action text-center" :to="{ path: '/service', query: { carId: car.id } }">
               <span class="action-icon" aria-hidden="true">▣</span>
               <span>Đặt lịch xem xe</span>
             </router-link>
           </div>
 
-          <div class="dealer-box">
+          <div v-if="hasDealerInfo" class="dealer-box">
             <span class="dealer-icon" aria-hidden="true">⌖</span>
             <div>
-              <strong>{{ value(car.dealerName) }}</strong>
-              <span>{{ value(car.dealerAddress) }}</span>
-              <span>Bảo hành: {{ value(car.warranty) }}</span>
+              <strong v-if="hasData(car.dealerName)">{{ car.dealerName }}</strong>
+              <span v-if="hasData(car.dealerAddress)">{{ car.dealerAddress }}</span>
+              <span v-if="hasData(car.warranty)">Bảo hành: {{ car.warranty }}</span>
             </div>
           </div>
         </section>
       </div>
 
-      <section class="detail-section">
+      <section v-if="hasData(car.description) || detailRows.length" class="detail-section">
         <div class="section-heading">
           <span>THÔNG TIN XE</span>
           <h2>Thông tin chi tiết</h2>
         </div>
-        <p class="description">{{ value(car.description) }}</p>
-        <div class="spec-grid">
+        <p v-if="hasData(car.description)" class="description">{{ car.description }}</p>
+        <div v-if="detailRows.length" class="spec-grid">
           <div v-for="item in detailRows" :key="item.label" class="spec-item">
             <span>{{ item.label }}</span>
             <strong>{{ item.value }}</strong>
@@ -86,36 +85,30 @@
         </div>
       </section>
 
-      <section class="detail-section two-columns">
-        <article class="feature-card">
+      <section v-if="safetyFeatures.length || comfortFeatures.length" class="detail-section two-columns">
+        <article v-if="safetyFeatures.length" class="feature-card">
           <h3>Trang bị an toàn</h3>
           <ul>
-            <li v-for="item in splitFeatures(car.safetyFeatures, defaultSafety)" :key="item">✓ {{ item }}</li>
+            <li v-for="item in safetyFeatures" :key="item">✓ {{ item }}</li>
           </ul>
         </article>
-        <article class="feature-card">
+        <article v-if="comfortFeatures.length" class="feature-card">
           <h3>Tiện nghi nổi bật</h3>
           <ul>
-            <li v-for="item in splitFeatures(car.comfortFeatures, defaultComfort)" :key="item">✓ {{ item }}</li>
+            <li v-for="item in comfortFeatures" :key="item">✓ {{ item }}</li>
           </ul>
         </article>
       </section>
 
-      <section class="detail-section inspection">
+      <section v-if="hasInspectionInfo" class="detail-section inspection">
         <div>
           <span class="eyebrow">KIỂM ĐỊNH CARSTORE</span>
-          <h2>{{ value(car.inspectionLevel) }}</h2>
-          <p>{{ value(car.inspectionNote) }}</p>
-        </div>
-        <div class="inspection-list">
-          <span>✓ Không tai nạn nghiêm trọng</span>
-          <span>✓ Không ngập nước</span>
-          <span>✓ ODO xác thực</span>
-          <span>✓ Hồ sơ pháp lý đầy đủ</span>
+          <h2 v-if="hasData(car.inspectionLevel)">{{ car.inspectionLevel }}</h2>
+          <p v-if="hasData(car.inspectionNote)">{{ car.inspectionNote }}</p>
         </div>
       </section>
 
-      <section class="detail-section">
+      <section v-if="similarCars.length" class="detail-section">
         <div class="section-heading">
           <span>ĐỀ XUẤT</span>
           <h2>Xe tương tự</h2>
@@ -129,10 +122,14 @@
     </div>
   </main>
 
-  <p v-else class="text-center py-5">Đang tải...</p>
+  <div v-else class="container py-5 text-center">
+    <div v-if="loadError" class="alert alert-danger">{{ loadError }}</div>
+    <p v-else>Đang tải...</p>
+    <router-link v-if="loadError" class="ford-btn-outline text-center" to="/car/list">Quay lại danh sách xe</router-link>
+  </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, cartApi, carImageUrl, formatPrice } from '../api'
@@ -147,27 +144,29 @@ const message = ref('')
 const success = ref(false)
 const selectedImage = ref('')
 const serverImages = ref([])
+const loadError = ref('')
 
 const { has, toggle, count } = useCompare()
 
-const value = (v) => (v === null || v === undefined || v === '' ? 'Chưa cập nhật' : v)
-const km = (v) => (v == null ? 'Chưa cập nhật' : `${Number(v).toLocaleString('vi-VN')} km`)
+const hasData = (value) => value !== null && value !== undefined
+  && (typeof value !== 'string' || value.trim() !== '')
+const km = (value) => `${Number(value).toLocaleString('vi-VN')} km`
+const splitFeatures = (text) =>
+  hasData(text) ? text.split(/[,;\n]/).map((value) => value.trim()).filter(Boolean) : []
 
-const defaultSafety = [
-  'Hệ thống chống bó cứng phanh ABS',
-  'Cân bằng điện tử',
-  'Camera lùi',
-  'Túi khí an toàn',
-]
-const defaultComfort = [
-  'Điều hòa tự động',
-  'Kết nối điện thoại',
-  'Màn hình trung tâm',
-  'Ghế bọc da',
-]
+const quickSpecs = computed(() => [
+  { label: 'Động cơ', value: car.value?.engineCapacity },
+  { label: 'Hộp số', value: car.value?.transmission },
+  { label: 'Dẫn động', value: car.value?.drivetrain },
+  { label: 'Nhiên liệu', value: car.value?.fuelType || car.value?.engineType },
+].filter((item) => hasData(item.value)))
 
-const splitFeatures = (text, fallback) =>
-  text ? text.split(/[,;\n]/).map((v) => v.trim()).filter(Boolean) : fallback
+const safetyFeatures = computed(() => splitFeatures(car.value?.safetyFeatures))
+const comfortFeatures = computed(() => splitFeatures(car.value?.comfortFeatures))
+const hasInspectionInfo = computed(() =>
+  hasData(car.value?.inspectionLevel) || hasData(car.value?.inspectionNote))
+const hasDealerInfo = computed(() =>
+  hasData(car.value?.dealerName) || hasData(car.value?.dealerAddress) || hasData(car.value?.warranty))
 
 const galleryImages = computed(() => {
   if (!car.value) return []
@@ -189,38 +188,44 @@ function nextImage() {
 }
 
 const detailRows = computed(() => [
-  { label: 'Đăng ký lần đầu', value: value(car.value.firstRegistration) },
-  { label: 'Số km đã đi', value: km(car.value.mileage) },
-  { label: 'Loại nhiên liệu', value: value(car.value.fuelType || car.value.engineType) },
-  { label: 'Dung tích động cơ', value: value(car.value.engineCapacity) },
-  { label: 'Công suất', value: car.value.horsepower ? `${car.value.horsepower} HP` : 'Chưa cập nhật' },
-  { label: 'Mô-men xoắn', value: value(car.value.torque) },
-  { label: 'Tiêu hao nhiên liệu', value: value(car.value.fuelConsumption) },
-  { label: 'Hộp số', value: value(car.value.transmission) },
-  { label: 'Hệ dẫn động', value: value(car.value.drivetrain) },
-  { label: 'Loại xe', value: value(car.value.bodyType) },
-  { label: 'Số chỗ ngồi', value: value(car.value.seats) },
-  { label: 'Màu ngoại thất', value: value(car.value.color) },
-  { label: 'Màu nội thất', value: value(car.value.interiorColor) },
-  { label: 'Năm sản xuất', value: value(car.value.year) },
-  { label: 'Tồn kho', value: value(car.value.stock) },
-  { label: 'Bảo hành', value: value(car.value.warranty) },
-])
+  { label: 'Đăng ký lần đầu', raw: car.value?.firstRegistration },
+  { label: 'Số km đã đi', raw: car.value?.mileage, format: km },
+  { label: 'Loại nhiên liệu', raw: car.value?.fuelType || car.value?.engineType },
+  { label: 'Dung tích động cơ', raw: car.value?.engineCapacity },
+  { label: 'Công suất', raw: car.value?.horsepower, format: (value) => `${value} HP` },
+  { label: 'Mô-men xoắn', raw: car.value?.torque },
+  { label: 'Tiêu hao nhiên liệu', raw: car.value?.fuelConsumption },
+  { label: 'Hộp số', raw: car.value?.transmission },
+  { label: 'Hệ dẫn động', raw: car.value?.drivetrain },
+  { label: 'Loại xe', raw: car.value?.bodyType },
+  { label: 'Số chỗ ngồi', raw: car.value?.seats },
+  { label: 'Màu ngoại thất', raw: car.value?.color },
+  { label: 'Màu nội thất', raw: car.value?.interiorColor },
+  { label: 'Năm sản xuất', raw: car.value?.year },
+  { label: 'Tồn kho', raw: car.value?.stock },
+  { label: 'Bảo hành', raw: car.value?.warranty },
+].filter((item) => hasData(item.raw))
+  .map((item) => ({ label: item.label, value: item.format ? item.format(item.raw) : item.raw })))
 
 async function loadData() {
   car.value = null
   serverImages.value = []
   selectedImage.value = ''
   message.value = ''
+  loadError.value = ''
 
   try {
-    const detailResponse = await carApi.getById(route.params.id)
-    car.value = detailResponse.data.data || detailResponse.data
+    const carId = String(route.params.id)
+    const detailResponse = await carApi.getById(carId)
+    if (!detailResponse.data?.success || !detailResponse.data?.data) {
+      throw new Error(detailResponse.data?.message || 'Không tìm thấy xe')
+    }
+    car.value = detailResponse.data.data
 
     const [listResult, similarResult, imagesResult] = await Promise.allSettled([
       carApi.getAll(),
-      carApi.getSimilar(route.params.id),
-      carApi.getImages(route.params.id),
+      carApi.getSimilar(carId),
+      carApi.getImages(carId),
     ])
 
     if (listResult.status === 'fulfilled') {
@@ -250,7 +255,7 @@ async function loadData() {
     selectedImage.value = galleryImages.value[0] || carImageUrl(car.value?.image)
   } catch (error) {
     car.value = null
-    message.value = error.response?.data?.message || 'Không thể tải thông tin xe'
+    loadError.value = error.response?.data?.message || error.message || 'Không thể tải thông tin xe'
     success.value = false
     console.error('Không thể tải thông tin xe:', error)
   }
@@ -268,10 +273,18 @@ function toggleCurrent() {
 }
 
 async function addById(id) {
+  const target = id === car.value?.id
+    ? car.value
+    : similarCars.value.find((item) => item.id === id)
+  if (!target || Number(target.stock || 0) <= 0) {
+    message.value = 'Xe đã hết hàng, không thể thêm vào giỏ'
+    success.value = false
+    return
+  }
   try {
-    await cartApi.add(id)
-    message.value = 'Đã thêm xe vào giỏ hàng'
-    success.value = true
+    const { data } = await cartApi.add(id)
+    success.value = Boolean(data.success)
+    message.value = data.success ? 'Đã thêm xe vào giỏ hàng' : (data.message || 'Không thể thêm vào giỏ hàng')
   } catch (error) {
     message.value = error.response?.data?.message || 'Không thể thêm vào giỏ hàng'
     success.value = false

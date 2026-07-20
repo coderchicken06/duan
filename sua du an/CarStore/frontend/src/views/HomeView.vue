@@ -13,18 +13,9 @@
         </div>
       </div>
       <div class="ford-hero-side">
-        <div class="ford-hero-stat">
-          <strong>120+</strong>
-          <span>mẫu xe đang chờ bạn</span>
-        </div>
-        <div class="ford-hero-stat">
-          <strong>4.9/5</strong>
-          <span>đánh giá khách hàng</span>
-        </div>
-        <div class="ford-hero-stat">
-          <strong>24/7</strong>
-          <span>hỗ trợ đặt lịch</span>
-        </div>
+        <div class="ford-hero-stat"><strong>120+</strong><span>mẫu xe đang chờ bạn</span></div>
+        <div class="ford-hero-stat"><strong>4.9/5</strong><span>đánh giá khách hàng</span></div>
+        <div class="ford-hero-stat"><strong>24/7</strong><span>hỗ trợ đặt lịch</span></div>
       </div>
     </section>
 
@@ -49,7 +40,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, cartApi } from '../api'
@@ -67,7 +58,7 @@ onMounted(loadCars)
 async function loadCars() {
   loading.value = true
   try {
-    const { data } = await carApi.getAll(q.value || undefined)
+    const { data } = await carApi.getAll(String(q.value || '') || undefined)
     cars.value = Array.isArray(data) ? data : data.data || []
   } finally {
     loading.value = false

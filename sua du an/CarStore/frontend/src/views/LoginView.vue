@@ -40,7 +40,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
@@ -61,7 +61,7 @@ async function submit() {
   try {
     const data = await auth.login(username.value, password.value)
     if (data.success) {
-      router.push(route.query.redirect || '/')
+      router.push(String(route.query.redirect || '/'))
     } else {
       error.value = data.message || 'Đăng nhập không thành công'
     }

@@ -2,6 +2,7 @@ package com.example.carstore.controller;
 
 import com.example.carstore.entity.Account;
 import com.example.carstore.repository.AccountRepository;
+import com.example.carstore.service.MailService;
 import com.example.carstore.util.ResponseUtils;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -15,7 +16,6 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -24,6 +24,7 @@ import javax.servlet.http.HttpSession;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.security.SecureRandom;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -32,10 +33,15 @@ public class RestAuthController {
 
     private final AccountRepository accountRepo;
     private final PasswordEncoder passwordEncoder;
+    private final MailService mailService;
+    private final SecureRandom secureRandom = new SecureRandom();
 
-    public RestAuthController(AccountRepository accountRepo, PasswordEncoder passwordEncoder) {
+    public RestAuthController(AccountRepository accountRepo,
+                              PasswordEncoder passwordEncoder,
+                              MailService mailService) {
         this.accountRepo = accountRepo;
         this.passwordEncoder = passwordEncoder;
+        this.mailService = mailService;
     }
 
     @PostMapping("/signup")
@@ -89,19 +95,6 @@ public class RestAuthController {
         return result;
     }
 
-    @GetMapping("/validate")
-    public Map<String, Object> validateToken(@RequestParam String username) {
-        java.util.Optional<Account> accountOpt = accountRepo.findById(username);
-        if (accountOpt.isEmpty()) return ResponseUtils.fail("User not found");
-        Account account = accountOpt.get();
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", true);
-        result.put("username", account.getUsername());
-        result.put("fullname", account.getFullname());
-        result.put("role", account.getRole());
-        return result;
-    }
-
     @GetMapping("/check-username/{username}")
     public Map<String, Object> checkUsernameAvailability(@PathVariable String username) {
         return Map.of("available", !accountRepo.existsById(username), "username", username);
@@ -141,11 +134,90 @@ public class RestAuthController {
         return ResponseUtils.ok("Logged out successfully");
     }
 
+    @PostMapping("/forgot-password")
+    public Map<String, Object> forgotPassword(@RequestBody Map<String, String> payload,
+                                              HttpSession session) {
+        String email = payload == null ? null : payload.get("email");
+        if (isBlank(email)) {
+            return ResponseUtils.fail("Email is required");
+        }
+
+        java.util.Optional<Account> accountOpt = accountRepo.findByEmail(email.trim());
+        if (accountOpt.isEmpty()) {
+            return ResponseUtils.fail("Email không tồn tại trong hệ thống");
+        }
+
+        String otp = String.valueOf(100000 + secureRandom.nextInt(900000));
+        session.setAttribute("resetEmail", accountOpt.get().getEmail());
+        session.setAttribute("resetOtp", otp);
+        session.setAttribute("resetOtpExpiresAt", System.currentTimeMillis() + 10 * 60 * 1000L);
+        mailService.sendOtp(accountOpt.get().getEmail(), otp);
+        return ResponseUtils.ok("Mã OTP đã được gửi đến email của bạn");
+    }
+
+    @PostMapping("/verify-otp")
+    public Map<String, Object> verifyOtp(@RequestBody Map<String, String> payload,
+                                         HttpSession session) {
+        String otp = payload == null ? null : payload.get("otp");
+        String expectedOtp = (String) session.getAttribute("resetOtp");
+        Long expiresAt = (Long) session.getAttribute("resetOtpExpiresAt");
+        if (isBlank(otp) || expectedOtp == null || expiresAt == null
+                || System.currentTimeMillis() > expiresAt || !expectedOtp.equals(otp.trim())) {
+            return ResponseUtils.fail("Mã OTP không đúng hoặc đã hết hạn");
+        }
+
+        session.setAttribute("resetOtpVerified", Boolean.TRUE);
+        session.removeAttribute("resetOtp");
+        return ResponseUtils.ok("Xác thực OTP thành công");
+    }
+
+    @PostMapping("/reset-password")
+    public Map<String, Object> resetPassword(@RequestBody Map<String, String> payload,
+                                             HttpSession session) {
+        String password = payload == null ? null : payload.get("password");
+        String confirmPassword = payload == null ? null : payload.get("confirmPassword");
+        String email = (String) session.getAttribute("resetEmail");
+        Boolean verified = (Boolean) session.getAttribute("resetOtpVerified");
+        Long expiresAt = (Long) session.getAttribute("resetOtpExpiresAt");
+
+        if (!Boolean.TRUE.equals(verified) || email == null || expiresAt == null
+                || System.currentTimeMillis() > expiresAt) {
+            return ResponseUtils.fail("Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn");
+        }
+        if (isBlank(password)) {
+            return ResponseUtils.fail("Password is required");
+        }
+        if (!password.equals(confirmPassword)) {
+            return ResponseUtils.fail("Mật khẩu xác nhận không khớp");
+        }
+
+        java.util.Optional<Account> accountOpt = accountRepo.findByEmail(email);
+        if (accountOpt.isEmpty()) {
+            return ResponseUtils.fail("Không tìm thấy tài khoản");
+        }
+
+        Account account = accountOpt.get();
+        account.setPassword(passwordEncoder.encode(password));
+        accountRepo.save(account);
+        session.removeAttribute("resetEmail");
+        session.removeAttribute("resetOtpExpiresAt");
+        session.removeAttribute("resetOtpVerified");
+        return ResponseUtils.ok("Đổi mật khẩu thành công");
+    }
+
     private String validateSignup(Account account) {
         if (account == null || isBlank(account.getUsername())) return "Username is required";
+        account.setUsername(account.getUsername().trim());
+        if (!account.getUsername().matches("^[a-zA-Z0-9._-]{3,50}$")) {
+            return "Username phải có 3-50 ký tự và chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang";
+        }
         if (accountRepo.existsById(account.getUsername())) return "Username already exists";
         if (isBlank(account.getPassword())) return "Password is required";
+        if (account.getPassword().length() < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
         if (isBlank(account.getEmail())) return "Email is required";
+        account.setEmail(account.getEmail().trim().toLowerCase());
+        if (!account.getEmail().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) return "Email không hợp lệ";
+        if (accountRepo.findByEmail(account.getEmail()).isPresent()) return "Email đã được sử dụng";
         return null;
     }
 

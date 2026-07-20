@@ -55,7 +55,7 @@ public class OrderService {
         Orders savedOrder = orderRepo.save(order);
 
         for (CartItem item : cart.values()) {
-            java.util.Optional<Car> carOpt = carService.findById(item.getId());
+            java.util.Optional<Car> carOpt = carRepo.findForUpdateById(item.getId());
             if (carOpt.isEmpty()) {
                 throw new IllegalArgumentException("Car not found: " + item.getId());
             }
@@ -85,32 +85,68 @@ public class OrderService {
 
     @Transactional
     public void deleteOrder(Integer orderId) {
-        if (!orderRepo.existsById(orderId)) {
-            return;
+        Orders order = orderRepo.findForUpdateById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
+        if (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())
+                || OrderStatus.PROCESSING.equals(order.getStatus())
+                || OrderStatus.DELIVERED.equals(order.getStatus())) {
+            throw new IllegalArgumentException("Không thể xóa đơn đã cọc, đang xử lý hoặc đã giao.");
         }
 
         List<OrderDetail> details = detailRepo.findByOrderId(orderId);
-
+        if (!OrderStatus.CANCELLED.equals(order.getStatus())) {
+            restoreStock(details);
+        }
         for (OrderDetail detail : details) {
-            Car car = detail.getCar();
-
-            if (car != null) {
-                int currentStock = car.getStock() == null ? 0 : car.getStock();
-                int quantity = detail.getQuantity() == null ? 0 : detail.getQuantity();
-
-                car.setStock(currentStock + quantity);
-                carRepo.save(car);
-            }
-
             detailRepo.deleteById(detail.getId());
         }
-
         orderRepo.deleteById(orderId);
     }
 
     @Transactional
+    public Orders updateStatus(Integer orderId, String targetStatus) {
+        if (!OrderStatus.VALID_STATUSES.contains(targetStatus)) {
+            throw new IllegalArgumentException("Trạng thái đơn hàng không hợp lệ.");
+        }
+        Orders order = orderRepo.findForUpdateById(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
+        String current = order.getStatus();
+        if (targetStatus.equals(current)) return order;
+        if (OrderStatus.CANCELLED.equals(current) || OrderStatus.DELIVERED.equals(current)) {
+            throw new IllegalArgumentException("Không thể thay đổi đơn đã kết thúc.");
+        }
+        if (OrderStatus.CANCELLED.equals(targetStatus)) {
+            if (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
+                throw new IllegalArgumentException("Không thể hủy đơn đã thanh toán cọc.");
+            }
+            restoreStock(detailRepo.findByOrderId(orderId));
+        } else if (OrderStatus.CONFIRMED.equals(targetStatus)
+                && !OrderStatus.PENDING.equals(current)) {
+            throw new IllegalArgumentException("Chỉ đơn đang chờ mới được xác nhận.");
+        } else if (OrderStatus.PROCESSING.equals(targetStatus)) {
+            throw new IllegalArgumentException("Đơn tự chuyển sang xử lý sau khi thanh toán cọc.");
+        } else if (OrderStatus.DELIVERED.equals(targetStatus)
+                && !OrderStatus.PROCESSING.equals(current)) {
+            throw new IllegalArgumentException("Chỉ đơn đang xử lý mới được đánh dấu đã giao.");
+        }
+        order.setStatus(targetStatus);
+        return orderRepo.save(order);
+    }
+
+    private void restoreStock(List<OrderDetail> details) {
+        for (OrderDetail detail : details) {
+            if (detail.getCar() == null) continue;
+            Car car = carRepo.findForUpdateById(detail.getCar().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Xe trong đơn hàng không còn tồn tại."));
+            int quantity = detail.getQuantity() == null ? 0 : detail.getQuantity();
+            car.setStock(car.getStock() + quantity);
+            carRepo.save(car);
+        }
+    }
+
+    @Transactional
     public Orders payDeposit(Integer orderId, String username, String method, boolean admin) {
-        Orders order = orderRepo.findById(orderId)
+        Orders order = orderRepo.findForUpdateById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
 
         if (!admin && !order.getUsername().equals(username)) {

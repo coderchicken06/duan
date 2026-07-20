@@ -2,7 +2,7 @@
   <aside v-if="selectedCars.length" class="compare-bar">
     <div class="compare-bar__title">
       <strong>So sánh xe</strong>
-      <span>{{ selectedCars.length }}/3 xe</span>
+      <span>{{ selectedCars.length }} xe đã chọn · tối đa 3</span>
     </div>
 
     <div class="compare-bar__cars">
@@ -29,11 +29,11 @@
       SO SÁNH
     </router-link>
 
-    <span v-else class="compare-hint">Chọn thêm 1 xe</span>
+    <span v-else class="compare-hint">Chọn thêm 1 xe để so sánh</span>
   </aside>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch } from 'vue'
 import { carApi, carImageUrl } from '../api'
 import { useCompare } from '../composables/useCompare'
@@ -46,7 +46,9 @@ watch(
   selectedIds,
   async (ids) => {
     const currentVersion = ++requestVersion
-    const normalizedIds = ids.map(Number).filter(Number.isFinite).slice(0, 3)
+    const normalizedIds = [...new Set(
+      ids.map(Number).filter((id) => Number.isInteger(id) && id > 0),
+    )].slice(0, 3)
 
     if (!normalizedIds.length) {
       selectedCars.value = []

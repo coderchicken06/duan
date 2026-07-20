@@ -9,6 +9,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import com.example.carstore.service.AccountUserDetailsService;
 import com.example.carstore.service.CustomOAuth2UserService;
@@ -32,18 +33,26 @@ public class SecurityConfig {
         public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 
                 http
-                                .csrf().disable()
-
-                                .authorizeRequests()
-
-                                // PUBLIC
+                                .csrf(csrf -> csrf.disable())
+                                .authorizeHttpRequests(auth -> auth
                                 .antMatchers(
                                                 "/",
-                                                "/login/**",
-                                                "/signup/**",
+                                                "/login",
+                                                "/signup",
                                                 "/forgot-password",
                                                 "/verify-otp",
                                                 "/reset-password",
+                                                "/compare",
+                                                "/cart/view",
+                                                "/checkout",
+                                                "/profile",
+                                                "/history",
+                                                "/service",
+                                                "/support",
+                                                "/order/**",
+                                                "/admin/**",
+                                                "/car/create",
+                                                "/car/edit/**",
                                                 "/css/**",
                                                 "/js/**",
                                                 "/assets/**",
@@ -51,97 +60,78 @@ public class SecurityConfig {
                                                 "/videos/**",
                                                 "/oauth2/**")
                                 .permitAll()
-
-                                .antMatchers(
-                                                "/api/auth/**")
+                                .antMatchers("/api/auth/**")
                                 .permitAll()
-
-                                // CAR PAGE
                                 .antMatchers(
                                                 "/car/list",
-                                                "/car/detail/**",
-                                                "/car/inventory")
+                                                "/car/detail/**")
                                 .permitAll()
-
-                                // API XE
                                 .antMatchers(HttpMethod.GET, "/api/cars/**")
                                 .permitAll()
-
-                                // GIỎ HÀNG VUE API
+                                .antMatchers(HttpMethod.GET, "/api/brands/**")
+                                .permitAll()
+                                .antMatchers("/api/brands/**")
+                                .hasRole("ADMIN")
                                 .antMatchers("/api/cart/**", "/cart/**")
                                 .permitAll()
-
-                                // HISTORY: người dùng đăng nhập xem được lịch sử yêu cầu
                                 .antMatchers("/history")
                                 .authenticated()
-
-                                // DONE: chỉ admin được đánh dấu đã xử lý
                                 .antMatchers("/done/**")
                                 .hasRole("ADMIN")
-
-                                // ADMIN
                                 .antMatchers(
                                                 "/car/create",
                                                 "/car/save",
                                                 "/car/edit/**",
                                                 "/car/delete/**",
-                                                "/admin/**",
                                                 "/api/admin/**",
                                                 "/api/upload",
                                                 "/api/upload/**")
                                 .hasRole("ADMIN")
-
                                 .antMatchers("/api/cars/**")
                                 .hasRole("ADMIN")
-
-                                // SUPPORT API
+                                .antMatchers(
+                                                "/api/orders/revenue",
+                                                "/api/orders/top")
+                                .hasRole("ADMIN")
                                 .antMatchers(HttpMethod.POST, "/api/support")
                                 .authenticated()
-
                                 .antMatchers(HttpMethod.GET, "/api/support/my")
                                 .authenticated()
-
                                 .antMatchers(HttpMethod.GET, "/api/support/**")
                                 .hasRole("ADMIN")
-
                                 .antMatchers(HttpMethod.PUT, "/api/support/**")
                                 .hasRole("ADMIN")
-
                                 .antMatchers(HttpMethod.DELETE, "/api/support/**")
                                 .hasRole("ADMIN")
-
-                                // USER API
                                 .antMatchers(
                                                 "/api/orders/**",
                                                 "/api/profile/**")
                                 .authenticated()
-
                                 .anyRequest()
-                                .authenticated()
-
-                                .and()
-
-                                .formLogin()
-                                .loginPage("/login/form")
-                                .loginProcessingUrl("/login")
-                                .defaultSuccessUrl("/", true)
-                                .permitAll()
-
-                                .and()
-
-                                .oauth2Login()
-                                .loginPage("/login/form")
-                                .userInfoEndpoint()
-                                .userService(oAuth2UserService)
-                                .and()
-                                .defaultSuccessUrl("/", true)
-
-                                .and()
-
-                                .logout()
-                                .logoutUrl("/logout")
-                                .logoutSuccessUrl("/")
-                                .permitAll();
+                                .authenticated())
+                                .exceptionHandling(exceptions -> exceptions
+                                                .defaultAuthenticationEntryPointFor(
+                                                                (request, response, exception) -> {
+                                                                        response.setStatus(401);
+                                                                        response.setContentType("application/json;charset=UTF-8");
+                                                                        response.getWriter().write(
+                                                                                        "{\"success\":false,\"message\":\"Not authenticated\"}");
+                                                                },
+                                                                new AntPathRequestMatcher("/api/**")))
+                                .formLogin(form -> form
+                                                .loginPage("/login")
+                                                .loginProcessingUrl("/login")
+                                                .defaultSuccessUrl("/", true)
+                                                .permitAll())
+                                .oauth2Login(oauth -> oauth
+                                                .loginPage("/login")
+                                                .userInfoEndpoint(userInfo -> userInfo
+                                                                .userService(oAuth2UserService))
+                                                .defaultSuccessUrl("/", true))
+                                .logout(logout -> logout
+                                                .logoutUrl("/logout")
+                                                .logoutSuccessUrl("/")
+                                                .permitAll());
 
                 return http.build();
         }

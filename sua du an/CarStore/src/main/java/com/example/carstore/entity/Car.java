@@ -1,6 +1,7 @@
 package com.example.carstore.entity;
 
 import javax.persistence.*;
+import com.example.carstore.util.ImagePathUtils;
 
 @Entity
 @Table(name = "Car", schema = "dbo")
@@ -104,6 +105,10 @@ public class Car {
     public void setPrice(Double price) { this.price = price; }
     public String getImage() { return image; }
     public void setImage(String image) { this.image = image; }
+    @Transient
+    public String getImageUrl() {
+        return ImagePathUtils.resolve(image);
+    }
     public String getDescription() { return description; }
     public void setDescription(String description) { this.description = description; }
     public Integer getBrandId() { return brandId; }

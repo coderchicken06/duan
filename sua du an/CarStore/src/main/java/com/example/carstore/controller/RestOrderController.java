@@ -175,26 +175,16 @@ public class RestOrderController {
             return fail("Access denied");
         }
 
-        Optional<Orders> orderOpt = orderRepo.findById(id);
-        if (orderOpt.isEmpty()) return fail("Order not found");
-        Orders order = orderOpt.get();
-
         String status = payload == null ? null : payload.get("status");
         if (status == null || status.trim().isEmpty()) {
             return fail("Status is required");
         }
-
-        status = status.trim();
-        if (!OrderStatus.VALID_STATUSES.contains(status)) {
-            return fail("Invalid status");
+        try {
+            orderService.updateStatus(id, status.trim());
+            return Map.of("success", true, "message", "Order status updated successfully");
+        } catch (IllegalArgumentException exception) {
+            return fail(exception.getMessage());
         }
-        if (OrderStatus.PROCESSING.equals(status)
-                && !OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
-            return fail("Order must be deposit-paid before processing");
-        }
-        order.setStatus(status);
-        orderRepo.save(order);
-        return Map.of("success", true, "message", "Order status updated successfully");
     }
 
     @DeleteMapping("/{id}")

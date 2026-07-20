@@ -26,7 +26,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { adminApi } from '../../api'
 
@@ -40,12 +40,15 @@ async function load() {
 }
 
 async function updateStatus(o) {
-  await adminApi.updateOrderStatus(o.id, o.status)
+  const { data } = await adminApi.updateOrderStatus(o.id, o.status)
+  if (!data.success) alert(data.message || 'Không thể cập nhật trạng thái')
+  await load()
 }
 
 async function remove(id) {
   if (!confirm('Xóa đơn hàng?')) return
-  await adminApi.deleteOrder(id)
+  const { data } = await adminApi.deleteOrder(id)
+  if (!data.success) alert(data.message || 'Không thể xóa đơn hàng')
   await load()
 }
 </script>
