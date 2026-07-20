@@ -13,10 +13,17 @@ import java.util.UUID;
 public class FileStorageService {
 
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif", "webp");
+    private static final long MAX_IMAGE_SIZE = 5L * 1024 * 1024;
 
     public String saveImage(MultipartFile file) throws Exception {
         if (file == null || file.isEmpty()) {
             return null;
+        }
+        if (file.getSize() > MAX_IMAGE_SIZE) {
+            throw new IllegalArgumentException("Ảnh không được vượt quá 5 MB");
+        }
+        if (file.getContentType() == null || !file.getContentType().startsWith("image/")) {
+            throw new IllegalArgumentException("File tải lên phải là hình ảnh");
         }
 
         String original = file.getOriginalFilename();
@@ -53,8 +60,6 @@ public class FileStorageService {
                 "classes",
                 "static",
                 "images");
-        System.out.println("Ảnh lưu tại: " + targetPath.toAbsolutePath());
-        System.out.println("Runtime: " + runtimeDir.resolve(filename).toAbsolutePath());
         Files.createDirectories(runtimeDir);
         Files.copy(targetPath, runtimeDir.resolve(filename), StandardCopyOption.REPLACE_EXISTING);
 

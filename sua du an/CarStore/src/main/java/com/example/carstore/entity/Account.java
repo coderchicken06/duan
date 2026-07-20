@@ -1,5 +1,6 @@
 package com.example.carstore.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
@@ -9,6 +10,7 @@ import javax.persistence.Table;
 public class Account {
     @Id
     private String username;
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
     private String password;
     private String fullname;
     private String email;

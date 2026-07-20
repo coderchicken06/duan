@@ -21,6 +21,10 @@ public class CarService {
         return carRepo.findAll();
     }
 
+    public long count() {
+        return carRepo.count();
+    }
+
     public List<Car> search(String keyword) {
         return findAllFiltered(keyword);
     }
@@ -29,7 +33,8 @@ public class CarService {
         if (!StringUtils.hasText(keyword)) {
             return carRepo.findAll();
         }
-        return carRepo.findByNameContainingIgnoreCase(keyword.trim());
+        String query = keyword.trim();
+        return carRepo.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(query, query);
     }
 
 

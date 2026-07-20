@@ -1,6 +1,7 @@
 package com.example.carstore.controller;
 
 import com.example.carstore.entity.SupportRequest;
+import com.example.carstore.dto.SupportRequestCreateDto;
 import com.example.carstore.service.SupportRequestService;
 import com.example.carstore.util.ResponseUtils;
 import com.example.carstore.util.SecurityUtils;
@@ -47,7 +48,7 @@ public class RestServiceController {
 
     @PostMapping
     public Map<String, Object> createSupportRequest(
-            @RequestBody SupportRequest request,
+            @RequestBody SupportRequestCreateDto request,
             Authentication auth) {
 
         if (!SecurityUtils.isLoggedIn(auth)) {
@@ -73,22 +74,33 @@ public class RestServiceController {
             request.setType("chat");
         }
 
-        SupportRequest saved;
-        if ("service".equalsIgnoreCase(request.getType())) {
-            saved = supportRequestService.createServiceBooking(
-                    request.getName(), request.getPhone(), request.getCarInfo(), request.getServiceType(),
-                    request.getAppointmentDate() == null ? null : request.getAppointmentDate().toString(),
-                    request.getAppointmentTime() == null ? null : request.getAppointmentTime().toString(), auth);
-        } else {
-            saved = supportRequestService.createFromRequest(request, auth);
-        }
+        try {
+            SupportRequest saved;
+            if ("service".equalsIgnoreCase(request.getType())) {
+                saved = supportRequestService.createServiceBooking(
+                        request.getName(), request.getPhone(), request.getCarId(), request.getCarInfo(), request.getServiceType(),
+                        request.getAppointmentDate() == null ? null : request.getAppointmentDate().toString(),
+                        request.getAppointmentTime() == null ? null : request.getAppointmentTime().toString(), auth);
+            } else {
+                SupportRequest entity = new SupportRequest();
+                entity.setName(request.getName());
+                entity.setPhone(request.getPhone());
+                entity.setType(request.getType());
+                entity.setContent(request.getContent());
+                entity.setCarInfo(request.getCarInfo());
+                entity.setCarId(request.getCarId());
+                saved = supportRequestService.createFromRequest(entity, auth);
+            }
 
-        return Map.of(
-                "success", true,
-                "message", "service".equalsIgnoreCase(saved.getType())
-                        ? "Đặt lịch dịch vụ thành công" : "Gửi yêu cầu hỗ trợ thành công",
-                "id", saved.getId()
-        );
+            return Map.of(
+                    "success", true,
+                    "message", "service".equalsIgnoreCase(saved.getType())
+                            ? "Đặt lịch dịch vụ thành công" : "Gửi yêu cầu hỗ trợ thành công",
+                    "id", saved.getId()
+            );
+        } catch (IllegalArgumentException ex) {
+            return ResponseUtils.fail(ex.getMessage());
+        }
     }
 
     private boolean hasText(String value) {
@@ -163,16 +175,10 @@ public class RestServiceController {
             return ResponseUtils.fail("Access denied");
         }
 
-        long total = supportRequestService.findAll().size();
-
-        long pending = supportRequestService.findAll().stream()
-                .filter(r -> SupportRequestService.STATUS_PENDING.equalsIgnoreCase(r.getStatus())
-                        || SupportRequestService.STATUS_PROCESSING.equalsIgnoreCase(r.getStatus()))
-                .count();
-
-        long resolved = supportRequestService.findAll().stream()
-                .filter(r -> SupportRequestService.STATUS_DONE.equalsIgnoreCase(r.getStatus()))
-                .count();
+        long total = supportRequestService.count();
+        long pending = supportRequestService.countByStatus(SupportRequestService.STATUS_PENDING)
+                + supportRequestService.countByStatus(SupportRequestService.STATUS_PROCESSING);
+        long resolved = supportRequestService.countByStatus(SupportRequestService.STATUS_DONE);
 
         return Map.of(
                 "success", true,

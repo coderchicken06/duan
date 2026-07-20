@@ -1,17 +1,10 @@
 <template>
   <div class="car-list-shell">
-    <section class="ford-hero-panel compact">
+    <section class="ford-hero-panel compact car-list-hero">
       <div class="ford-hero-panel-content">
         <span class="ford-badge">Bộ sưu tập xe</span>
         <h1>Danh sách xe chất lượng cao</h1>
         <p>Khám phá các mẫu xe mới, so sánh thông số và chọn chiếc xe phù hợp nhất cho nhu cầu của bạn.</p>
-      </div>
-      <div class="ford-hero-side">
-        <div class="ford-hero-stat">
-          <strong>{{ filteredCars.length }}</strong>
-          <span>mẫu xe phù hợp</span>
-        </div>
-        <div v-if="q" class="ford-hero-pill">Tìm kiếm: “{{ q }}”</div>
       </div>
     </section>
 
@@ -26,6 +19,8 @@
         </div>
       </div>
 
+      <div v-if="loadError" class="alert alert-danger" role="alert">{{ loadError }}</div>
+
       <div class="ford-filter-card">
         <div class="ford-filter-card-header">Bộ lọc sản phẩm</div>
         <div class="ford-filter-grid">
@@ -33,10 +28,9 @@
             <span>Thương hiệu</span>
             <select v-model="filters.brandId">
               <option value="">Tất cả</option>
-              <option value="1">Toyota</option>
-              <option value="2">BMW</option>
-              <option value="3">Mercedes</option>
-              <option value="4">Honda</option>
+              <option v-for="brand in brands" :key="brand.id" :value="String(brand.id)">
+                {{ brand.name }}
+              </option>
             </select>
           </label>
 
@@ -78,21 +72,21 @@
       <p v-if="!loading && filteredCars.length === 0" class="ford-empty-state">Không có xe nào phù hợp với bộ lọc.</p>
       <div v-if="message" class="alert alert-success mt-3">{{ message }}</div>
     </div>
-    <CompareBar :cars="allCars" />
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { carApi, cartApi } from '../api'
+import { brandApi, carApi, cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
-import CompareBar from '../components/CompareBar.vue'
 
 const route = useRoute()
 const allCars = ref([])
+const brands = ref([])
 const loading = ref(true)
 const message = ref('')
+const loadError = ref('')
 const q = ref(route.query.q || '')
 const filters = ref({
   brandId: '',
@@ -109,7 +103,7 @@ const availableYears = computed(() => {
 })
 
 const filteredCars = computed(() => {
-  const query = (q.value || '').trim().toLowerCase()
+  const query = String(q.value || '').trim().toLowerCase()
   return allCars.value.filter((car) => {
     const name = (car.name || '').toLowerCase()
     const description = (car.description || '').toLowerCase()
@@ -133,7 +127,7 @@ const filteredCars = computed(() => {
 })
 
 watch(() => route.query.q, (val) => {
-  q.value = val || ''
+  q.value = String(val || '')
   loadCars()
 })
 
@@ -141,9 +135,20 @@ onMounted(loadCars)
 
 async function loadCars() {
   loading.value = true
+  loadError.value = ''
   try {
-    const { data } = await carApi.getAll(q.value || undefined)
-    allCars.value = Array.isArray(data) ? data : data.data || []
+    const [carsResponse, brandsResponse] = await Promise.all([
+      carApi.getAll(String(q.value || '') || undefined),
+      brandApi.getAll(),
+    ])
+    const carData = carsResponse.data
+    const brandData = brandsResponse.data
+    allCars.value = Array.isArray(carData) ? carData : carData.data || []
+    brands.value = Array.isArray(brandData) ? brandData : brandData.data || []
+  } catch {
+    allCars.value = []
+    brands.value = []
+    loadError.value = 'Không thể kết nối máy chủ. Vui lòng kiểm tra backend và thử lại.'
   } finally {
     loading.value = false
   }
@@ -159,7 +164,26 @@ function resetFilters() {
 }
 
 async function addToCart(id) {
-  const { data } = await cartApi.add(id)
-  message.value = data.success ? 'Đã thêm vào giỏ hàng' : (data.message || 'Lỗi')
+  const car = allCars.value.find((item) => item.id === id)
+  if (!car || Number(car.stock || 0) <= 0) {
+    message.value = 'Xe đã hết hàng, không thể thêm vào giỏ'
+    return
+  }
+  try {
+    const { data } = await cartApi.add(id)
+    message.value = data.success ? 'Đã thêm vào giỏ hàng' : (data.message || 'Lỗi')
+  } catch {
+    message.value = 'Không thể kết nối máy chủ để thêm xe vào giỏ'
+  }
 }
 </script>
+
+<style scoped>
+.car-list-hero {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.car-list-hero .ford-hero-panel-content {
+  max-width: 760px;
+}
+</style>

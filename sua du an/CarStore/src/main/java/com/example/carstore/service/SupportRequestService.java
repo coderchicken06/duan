@@ -2,12 +2,14 @@ package com.example.carstore.service;
 
 import com.example.carstore.entity.SupportRequest;
 import com.example.carstore.repository.SupportRequestRepository;
+import com.example.carstore.repository.CarRepository;
 import com.example.carstore.util.SecurityUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Set;
@@ -26,11 +28,16 @@ public class SupportRequestService {
             STATUS_DONE,
             STATUS_CANCELLED
     );
+    private static final Set<String> VALID_TYPES = Set.of(
+            "chat", "consulting", "warranty", "service"
+    );
 
     private final SupportRequestRepository supportRepo;
+    private final CarRepository carRepo;
 
-    public SupportRequestService(SupportRequestRepository supportRepo) {
+    public SupportRequestService(SupportRequestRepository supportRepo, CarRepository carRepo) {
         this.supportRepo = supportRepo;
+        this.carRepo = carRepo;
     }
 
     public boolean isValidStatus(String status) {
@@ -51,7 +58,8 @@ public class SupportRequestService {
         }
 
         String supportType = defaultType(type);
-        SupportRequest request = new SupportRequest(name.trim(), phone.trim(), supportType, content.trim());
+        SupportRequest request = new SupportRequest(
+                name.trim(), normalizePhone(phone), supportType, content.trim());
         request.setUsername(username);
         request.setStatus(STATUS_PENDING);
 
@@ -61,6 +69,7 @@ public class SupportRequestService {
     public SupportRequest createServiceBooking(
             String name,
             String phone,
+            Integer carId,
             String carInfo,
             String serviceType,
             String date,
@@ -71,18 +80,34 @@ public class SupportRequestService {
         if (!StringUtils.hasText(carInfo)) {
             throw new IllegalArgumentException("Thông tin xe không được để trống.");
         }
+        if (carInfo.trim().length() > 255) {
+            throw new IllegalArgumentException("Thông tin xe không được vượt quá 255 ký tự.");
+        }
+        if (carId != null && !carRepo.existsById(carId)) {
+            throw new IllegalArgumentException("Không tìm thấy xe cần đặt lịch.");
+        }
         if (!StringUtils.hasText(serviceType)) {
             throw new IllegalArgumentException("Loại dịch vụ không được để trống.");
         }
+        if (serviceType.trim().length() > 255) {
+            throw new IllegalArgumentException("Loại dịch vụ không được vượt quá 255 ký tự.");
+        }
 
+        LocalDateTime now = LocalDateTime.now();
         LocalDate appointmentDate = parseDate(date);
         if (appointmentDate == null) {
             throw new IllegalArgumentException("Ngày hẹn không được để trống.");
+        }
+        if (appointmentDate.isBefore(now.toLocalDate())) {
+            throw new IllegalArgumentException("Ngày hẹn không được ở trong quá khứ.");
         }
 
         LocalTime appointmentTime = parseTime(time);
         if (appointmentTime == null) {
             throw new IllegalArgumentException("Giờ hẹn không được để trống.");
+        }
+        if (!LocalDateTime.of(appointmentDate, appointmentTime).isAfter(now)) {
+            throw new IllegalArgumentException("Giờ hẹn phải sau thời điểm hiện tại.");
         }
 
         String username = SecurityUtils.username(auth);
@@ -92,7 +117,7 @@ public class SupportRequestService {
 
         SupportRequest request = new SupportRequest(
                 name.trim(),
-                phone.trim(),
+                normalizePhone(phone),
                 "service",
                 "Yêu cầu đặt lịch dịch vụ",
                 carInfo.trim(),
@@ -102,6 +127,7 @@ public class SupportRequestService {
         );
 
         request.setUsername(username);
+        request.setCarId(carId);
         request.setStatus(STATUS_PENDING);
 
         return supportRepo.save(request);
@@ -119,13 +145,30 @@ public class SupportRequestService {
         }
 
         request.setType(defaultType(request.getType()));
+        request.setName(request.getName().trim());
+        request.setPhone(normalizePhone(request.getPhone()));
+        request.setContent(request.getContent().trim());
+        if (StringUtils.hasText(request.getCarInfo())) {
+            if (request.getCarInfo().trim().length() > 255) {
+                throw new IllegalArgumentException("Thông tin xe không được vượt quá 255 ký tự.");
+            }
+            request.setCarInfo(request.getCarInfo().trim());
+        }
         request.setUsername(username);
         request.setStatus(STATUS_PENDING);
         return supportRepo.save(request);
     }
 
     private String defaultType(String type) {
-        return StringUtils.hasText(type) ? type.trim() : "chat";
+        String normalized = StringUtils.hasText(type) ? type.trim().toLowerCase() : "chat";
+        if (!VALID_TYPES.contains(normalized)) {
+            throw new IllegalArgumentException("Loại yêu cầu không hợp lệ.");
+        }
+        return normalized;
+    }
+
+    private String normalizePhone(String phone) {
+        return phone.trim().replaceAll("\\s+", "");
     }
 
     private void validateCommonSupportInput(String name, String phone, String content) {
@@ -135,13 +178,31 @@ public class SupportRequestService {
         if (!StringUtils.hasText(phone)) {
             throw new IllegalArgumentException("Số điện thoại không được để trống.");
         }
+        String normalizedPhone = normalizePhone(phone);
+        if (!normalizedPhone.matches("^\\+84[0-9]{9}$")) {
+            throw new IllegalArgumentException("Số điện thoại phải có định dạng +84xxxxxxxxx.");
+        }
         if (!StringUtils.hasText(content)) {
             throw new IllegalArgumentException("Nội dung không được để trống.");
+        }
+        if (name.trim().length() > 255) {
+            throw new IllegalArgumentException("Họ tên không được vượt quá 255 ký tự.");
+        }
+        if (content.trim().length() > 1000) {
+            throw new IllegalArgumentException("Nội dung không được vượt quá 1000 ký tự.");
         }
     }
 
     public List<SupportRequest> findAll() {
         return supportRepo.findAll();
+    }
+
+    public long count() {
+        return supportRepo.count();
+    }
+
+    public long countByStatus(String status) {
+        return supportRepo.countByStatusIgnoreCase(status);
     }
 
     public java.util.Optional<SupportRequest> findById(Integer id) {

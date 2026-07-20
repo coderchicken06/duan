@@ -8,7 +8,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -129,53 +128,6 @@ public class RestProfileController {
         }
         accountRepo.delete(accountOpt.get());
         return ResponseUtils.ok("Account deleted successfully");
-    }
-
-    @GetMapping("/{username}")
-    public Map<String, Object> getProfileByUsername(@PathVariable String username) {
-        return profileResponse(username);
-    }
-
-    @PostMapping("/verify-password")
-    public Map<String, Object> verifyPassword(@RequestBody Map<String, String> payload, Authentication auth) {
-        if (auth == null) {
-            return ResponseUtils.fail("Not authenticated");
-        }
-
-        String password = payload == null ? null : payload.get("password");
-        if (!hasText(password)) {
-            return ResponseUtils.fail("Password is required");
-        }
-
-        java.util.Optional<Account> accountOpt = getCurrentAccount(auth);
-        if (accountOpt.isEmpty())
-            return ResponseUtils.fail("Account not found");
-        Account account = accountOpt.get();
-        return Map.of("success", true, "matches", passwordEncoder.matches(password, account.getPassword()));
-    }
-
-    private Map<String, Object> profileResponse(String username) {
-
-        Optional<Account> accountOpt = accountRepo.findByUsername(username);
-
-        if (accountOpt.isEmpty()) {
-            accountOpt = accountRepo.findByEmail(username);
-        }
-
-        if (accountOpt.isEmpty()) {
-            return ResponseUtils.fail("Account not found");
-        }
-
-        Account account = accountOpt.get();
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", true);
-        result.put("username", account.getUsername());
-        result.put("fullname", account.getFullname());
-        result.put("email", account.getEmail());
-        result.put("role", account.getRole());
-
-        return result;
     }
 
     private String validatePassword(String oldPassword, String newPassword, String confirmPassword) {

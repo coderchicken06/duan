@@ -25,7 +25,7 @@
         <thead><tr><th>Xe</th><th>Giá</th><th>SL</th><th>Thành tiền</th></tr></thead>
         <tbody>
           <tr v-for="d in details" :key="d.id">
-            <td>{{ d.carName || d.carId }}</td>
+            <td>{{ d.car?.name || 'Xe không còn tồn tại' }}</td>
             <td>{{ formatPrice(d.price) }}</td>
             <td>{{ d.quantity }}</td>
             <td>{{ formatPrice(d.price * d.quantity) }}</td>
@@ -37,7 +37,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { orderApi, formatPrice } from '../api'
@@ -50,7 +50,7 @@ const message = ref('')
 const ok = ref(false)
 
 onMounted(async () => {
-  const { data } = await orderApi.getDetails(route.params.id)
+  const { data } = await orderApi.getDetails(String(route.params.id))
   if (data.success) {
     order.value = data.order
     details.value = data.details || []

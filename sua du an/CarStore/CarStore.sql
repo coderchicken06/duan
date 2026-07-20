@@ -100,6 +100,10 @@ CREATE TABLE dbo.CarImage (
 GO
 CREATE INDEX IX_CarImage_CarId ON dbo.CarImage(car_id, is_primary DESC, sort_order ASC);
 GO
+CREATE UNIQUE INDEX UX_CarImage_OnePrimaryPerCar
+ON dbo.CarImage(car_id)
+WHERE is_primary = 1;
+GO
 
 -- =============================================================
 -- 3. TÀI KHOẢN
@@ -162,11 +166,13 @@ CREATE TABLE dbo.support_request (
     type NVARCHAR(255) NULL,
     content NVARCHAR(1000) NULL,
     status NVARCHAR(255) NULL CONSTRAINT DF_Support_Status DEFAULT N'Chờ xử lý',
+    car_id INT NULL,
     car_info NVARCHAR(255) NULL,
     service_type NVARCHAR(255) NULL,
     appointment_date DATE NULL,
     appointment_time TIME NULL,
-    CONSTRAINT PK_SupportRequest PRIMARY KEY (id)
+    CONSTRAINT PK_SupportRequest PRIMARY KEY (id),
+    CONSTRAINT FK_SupportRequest_Car FOREIGN KEY (car_id) REFERENCES dbo.Car(id)
 );
 GO
 
@@ -397,14 +403,14 @@ GO
 -- 16. DỮ LIỆU MẪU HỖ TRỢ / DỊCH VỤ
 -- =============================================================
 INSERT INTO dbo.support_request
-(name, phone, username, type, content, status, car_info, service_type, appointment_date, appointment_time)
+(name, phone, username, type, content, status, car_id, car_info, service_type, appointment_date, appointment_time)
 VALUES
 (N'Nguyễn Văn A', N'0909123456', N'user1', N'service',
- N'Yêu cầu đặt lịch dịch vụ', N'Chờ xử lý',
+ N'Yêu cầu đặt lịch dịch vụ', N'Chờ xử lý', 1,
  N'51G-123.45 / Ford Ranger', N'Bảo dưỡng định kỳ', '2026-06-25', '09:00'),
 
 (N'Trần Thị B', N'0912345678', N'user2', N'chat',
- N'Tư vấn thủ tục mua xe trả góp', N'Chờ xử lý',
+ N'Tư vấn thủ tục mua xe trả góp', N'Chờ xử lý', NULL,
  NULL, NULL, NULL, NULL);
 GO
 

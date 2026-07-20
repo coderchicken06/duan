@@ -35,6 +35,7 @@ public class RestCartController {
 
     @GetMapping
     public Map<String, Object> getCart(HttpSession session) {
+        refreshCartItems(session);
         Collection<CartItem> items = cartService.getCart(session).values();
         return Map.of(
                 "success", true,
@@ -63,7 +64,9 @@ public class RestCartController {
             return ResponseUtils.fail("Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock());
         }
 
-        cartService.add(new CartItem(car.getId(), car.getName(), car.getPrice(), safeQuantity), session);
+        cartService.add(new CartItem(
+                car.getId(), car.getName(), car.getPrice(), safeQuantity,
+                car.getImageUrl(), car.getYear(), car.getBodyType(), car.getColor(), car.getStock()), session);
         return Map.of(
                 "success", true,
                 "message", "Added to cart",
@@ -183,5 +186,18 @@ public class RestCartController {
                 "quantity", item.getQuantity(),
                 "items", cartService.getCart(session).values(),
                 "total", cartService.getTotal(session));
+    }
+
+    private void refreshCartItems(HttpSession session) {
+        cartService.getCart(session).values().forEach(item ->
+                carService.findById(item.getId()).ifPresent(car -> {
+                    item.setName(car.getName());
+                    item.setPrice(car.getPrice());
+                    item.setImage(car.getImageUrl());
+                    item.setYear(car.getYear());
+                    item.setBodyType(car.getBodyType());
+                    item.setColor(car.getColor());
+                    item.setStock(car.getStock());
+                }));
     }
 }

@@ -6,7 +6,7 @@
         <div class="row g-3">
           <div class="col-md-6"><label class="form-label">Tên xe</label><input v-model="form.name" class="form-control" required /></div>
           <div class="col-md-6"><label class="form-label">Giá (VNĐ)</label><input v-model.number="form.price" type="number" class="form-control" required /></div>
-          <div class="col-md-4"><label class="form-label">Brand ID</label><input v-model.number="form.brandId" type="number" class="form-control" /></div>
+          <div class="col-md-4"><label class="form-label">Brand ID</label><input v-model.number="form.brandId" type="number" class="form-control" required /></div>
           <div class="col-md-4"><label class="form-label">Năm</label><input v-model.number="form.year" type="number" class="form-control" /></div>
           <div class="col-md-4"><label class="form-label">Màu</label><input v-model="form.color" class="form-control" /></div>
           <div class="col-md-4"><label class="form-label">Tồn kho</label><input v-model.number="form.stock" type="number" class="form-control" min="0" /></div>
@@ -47,7 +47,10 @@
                   <img :src="carImageUrl(item.imageUrl)" class="w-100 rounded mb-2" style="height:120px;object-fit:cover" />
                   <div class="d-flex align-items-center gap-2 mb-2">
                     <input v-model.number="item.sortOrder" type="number" min="0" class="form-control form-control-sm" title="Thứ tự" />
-                    <label class="small text-nowrap"><input v-model="item.primaryImage" type="checkbox" /> Ảnh chính</label>
+                    <label class="small text-nowrap">
+                      <input type="radio" name="primary-gallery-image"
+                        :checked="item.primaryImage" @change="selectPrimary(index)" /> Ảnh chính
+                    </label>
                   </div>
                   <button type="button" class="btn btn-sm btn-outline-danger w-100" @click="removeGalleryImage(item, index)">Xóa ảnh</button>
                 </div>
@@ -67,7 +70,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { carApi, adminApi, uploadApi, carImageUrl } from '../api'
@@ -77,14 +80,23 @@ const router = useRouter()
 const isEdit = computed(() => !!route.params.id)
 const error = ref('')
 const galleryImages = ref([])
-const form = ref({ name: '', price: 0, brandId: 1, year: 2024, color: '', stock: 0, image: '', description: '', firstRegistration: '', mileage: 0, engineType: '', engineCapacity: '', interiorColor: '', bodyType: '', seats: 5, drivetrain: '', transmission: '', horsepower: null, torque: '', fuelType: '', fuelConsumption: '', warranty: '', dealerName: '', dealerAddress: '', inspectionLevel: '', inspectionNote: '', safetyFeatures: '', comfortFeatures: '' })
+const form = ref({ name: '', price: null, brandId: null, year: null, color: '', stock: 0, image: '', description: '', firstRegistration: '', mileage: null, engineType: '', engineCapacity: '', interiorColor: '', bodyType: '', seats: null, drivetrain: '', transmission: '', horsepower: null, torque: '', fuelType: '', fuelConsumption: '', warranty: '', dealerName: '', dealerAddress: '', inspectionLevel: '', inspectionNote: '', safetyFeatures: '', comfortFeatures: '' })
+const carFields = [
+  'name', 'price', 'brandId', 'year', 'color', 'stock', 'image', 'description',
+  'firstRegistration', 'mileage', 'engineType', 'engineCapacity', 'interiorColor',
+  'bodyType', 'seats', 'drivetrain', 'transmission', 'horsepower', 'torque',
+  'fuelType', 'fuelConsumption', 'warranty', 'dealerName', 'dealerAddress',
+  'inspectionLevel', 'inspectionNote', 'safetyFeatures', 'comfortFeatures',
+]
 
 onMounted(async () => {
   if (isEdit.value) {
-    const { data } = await carApi.getById(route.params.id)
+    const { data } = await carApi.getById(String(route.params.id))
     form.value = { ...(data.data || data) }
-    const images = await carApi.getImages(route.params.id)
+    const images = await carApi.getImages(String(route.params.id))
     galleryImages.value = Array.isArray(images.data) ? images.data : (images.data.data || [])
+    const primaryIndex = galleryImages.value.findIndex((item) => item.primaryImage)
+    if (galleryImages.value.length) selectPrimary(primaryIndex >= 0 ? primaryIndex : 0)
   }
 })
 
@@ -96,7 +108,7 @@ async function onFileChange(e) {
 }
 
 async function onGalleryFiles(e) {
-  const files = Array.from(e.target.files || [])
+  const files = Array.from(e.target.files || []) as File[]
   for (const file of files) {
     const { data } = await uploadApi.upload(file)
     galleryImages.value.push({ imageUrl: data, sortOrder: galleryImages.value.length, primaryImage: galleryImages.value.length === 0 })
@@ -105,8 +117,21 @@ async function onGalleryFiles(e) {
 }
 
 async function removeGalleryImage(item, index) {
-  if (item.id && isEdit.value) await carApi.deleteImage(route.params.id, item.id)
+  if (item.id && isEdit.value) {
+    await carApi.deleteImage(String(route.params.id), item.id)
+    const images = await carApi.getImages(String(route.params.id))
+    galleryImages.value = Array.isArray(images.data) ? images.data : (images.data.data || [])
+    return
+  }
+  const wasPrimary = item.primaryImage
   galleryImages.value.splice(index, 1)
+  if (wasPrimary && galleryImages.value.length) selectPrimary(0)
+}
+
+function selectPrimary(index) {
+  galleryImages.value.forEach((item, itemIndex) => {
+    item.primaryImage = itemIndex === index
+  })
 }
 
 async function saveGallery(carId) {
@@ -121,9 +146,9 @@ async function saveGallery(carId) {
 async function submit() {
   error.value = ''
   try {
-    const payload = { ...form.value }
+    const payload = Object.fromEntries(carFields.map((field) => [field, form.value[field]]))
     const res = isEdit.value
-      ? await adminApi.updateCar(route.params.id, payload)
+      ? await adminApi.updateCar(String(route.params.id), payload)
       : await adminApi.createCar(payload)
     if (res.data.success === false) {
       error.value = res.data.message

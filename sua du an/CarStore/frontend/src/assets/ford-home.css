@@ -637,6 +637,14 @@ body.page-home .ford-btn-primary:hover {
   margin-top: 24px;
 }
 
+.ford-hero-panel.content-only {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.ford-hero-panel.content-only .ford-hero-panel-content {
+  max-width: 760px;
+}
+
 .ford-hero-panel-content h1 {
   color: #fff;
   font-size: clamp(2rem, 3.5vw, 3rem);
@@ -653,6 +661,10 @@ body.page-home .ford-btn-primary:hover {
 .ford-hero-side {
   display: grid;
   gap: 12px;
+}
+
+.ford-hero-panel.compact .ford-hero-side {
+  align-content: center;
 }
 
 .ford-hero-stat,

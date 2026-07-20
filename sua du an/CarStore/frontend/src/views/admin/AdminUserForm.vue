@@ -21,7 +21,7 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { adminApi } from '../../api'
@@ -44,7 +44,7 @@ onMounted(async () => {
 async function submit() {
   error.value = ''
   const res = isEdit.value
-    ? await adminApi.updateUser(route.params.username, form.value)
+    ? await adminApi.updateUser(String(route.params.username), form.value)
     : await adminApi.createUser(form.value)
   if (res.data.success === false) {
     error.value = res.data.message
