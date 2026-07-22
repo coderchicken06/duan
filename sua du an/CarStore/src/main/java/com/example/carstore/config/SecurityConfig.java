@@ -127,7 +127,7 @@ public class SecurityConfig {
                                                 .loginPage("/login")
                                                 .userInfoEndpoint(userInfo -> userInfo
                                                                 .userService(oAuth2UserService))
-                                                .defaultSuccessUrl("/", true))
+                                                .defaultSuccessUrl("http://localhost:5173", true))
                                 .logout(logout -> logout
                                                 .logoutUrl("/logout")
                                                 .logoutSuccessUrl("/")
