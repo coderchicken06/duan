@@ -9,6 +9,7 @@ import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.repository.CarRepository;
 import com.example.carstore.util.OrderStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
@@ -21,21 +22,44 @@ public class OrderService {
 
     private final OrderRepository orderRepo;
     private final OrderDetailRepository detailRepo;
-    private final CarService carService;
     private final CarRepository carRepo;
+    private final ContractService contractService;
+    private final PaymentTransactionService paymentTransactionService;
+    private final PromotionService promotionService;
+
+    @Autowired
+    public OrderService(OrderRepository orderRepo,
+            OrderDetailRepository detailRepo,
+            CarService carService,
+            CarRepository carRepo,
+            ContractService contractService,
+            PaymentTransactionService paymentTransactionService,
+            PromotionService promotionService) {
+        this.orderRepo = orderRepo;
+        this.detailRepo = detailRepo;
+        this.carRepo = carRepo;
+        this.contractService = contractService;
+        this.paymentTransactionService = paymentTransactionService;
+        this.promotionService = promotionService;
+    }
+
+    public OrderService(OrderRepository orderRepo,
+            OrderDetailRepository detailRepo,
+            CarService carService,
+            CarRepository carRepo,
+            ContractService contractService) {
+        this(orderRepo, detailRepo, carService, carRepo, contractService, null, null);
+    }
 
     public OrderService(OrderRepository orderRepo,
             OrderDetailRepository detailRepo,
             CarService carService,
             CarRepository carRepo) {
-        this.orderRepo = orderRepo;
-        this.detailRepo = detailRepo;
-        this.carService = carService;
-        this.carRepo = carRepo;
+        this(orderRepo, detailRepo, carService, carRepo, null, null, null);
     }
 
     @Transactional
-    public Orders checkout(String username, String address, Map<Integer, CartItem> cart) {
+    public Orders checkout(String username, String address, String registrationAddress, String paymentMethod, Map<Integer, CartItem> cart) {
         if (!StringUtils.hasText(username)) {
             throw new IllegalArgumentException("User is required");
         }
@@ -48,8 +72,14 @@ public class OrderService {
 
         Orders order = new Orders();
         order.setUsername(username);
-        order.setCreate_date(new Date());
+        // 1. Sửa lỗi setter createDate
+        order.setCreateDate(new Date());
         order.setAddress(address.trim());
+
+        // 2. Bổ sung địa chỉ đăng ký & phương thức thanh toán
+        order.setRegistrationAddress(StringUtils.hasText(registrationAddress) ? registrationAddress.trim() : address.trim());
+        order.setPaymentMethod(StringUtils.hasText(paymentMethod) ? paymentMethod.trim() : "Chuyển khoản QR");
+
         order.setStatus(OrderStatus.PENDING);
         order.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
         Orders savedOrder = orderRepo.save(order);
@@ -75,12 +105,24 @@ public class OrderService {
             OrderDetail detail = new OrderDetail();
             detail.setOrderId(savedOrder.getId());
             detail.setCar(car);
-            detail.setPrice(car.getPrice());
+
+            // Không tin giá do client gửi lên; giá đơn hàng phải lấy từ database.
+            detail.setPrice(promotionService == null ? car.getPrice()
+                    : promotionService.priceAfterPromotion(car.getId(), car.getPrice()));
             detail.setQuantity(item.getQuantity());
             detailRepo.save(detail);
         }
 
+        if (contractService != null) {
+            contractService.createForOrder(savedOrder, calculateTotal(savedOrder.getId()));
+        }
         return savedOrder;
+    }
+
+    // Overload hàm checkout cũ để tránh vỡ code ở các Controller hiện tại chưa truyền đủ tham số
+    @Transactional
+    public Orders checkout(String username, String address, Map<Integer, CartItem> cart) {
+        return checkout(username, address, address, "Chuyển khoản QR", cart);
     }
 
     @Transactional
@@ -175,7 +217,14 @@ public class OrderService {
         order.setDepositStatus(OrderStatus.DEPOSIT_PAID);
         order.setDepositPaidAt(new Date());
         order.setStatus(OrderStatus.PROCESSING);
-        return orderRepo.save(order);
+        Orders paidOrder = orderRepo.save(order);
+        if (contractService != null) {
+            contractService.syncDeposit(paidOrder, method.trim());
+        }
+        if (paymentTransactionService != null) {
+            paymentTransactionService.recordSuccessfulDeposit(paidOrder, method.trim());
+        }
+        return paidOrder;
     }
 
     public double calculateTotal(Integer orderId) {

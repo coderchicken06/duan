@@ -66,37 +66,30 @@
             <p v-else class="empty-top">Chưa có dữ liệu bán hàng.</p>
           </article>
         </div>
+        <article class="dashboard-card quotation-card">
+          <div class="card-heading"><div><span class="card-kicker">BÁO GIÁ</span><h2>Yêu cầu báo giá</h2></div><span class="top-total">{{ quotations.length }} yêu cầu</span></div>
+          <div class="table-responsive mt-4"><table class="table"><thead><tr><th>Mã</th><th>Khách hàng</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr></thead><tbody><tr v-for="quote in quotations" :key="quote.id"><td>{{ quote.quotationNo || `BG-${quote.id}` }}</td><td>{{ quote.customerUsername }}</td><td>{{ formatPrice(quote.totalPrice) }}</td><td>{{ quote.status }}</td><td class="quote-actions"><button v-if="quote.status==='Chờ xác nhận'" class="btn btn-sm btn-success" @click="setQuotationStatus(quote, 'Đã duyệt')">Duyệt</button><button v-if="quote.status==='Chờ xác nhận'" class="btn btn-sm btn-outline-danger" @click="setQuotationStatus(quote, 'Từ chối')">Từ chối</button><router-link class="btn btn-sm btn-outline-secondary" :to="`/quotations/${quote.id}`">Xem</router-link></td></tr></tbody></table></div>
+        </article>
       </template>
     </div>
   </section>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, ref } from 'vue'
-import { adminApi, formatPrice } from '../../api'
+import { adminApi, quotationApi, formatPrice } from '../../api'
 
-interface DashboardStats {
-  totalCars: number
-  totalUsers: number
-  totalOrders: number
-  totalBrands: number
-}
-
-interface TopCar {
-  name: string
-  qty: number
-}
-
-const stats = ref<DashboardStats>({
+const stats = ref({
   totalCars: 0,
   totalUsers: 0,
   totalOrders: 0,
   totalBrands: 0,
 })
 const revenue = ref(0)
-const topCars = ref<TopCar[]>([])
+const topCars = ref([])
 const loading = ref(true)
 const errorMessage = ref('')
+const quotations = ref([])
 
 const statCards = computed(() => [
   { label: 'Mẫu xe', value: stats.value.totalCars, description: 'Sản phẩm đang quản lý', symbol: '01', tone: 'blue' },
@@ -108,13 +101,13 @@ const statCards = computed(() => [
 const totalTopSales = computed(() => topCars.value.reduce((sum, car) => sum + car.qty, 0))
 const highestSales = computed(() => Math.max(...topCars.value.map((car) => car.qty), 1))
 
-function salePercentage(quantity: number) {
+function salePercentage(quantity) {
   return Math.max(8, Math.round((quantity / highestSales.value) * 100))
 }
 
 onMounted(async () => {
   try {
-    const { data } = await adminApi.getDashboardInfo()
+    const [{ data }, quotationResponse] = await Promise.all([adminApi.getDashboardInfo(), quotationApi.getAll()])
     if (!data?.success) throw new Error(data?.message || 'Không thể tải số liệu tổng quan')
 
     stats.value = {
@@ -125,10 +118,11 @@ onMounted(async () => {
     }
     revenue.value = Number(data.stats?.revenue || 0)
     const raw = Array.isArray(data.topCars) ? data.topCars : []
-    topCars.value = raw.map((row: unknown[]) => ({
+    topCars.value = raw.map((row) => ({
       name: String(row[0] || 'Chưa cập nhật'),
       qty: Number(row[1] || 0),
     }))
+    quotations.value = quotationResponse.data.data || []
   } catch (error) {
     console.error('Không thể tải dashboard:', error)
     errorMessage.value = 'Không thể tải dữ liệu thống kê. Vui lòng thử lại.'
@@ -136,6 +130,15 @@ onMounted(async () => {
     loading.value = false
   }
 })
+
+async function setQuotationStatus(quote, status) {
+  try {
+    const { data } = await quotationApi.update(quote.id, { discount: quote.discount || 0, status })
+    Object.assign(quote, data.data)
+  } catch (error) {
+    errorMessage.value = error.response?.data?.message || 'Không thể cập nhật báo giá.'
+  }
+}
 </script>
 
 <style scoped>
@@ -152,7 +155,7 @@ onMounted(async () => {
 .stat-icon{align-items:center;border-radius:12px;display:flex;font-size:.72rem;font-weight:900;height:48px;justify-content:center;letter-spacing:.06em;min-width:48px}
 .stat-icon--blue{background:#eff6ff;color:#2563eb}.stat-icon--green{background:#ecfdf5;color:#059669}.stat-icon--orange{background:#fff7ed;color:#ea580c}.stat-icon--red{background:#fef2f2;color:#dc2626}
 .stat-card>div{display:flex;flex-direction:column;min-width:0}.stat-label{color:#6b7280;font-size:.84rem;font-weight:700}.stat-card strong{color:#111827;font-size:1.75rem;line-height:1.15;margin:3px 0}.stat-card small{color:#9ca3af;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.dashboard-grid{display:grid;gap:20px;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);margin-top:20px}
+.dashboard-grid{display:grid;gap:20px;grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);margin-top:20px}.quotation-card{margin-top:20px}.quote-actions{display:flex;gap:6px;white-space:nowrap}
 .dashboard-card{background:#fff;border:1px solid #e7eaf0;border-radius:16px;box-shadow:0 10px 28px rgba(15,23,42,.06);padding:28px}
 .card-heading{align-items:flex-start;display:flex;justify-content:space-between}.card-heading h2{color:#111827;font-size:1.15rem;font-weight:800;margin:5px 0 0}
 .revenue-card{background:linear-gradient(135deg,#172234,#273449);border:0;color:#fff}.revenue-card .card-kicker{color:#f87171}.revenue-card h2{color:#fff}.revenue-mark{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.14);border-radius:9px;color:#cbd5e1;font-size:.72rem;font-weight:800;padding:7px 9px}

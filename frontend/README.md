@@ -1,13 +1,13 @@
 # CarStore Frontend
 
-Giao diện chính của CarStore sử dụng Vue 3, Vite và TypeScript.
+Giao diện chính của CarStore sử dụng Vue 3, Vite và JavaScript.
 
 ## Luồng chạy
 
-1. `main.ts` khởi tạo Vue, Pinia và Vue Router.
-2. `router/index.ts` ánh xạ URL tới từng `View`.
-3. View gọi hàm trong `api/index.ts`.
-4. Axios instance tại `api/client.ts` gửi request kèm session cookie.
+1. `main.js` khởi tạo Vue, Pinia và Vue Router.
+2. `router/index.js` ánh xạ URL tới từng `View`.
+3. View gọi hàm trong `api/index.js`.
+4. Axios instance tại `api/client.js` gửi request kèm session cookie.
 5. Spring Boot xử lý và trả JSON.
 6. View cập nhật trạng thái phản hồi lên giao diện.
 

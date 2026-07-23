@@ -2,7 +2,7 @@
 
 ## 1. Kiến trúc
 
-CarStore dùng một giao diện Vue 3 + TypeScript. Vue gọi REST API Spring Boot
+CarStore dùng một giao diện Vue 3 + JavaScript. Vue gọi REST API Spring Boot
 và nhận JSON. Backend Spring Boot được viết bằng Java, xử lý nghiệp vụ qua
 Service, Repository, Entity rồi đọc/ghi SQL Server.
 

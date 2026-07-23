@@ -14,7 +14,6 @@ import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.OrderService;
 import com.example.carstore.service.CarImageService;
-import com.example.carstore.util.OrderStatus;
 import com.example.carstore.util.ImagePathUtils;
 
 import java.util.List;

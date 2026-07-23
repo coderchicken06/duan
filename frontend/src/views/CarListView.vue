@@ -75,7 +75,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { brandApi, carApi, cartApi } from '../api'

@@ -56,6 +56,8 @@
             <router-link to="/admin/orders">📦 Quản lý đơn hàng</router-link>
             <router-link to="/admin/support">📋 Quản lý yêu cầu</router-link>
             <router-link to="/admin/users">👥 Quản lý khách hàng</router-link>
+            <router-link to="/admin/marketing">📣 Khuyến mãi & tin tức</router-link>
+            <router-link to="/admin/contracts">📄 Quản lý hợp đồng</router-link>
             <router-link to="/car/create">➕ Thêm xe mới</router-link>
           </div>
         </details>
@@ -85,7 +87,7 @@
   </header>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'

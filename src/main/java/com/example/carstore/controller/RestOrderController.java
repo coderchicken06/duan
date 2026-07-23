@@ -6,7 +6,6 @@ import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.CartService;
 import com.example.carstore.service.OrderService;
-import com.example.carstore.util.OrderStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -81,7 +80,6 @@ public class RestOrderController {
         return Map.of("success", true, "data", order);
     }
 
-
     /**
      * Giữ lại API cũ POST /api/orders để không làm hỏng frontend cũ nếu còn gọi endpoint này.
      * Logic lưu đơn vẫn đi qua OrderService để có transaction và username thật từ Spring Security.
@@ -126,7 +124,16 @@ public class RestOrderController {
 
         try {
             String address = payload == null ? null : payload.get("address");
-            Orders order = orderService.checkout(auth.getName(), address, cartService.getCart(session));
+            String registrationAddress = payload == null ? null : payload.get("registrationAddress");
+            String paymentMethod = payload == null ? null : payload.get("paymentMethod");
+
+            Orders order = orderService.checkout(
+                    auth.getName(),
+                    address,
+                    registrationAddress,
+                    paymentMethod,
+                    cartService.getCart(session)
+            );
             cartService.clear(session);
 
             return Map.of(
@@ -224,7 +231,8 @@ public class RestOrderController {
         summary.put("username", order.getUsername());
         summary.put("address", order.getAddress());
         summary.put("status", order.getStatus());
-        summary.put("createDate", order.getCreate_date());
+        // Sửa lỗi gõ sai cú pháp và đổi thành getCreateDate()
+        summary.put("createDate", order.getCreateDate());
         summary.put("totalItems", totalItems);
         summary.put("totalAmount", totalAmount);
         return summary;

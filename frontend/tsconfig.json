@@ -13,5 +13,5 @@
     "types": ["vite/client"],
     "skipLibCheck": true
   },
-  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue", "vite.config.ts"]
+  "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.vue", "vite.config.ts", "src/composables/useCompare.js", "src/api/index.js", "src/api/client.js"]
 }

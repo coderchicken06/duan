@@ -16,17 +16,28 @@
       </table>
       <p v-if="requests.length === 0" class="text-center cs-muted py-4">Chưa có yêu cầu nào.</p>
     </div>
+    <h2 class="cs-page-title mb-4 mt-5">Báo giá của tôi</h2>
+    <div class="table-responsive cs-card p-3">
+      <table class="table cs-table mb-0">
+        <thead><tr><th>Mã</th><th>Ngày tạo</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr></thead>
+        <tbody><tr v-for="quote in quotations" :key="quote.id"><td>{{ quote.quotationNo || `BG-${quote.id}` }}</td><td>{{ formatDate(quote.quotationDate) }}</td><td>{{ formatPrice(quote.totalPrice) }} VNĐ</td><td>{{ quote.status }}</td><td><router-link :to="`/quotations/${quote.id}`">Xem</router-link></td></tr></tbody>
+      </table>
+      <p v-if="quotations.length === 0" class="text-center cs-muted py-4">Chưa có báo giá nào.</p>
+    </div>
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, onMounted } from 'vue'
-import { supportApi } from '../api'
+import { supportApi, quotationApi, formatPrice } from '../api'
 
 const requests = ref([])
+const quotations = ref([])
+const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '-'
 
 onMounted(async () => {
-  const { data } = await supportApi.getMy()
-  requests.value = data.data || []
+  const [supportResult, quotationResult] = await Promise.all([supportApi.getMy(), quotationApi.getMine()])
+  requests.value = supportResult.data.data || []
+  quotations.value = quotationResult.data.data || []
 })
 </script>

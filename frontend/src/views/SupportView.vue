@@ -80,7 +80,7 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref } from 'vue'
 import { supportApi } from '../api'
 
@@ -113,7 +113,7 @@ async function submit() {
       form.value.carInfo = ''
       form.value.content = ''
     }
-  } catch (error: any) {
+  } catch (error) {
     ok.value = false
     msg.value = error.response?.data?.message || 'Không thể kết nối máy chủ. Vui lòng thử lại.'
   } finally {

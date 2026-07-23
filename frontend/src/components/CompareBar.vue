@@ -33,7 +33,7 @@
   </aside>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, watch } from 'vue'
 import { carApi, carImageUrl } from '../api'
 import { useCompare } from '../composables/useCompare'

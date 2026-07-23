@@ -96,27 +96,15 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { carImageUrl, cartApi, formatPrice } from '../api'
 
-interface CartItem {
-  id: number
-  name: string
-  price: number
-  quantity: number
-  image?: string
-  year?: number
-  bodyType?: string
-  color?: string
-  stock?: number
-}
-
-const items = ref<CartItem[]>([])
+const items = ref([])
 const total = ref(0)
 const loading = ref(true)
 const clearing = ref(false)
-const busyId = ref<number | null>(null)
+const busyId = ref(null)
 const message = ref('')
 const loadError = ref('')
 
@@ -138,11 +126,11 @@ async function loadCart() {
   }
 }
 
-async function updateQuantity(id: number, action: () => Promise<unknown>) {
+async function updateQuantity(id, action) {
   busyId.value = id
   message.value = ''
   try {
-    const response = await action() as { data?: { success?: boolean; message?: string } }
+    const response = await action()
     if (response.data?.success === false) {
       message.value = response.data.message || 'Không thể cập nhật số lượng'
       return
@@ -155,15 +143,15 @@ async function updateQuantity(id: number, action: () => Promise<unknown>) {
   }
 }
 
-function increment(id: number) {
+function increment(id) {
   return updateQuantity(id, () => cartApi.increment(id))
 }
 
-function decrement(id: number) {
+function decrement(id) {
   return updateQuantity(id, () => cartApi.decrement(id))
 }
 
-function remove(id: number) {
+function remove(id) {
   return updateQuantity(id, () => cartApi.remove(id))
 }
 

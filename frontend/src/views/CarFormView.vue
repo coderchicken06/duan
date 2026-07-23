@@ -70,7 +70,7 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { carApi, adminApi, uploadApi, carImageUrl } from '../api'
@@ -108,7 +108,7 @@ async function onFileChange(e) {
 }
 
 async function onGalleryFiles(e) {
-  const files = Array.from(e.target.files || []) as File[]
+  const files = Array.from(e.target.files || [])
   for (const file of files) {
     const { data } = await uploadApi.upload(file)
     galleryImages.value.push({ imageUrl: data, sortOrder: galleryImages.value.length, primaryImage: galleryImages.value.length === 0 })

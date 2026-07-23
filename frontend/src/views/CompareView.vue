@@ -11,18 +11,16 @@
     </div>
   </main>
 </template>
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { carApi, carImageUrl, formatPrice } from '../api'
 import { useCompare } from '../composables/useCompare'
-type CarData = Record<string, any>
-type Spec = [string, (car: CarData) => string | number]
-const route=useRoute(), router=useRouter(), cars=ref<CarData[]>([]), loading=ref(true)
+const route=useRoute(), router=useRouter(), cars=ref([]), loading=ref(true)
 const { selectedIds, clear }=useCompare()
 const value=v=>v===null||v===undefined||v===''?'Chưa cập nhật':v
 const km=v=>v==null?'Chưa cập nhật':Number(v).toLocaleString('vi-VN')+' km'
-const specs: Spec[]=[['Giá bán',c=>formatPrice(c.price)+' VNĐ'],['Năm sản xuất',c=>value(c.year)],['Đăng ký lần đầu',c=>value(c.firstRegistration)],['ODO',c=>km(c.mileage)],['Kiểu dáng',c=>value(c.bodyType)],['Nhiên liệu',c=>value(c.fuelType||c.engineType)],['Dung tích',c=>value(c.engineCapacity)],['Công suất',c=>value(c.horsepower)+(c.horsepower?' HP':'')],['Mô-men xoắn',c=>value(c.torque)],['Hộp số',c=>value(c.transmission)],['Dẫn động',c=>value(c.drivetrain)],['Số chỗ',c=>value(c.seats)],['Tiêu hao nhiên liệu',c=>value(c.fuelConsumption)],['Ngoại thất',c=>value(c.color)],['Nội thất',c=>value(c.interiorColor)],['Bảo hành',c=>value(c.warranty)],['Kiểm định',c=>value(c.inspectionLevel)],['Đại lý',c=>value(c.dealerName)]]
+const specs=[['Giá bán',c=>formatPrice(c.price)+' VNĐ'],['Năm sản xuất',c=>value(c.year)],['Đăng ký lần đầu',c=>value(c.firstRegistration)],['ODO',c=>km(c.mileage)],['Kiểu dáng',c=>value(c.bodyType)],['Nhiên liệu',c=>value(c.fuelType||c.engineType)],['Dung tích',c=>value(c.engineCapacity)],['Công suất',c=>value(c.horsepower)+(c.horsepower?' HP':'')],['Mô-men xoắn',c=>value(c.torque)],['Hộp số',c=>value(c.transmission)],['Dẫn động',c=>value(c.drivetrain)],['Số chỗ',c=>value(c.seats)],['Tiêu hao nhiên liệu',c=>value(c.fuelConsumption)],['Ngoại thất',c=>value(c.color)],['Nội thất',c=>value(c.interiorColor)],['Bảo hành',c=>value(c.warranty)],['Kiểm định',c=>value(c.inspectionLevel)],['Đại lý',c=>value(c.dealerName)]]
 const rows=computed(()=>specs.map(([label,fn])=>{const values=cars.value.map(fn);return{label,values,different:new Set(values).size>1}}))
 onMounted(async()=>{
   const ids=[...new Set(

@@ -15,8 +15,11 @@ public class SpaController {
             "/profile", "/history", "/service", "/support", "/checkout", "/compare",
             "/car/list", "/car/create", "/car/detail/{id}", "/car/edit/{id}",
             "/cart/view", "/order/my-orders", "/order/detail/{id}",
+            "/orders/{id}/contract", "/orders/{id}/payment", "/quotations/{id}",
+            "/news", "/news/{slug}",
             "/admin/dashboard", "/admin/inventory", "/admin/orders", "/admin/support",
-            "/admin/users", "/admin/users/create", "/admin/users/edit/{username}"
+            "/admin/users", "/admin/users/create", "/admin/users/edit/{username}",
+            "/admin/marketing", "/admin/contracts"
     })
     public String forwardToVue() {
         return "forward:/index.html";

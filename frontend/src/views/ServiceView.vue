@@ -84,13 +84,13 @@
   </main>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, supportApi } from '../api'
 
 const route = useRoute()
-const toLocalDate = (value: Date) => {
+const toLocalDate = (value) => {
   const year = value.getFullYear()
   const month = String(value.getMonth() + 1).padStart(2, '0')
   const day = String(value.getDate()).padStart(2, '0')
@@ -108,7 +108,7 @@ const form = ref({
   phone: '',
   type: 'service',
   content: 'Yêu cầu đặt lịch dịch vụ',
-  carId: null as number | null,
+  carId: null,
   carInfo: '',
   serviceType: '',
   appointmentDate: '',
@@ -131,7 +131,7 @@ onMounted(async () => {
     form.value.carId = data.data.id
     form.value.carInfo = data.data.name
     form.value.serviceType = 'Kiểm tra tổng thể'
-  } catch (error: any) {
+  } catch (error) {
     ok.value = false
     msg.value = error.response?.data?.message || error.message || 'Không tìm thấy xe cần đặt lịch'
   }
@@ -170,7 +170,7 @@ async function submit() {
         form.value.serviceType = ''
       }
     }
-  } catch (error: any) {
+  } catch (error) {
     ok.value = false
     msg.value = error.response?.data?.message || 'Không thể đặt lịch dịch vụ'
   } finally {

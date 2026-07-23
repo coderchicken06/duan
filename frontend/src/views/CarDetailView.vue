@@ -58,6 +58,10 @@
               <span class="action-icon" aria-hidden="true">▣</span>
               <span>Đặt lịch xem xe</span>
             </router-link>
+            <button class="ford-btn-outline hero-action" type="button" @click="requestQuotation">
+              <span class="action-icon" aria-hidden="true">₫</span>
+              <span>Yêu cầu báo giá</span>
+            </button>
           </div>
 
           <div v-if="hasDealerInfo" class="dealer-box">
@@ -119,6 +123,19 @@
           </div>
         </div>
       </section>
+
+      <section class="detail-section review-section">
+        <div class="section-heading"><span>KHÁCH HÀNG</span><h2>Đánh giá xe</h2></div>
+        <div class="review-summary"><strong>{{ reviewAverage.toFixed(1) }}/5</strong><span>{{ reviews.length }} đánh giá từ khách đã mua</span></div>
+        <form v-if="auth.isLoggedIn && (!myReview || editingReviewId)" class="review-form" @submit.prevent="submitReview">
+          <select v-model.number="reviewForm.rating" class="form-select" required><option :value="0" disabled>Chọn số sao</option><option v-for="star in 5" :key="star" :value="star">{{ star }} sao</option></select>
+          <textarea v-model="reviewForm.comment" class="form-control" rows="3" maxlength="1000" placeholder="Chia sẻ trải nghiệm của bạn" required></textarea>
+          <div class="review-actions"><button class="ford-btn-primary" type="submit" :disabled="reviewSubmitting">{{ reviewSubmitting ? 'Đang lưu...' : (editingReviewId ? 'Lưu đánh giá' : 'Gửi đánh giá') }}</button><button v-if="editingReviewId" class="btn btn-outline-secondary" type="button" @click="cancelReviewEdit">Hủy</button></div>
+        </form>
+        <div v-if="reviewMessage" class="alert mt-3" :class="reviewOk ? 'alert-success' : 'alert-danger'">{{ reviewMessage }}</div>
+        <div v-if="reviews.length" class="review-list"><article v-for="review in reviews" :key="review.id" class="review-item"><div class="review-avatar">{{ review.username?.charAt(0)?.toUpperCase() }}</div><div class="review-content"><strong>{{ review.username }}</strong><div class="review-stars">{{ '★'.repeat(review.rating) }}{{ '☆'.repeat(5-review.rating) }}</div><p>{{ review.comment }}</p><small>{{ new Date(review.reviewDate).toLocaleDateString('vi-VN') }}</small><div v-if="isOwnReview(review)" class="review-actions mt-2"><button class="btn btn-sm btn-outline-primary" type="button" @click="startReviewEdit(review)">Sửa</button><button class="btn btn-sm btn-outline-danger" type="button" @click="deleteReview(review)">Xóa</button></div></div></article></div>
+        <p v-else class="ford-empty-state">Xe này chưa có đánh giá.</p>
+      </section>
     </div>
   </main>
 
@@ -129,15 +146,26 @@
   </div>
 </template>
 
-<script setup lang="ts">
+<script setup>
 import { computed, onMounted, ref, watch } from 'vue'
-import { useRoute } from 'vue-router'
-import { carApi, cartApi, carImageUrl, formatPrice } from '../api'
+import { useRoute, useRouter } from 'vue-router'
+import { carApi, cartApi, carImageUrl, formatPrice, quotationApi } from '../api'
 import CarCard from '../components/CarCard.vue'
 import { useCompare } from '../composables/useCompare'
+import { useAuthStore } from '../stores/auth'
+import { reviewApi } from '../api'
 
 const route = useRoute()
+const router = useRouter()
+const auth = useAuthStore()
 const car = ref(null)
+const reviews = ref([])
+const reviewAverage = ref(0)
+const reviewForm = ref({ rating: 0, comment: '' })
+const reviewSubmitting = ref(false)
+const reviewMessage = ref('')
+const reviewOk = ref(false)
+const editingReviewId = ref(null)
 const cars = ref([])
 const similarCars = ref([])
 const message = ref('')
@@ -147,6 +175,7 @@ const serverImages = ref([])
 const loadError = ref('')
 
 const { has, toggle, count } = useCompare()
+const myReview = computed(() => reviews.value.find(isOwnReview))
 
 const hasData = (value) => value !== null && value !== undefined
   && (typeof value !== 'string' || value.trim() !== '')
@@ -292,9 +321,75 @@ async function addById(id) {
 }
 
 const addToCart = () => addById(car.value.id)
+
+async function requestQuotation() {
+  try {
+    const { data } = await quotationApi.create({ carId: car.value.id })
+    if (data.success) router.push(`/quotations/${data.data.id}`)
+  } catch (error) {
+    success.value = false
+    message.value = error.response?.data?.message || 'Không thể tạo yêu cầu báo giá'
+  }
+}
+
+async function loadReviews() {
+  const { data } = await reviewApi.getByCar(route.params.id)
+  reviews.value = data.data || []
+  reviewAverage.value = Number(data.average || 0)
+}
+
+async function submitReview() {
+  reviewSubmitting.value = true
+  reviewMessage.value = ''
+  try {
+    if (editingReviewId.value) await reviewApi.update(editingReviewId.value, reviewForm.value)
+    else await reviewApi.create(car.value.id, reviewForm.value)
+    reviewOk.value = true
+    reviewMessage.value = editingReviewId.value ? 'Đã cập nhật đánh giá.' : 'Cảm ơn bạn đã đánh giá.'
+    editingReviewId.value = null
+    reviewForm.value = { rating: 0, comment: '' }
+    await loadReviews()
+  } catch (error) {
+    reviewOk.value = false
+    reviewMessage.value = error.response?.data?.message || 'Không thể gửi đánh giá'
+  } finally {
+    reviewSubmitting.value = false
+  }
+}
+
+function isOwnReview(review) {
+  return Boolean(auth.user?.username && review.username === auth.user.username)
+}
+
+function startReviewEdit(review) {
+  editingReviewId.value = review.id
+  reviewForm.value = { rating: review.rating, comment: review.comment }
+}
+
+function cancelReviewEdit() {
+  editingReviewId.value = null
+  reviewForm.value = { rating: 0, comment: '' }
+}
+
+async function deleteReview(review) {
+  if (!confirm('Bạn có chắc muốn xóa đánh giá này?')) return
+  try {
+    await reviewApi.delete(review.id)
+    cancelReviewEdit()
+    reviewOk.value = true
+    reviewMessage.value = 'Đã xóa đánh giá.'
+    await loadReviews()
+  } catch (error) {
+    reviewOk.value = false
+    reviewMessage.value = error.response?.data?.message || 'Không thể xóa đánh giá'
+  }
+}
+
+loadReviews().catch(() => {})
 </script>
 
 <style scoped>
+.review-summary{display:flex;align-items:baseline;gap:14px;margin-bottom:22px}.review-summary strong{color:#b91c1c;font-size:2rem}.review-summary span{color:#6b7280}.review-form{display:grid;gap:12px;max-width:620px}.review-form .form-select,.review-form .form-control{background:#fff;color:#111827;border-color:#d1d5db}.review-list{display:grid;gap:14px;margin-top:24px}.review-item{display:flex;gap:14px;border-top:1px solid #e5e7eb;padding-top:16px}.review-content{flex:1}.review-actions{display:flex;gap:8px;align-items:center}.review-avatar{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:50%;background:#fee2e2;color:#991b1b;font-weight:800}.review-stars{color:#f59e0b}.review-item p{margin:5px 0}.review-item small{color:#6b7280}
 .detail-page {
   min-height: 100vh;
   background: #f5f5f5;
