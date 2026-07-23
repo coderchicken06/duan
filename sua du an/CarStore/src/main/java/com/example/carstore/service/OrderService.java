@@ -25,9 +25,9 @@ public class OrderService {
     private final CarRepository carRepo;
 
     public OrderService(OrderRepository orderRepo,
-            OrderDetailRepository detailRepo,
-            CarService carService,
-            CarRepository carRepo) {
+                        OrderDetailRepository detailRepo,
+                        CarService carService,
+                        CarRepository carRepo) {
         this.orderRepo = orderRepo;
         this.detailRepo = detailRepo;
         this.carService = carService;
@@ -35,7 +35,7 @@ public class OrderService {
     }
 
     @Transactional
-    public Orders checkout(String username, String address, Map<Integer, CartItem> cart) {
+    public Orders checkout(String username, String address, String registrationAddress, String paymentMethod, Map<Integer, CartItem> cart) {
         if (!StringUtils.hasText(username)) {
             throw new IllegalArgumentException("User is required");
         }
@@ -48,8 +48,14 @@ public class OrderService {
 
         Orders order = new Orders();
         order.setUsername(username);
-        order.setCreate_date(new Date());
+        // 1. Sửa lỗi setter createDate
+        order.setCreateDate(new Date()); 
         order.setAddress(address.trim());
+        
+        // 2. Bổ sung địa chỉ đăng ký & phương thức thanh toán
+        order.setRegistrationAddress(StringUtils.hasText(registrationAddress) ? registrationAddress.trim() : address.trim());
+        order.setPaymentMethod(StringUtils.hasText(paymentMethod) ? paymentMethod.trim() : "Chuyển khoản QR");
+        
         order.setStatus(OrderStatus.PENDING);
         order.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
         Orders savedOrder = orderRepo.save(order);
@@ -75,12 +81,22 @@ public class OrderService {
             OrderDetail detail = new OrderDetail();
             detail.setOrderId(savedOrder.getId());
             detail.setCar(car);
-            detail.setPrice(car.getPrice());
+            
+            // 3. Ưu tiên lấy giá sau giảm từ CartItem (nếu có), nếu không lấy giá niêm yết của xe
+            // SỬA DÒNG 86 THÀNH:
+            Double itemPrice = (item.getPrice() > 0) ? item.getPrice() : car.getPrice();
+            detail.setPrice(itemPrice);
             detail.setQuantity(item.getQuantity());
             detailRepo.save(detail);
         }
 
         return savedOrder;
+    }
+
+    // Overload hàm checkout cũ để tránh vỡ code ở các Controller hiện tại chưa truyền đủ tham số
+    @Transactional
+    public Orders checkout(String username, String address, Map<Integer, CartItem> cart) {
+        return checkout(username, address, address, "Chuyển khoản QR", cart);
     }
 
     @Transactional

@@ -260,16 +260,23 @@ GO
 -- 10. KHUYẾN MÃI
 -- =============================================================
 CREATE TABLE dbo.Promotion (
+    -- Sửa/Tạo mới bảng Promotion hỗ trợ cả % và Tiền mặt
+CREATE TABLE dbo.Promotion (
     id INT IDENTITY(1,1) NOT NULL,
     title NVARCHAR(200) NOT NULL,
     description NVARCHAR(MAX) NULL,
-    discount_percent INT NULL,
+    discount_percent INT NULL,             -- Giảm theo % (VD: 10)
+    discount_amount FLOAT NULL,            -- Giảm theo số tiền cố định (VD: 50000000)
     start_date DATE NULL,
     end_date DATE NULL,
     status BIT NOT NULL CONSTRAINT DF_Promotion_Status DEFAULT 1,
+    
     CONSTRAINT PK_Promotion PRIMARY KEY (id),
-    CONSTRAINT CK_Promotion_Discount CHECK (discount_percent BETWEEN 0 AND 100),
+    CONSTRAINT CK_Promotion_Discount CHECK (discount_percent IS NULL OR discount_percent BETWEEN 0 AND 100),
+    CONSTRAINT CK_Promotion_Amount CHECK (discount_amount IS NULL OR discount_amount >= 0),
     CONSTRAINT CK_Promotion_Date CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date)
+);
+GO
 );
 GO
 
@@ -417,20 +424,25 @@ GO
 -- =============================================================
 -- 17. DỮ LIỆU MẪU ĐƠN HÀNG - PHẢI TẠO TRƯỚC PAYMENT/CONTRACT
 -- =============================================================
+-- 1. Thêm dữ liệu mẫu Đơn hàng (Orders)
 INSERT INTO dbo.Orders
 (username, address, registration_address, payment_method, status,
  deposit_status, deposit_amount, deposit_method, deposit_paid_at)
 VALUES
-('user1', N'TP Hồ Chí Minh', N'TP Hồ Chí Minh', N'Chuyển khoản', N'CONFIRMED',
- 'PAID', 50000000, N'VNPay', GETDATE()),
+-- Đơn 1: Toyota Camry (Giá 1.2 tỷ) -> Cọc 10% = 120 triệu
+('user1', N'TP Hồ Chí Minh', N'TP Hồ Chí Minh', N'Chuyển khoản QR', N'CONFIRMED',
+ 'PAID', 120000000, N'VietQR', GETDATE()),
 
-('user1', N'Bình Dương', N'Bình Dương', N'Trả góp', N'PROCESSING',
- 'PAID', 100000000, N'MoMo', GETDATE());
+-- Đơn 2: BMW X5 (Giá 3.5 tỷ) -> Cọc 10% = 350 triệu
+('user1', N'Bình Dương', N'Bình Dương', N'Chuyển khoản QR', N'PROCESSING',
+ 'PAID', 350000000, N'VietQR', GETDATE());
 GO
 
-INSERT INTO dbo.OrderDetail(order_id, car_id, price, quantity) VALUES
-(1, 1, 830000000, 1),
-(2, 2, 1200000000, 1);
+-- 2. Thêm dữ liệu Chi tiết đơn hàng (OrderDetail)
+INSERT INTO dbo.OrderDetail(order_id, car_id, price, quantity) 
+VALUES
+(1, 1, 1200000000, 1), -- Xe ID 1: Toyota Camry
+(2, 2, 3500000000, 1); -- Xe ID 2: BMW X5
 GO
 
 -- =============================================================

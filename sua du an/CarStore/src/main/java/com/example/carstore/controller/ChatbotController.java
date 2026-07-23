@@ -10,7 +10,7 @@ import java.util.*;
 
 @RestController
 @RequestMapping("/api/chat")
-@CrossOrigin(origins = "*") // Cho phép Vue.js gọi API mà không bị lỗi CORS
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class ChatbotController {
 
     @Autowired
