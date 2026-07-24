@@ -24,6 +24,9 @@ public class AccountUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         Account account = accountRepository.findById(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+                if (!Boolean.TRUE.equals(account.getEnabled())) {
+                    throw new UsernameNotFoundException("Tài khoản chưa xác thực email");
+                }
 
         return User.builder()
                 .username(account.getUsername())

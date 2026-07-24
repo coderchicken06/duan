@@ -14,6 +14,7 @@ const router = createRouter({
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
     { path: '/login/form', redirect: '/login' },
     { path: '/signup', name: 'signup', component: () => import('../views/SignupView.vue') },
+    {path: '/verify-email',name: 'verify-email',component: () => import('../views/VerifyEmailView.vue')},
     { path: '/forgot-password', name: 'forgot-password', component: () => import('../views/ForgotPasswordView.vue') },
     { path: '/verify-otp', name: 'verify-otp', component: () => import('../views/VerifyOtpView.vue') },
     { path: '/reset-password', name: 'reset-password', component: () => import('../views/ResetPasswordView.vue') },

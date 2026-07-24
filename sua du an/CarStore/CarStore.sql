@@ -140,3 +140,27 @@ SELECT
 GO
 
 PRINT 'Setup hoàn thành! ✓';
+
+
+
+
+--code ma xac thuc gmail
+ALTER TABLE account
+ADD enabled BIT NOT NULL DEFAULT 0;
+
+
+ALTER TABLE account
+ADD verification_code NVARCHAR(10);
+
+
+ALTER TABLE account
+ADD verification_expired DATETIME;
+SELECT * FROM account
+
+
+
+--cap nhap admin 
+
+UPDATE account
+SET enabled = 1
+WHERE role='ROLE_ADMIN';

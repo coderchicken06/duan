@@ -30,17 +30,47 @@ const error = ref('')
 const form = ref({ username: '', fullname: '', email: '', password: '' })
 
 async function submit() {
-  loading.value = true
-  error.value = ''
-  try {
-    const { data } = await authApi.signup(form.value)
+
+loading.value = true
+error.value = ""
+
+try {
+
+  const { data } = await authApi.signup(form.value)
+
+  console.log("Signup Response =", data)
+
     if (data.success) {
-      router.push({ path: '/login', query: { registered: '1' } })
-    } else {
-      error.value = data.message
-    }
-  } finally {
-    loading.value = false
+
+  console.log("Đăng ký thành công");
+  console.log(data);
+
+  router.push({
+      path: "/verify-email",
+      query: {
+          email: form.value.email
+      }
+  });
+
+  console.log("Đã gọi router.push");
+
+  } else {
+
+    error.value = data.message
+
   }
+
+} catch (e) {
+
+  console.error(e)
+
+  error.value = "Có lỗi"
+
+} finally {
+
+  loading.value = false
+
+}
+
 }
 </script>
