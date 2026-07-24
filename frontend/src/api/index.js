@@ -3,6 +3,8 @@ import api from './client'
 export const authApi = {
   login: (username, password) => api.post('/api/auth/login', { username, password }),
   signup: (account) => api.post('/api/auth/signup', account),
+  verifyEmail: (email, otp) => api.post('/api/auth/verify', { email, otp }),
+  resendOtp:(email)=>api.post('/api/auth/resend-otp',{email}),
   logout: () => api.post('/api/auth/logout'),
   me: () => api.get('/api/auth/me'),
   checkUsername: (username) => api.get(`/api/auth/check-username/${username}`),

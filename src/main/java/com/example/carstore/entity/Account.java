@@ -4,7 +4,8 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
-
+import javax.persistence.Column;
+import java.time.LocalDateTime;
 @Entity
 @Table(name = "account")
 public class Account {
@@ -15,6 +16,17 @@ public class Account {
     private String fullname;
     private String email;
     private String role;
+
+    // code xac thucthuc
+            @Column(name = "enabled")
+        private Boolean enabled = false;
+
+        @Column(name = "verification_code")
+        private String verificationCode;
+
+        @Column(name = "verification_expired")
+        private LocalDateTime verificationExpired;
+
 
     public Account() {}
 
@@ -64,5 +76,30 @@ public class Account {
 
     public void setRole(String role) {
         this.role = role;
+    }
+
+
+    public Boolean getEnabled() {
+        return enabled;
+    }
+    
+    public void setEnabled(Boolean enabled) {
+        this.enabled = enabled;
+    }
+    
+    public String getVerificationCode() {
+        return verificationCode;
+    }
+    // code xac thucthuc
+    public void setVerificationCode(String verificationCode) {
+        this.verificationCode = verificationCode;
+    }
+    
+    public LocalDateTime getVerificationExpired() {
+        return verificationExpired;
+    }
+    
+    public void setVerificationExpired(LocalDateTime verificationExpired) {
+        this.verificationExpired = verificationExpired;
     }
 }

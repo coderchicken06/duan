@@ -25,6 +25,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.security.SecureRandom;
+import java.util.Optional;
+
+
+// code xac thucthuc
+import com.example.carstore.service.EmailVerificationService;
+import com.example.carstore.service.OtpService;
+import com.example.carstore.dto.VerifyOtpRequest;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -33,67 +40,179 @@ public class RestAuthController {
 
     private final AccountRepository accountRepo;
     private final PasswordEncoder passwordEncoder;
+    // code xac thucthuc
+    private final EmailVerificationService emailVerificationService;
+    private final OtpService otpService;
     private final MailService mailService;
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public RestAuthController(AccountRepository accountRepo,
-                              PasswordEncoder passwordEncoder,
-                              MailService mailService) {
-        this.accountRepo = accountRepo;
-        this.passwordEncoder = passwordEncoder;
-        this.mailService = mailService;
+        
+            public RestAuthController(
+                AccountRepository accountRepo,
+                PasswordEncoder passwordEncoder,
+                EmailVerificationService emailVerificationService,
+                OtpService otpService,
+                MailService mailService) {
+
+            this.accountRepo = accountRepo;
+            this.passwordEncoder = passwordEncoder;
+            this.emailVerificationService = emailVerificationService;
+            this.otpService = otpService;
+            this.mailService = mailService;
+        }
+@PostMapping("/signup")
+public Map<String, Object> signup(@RequestBody Account account) {
+    String validation = validateSignup(account);
+    if(accountRepo.findByEmail(account.getEmail()).isPresent()){
+        return ResponseUtils.fail("Email đã tồn tại");
     }
+    if (validation != null) {
+        return ResponseUtils.fail(validation);
+    }
+    account.setRole("ROLE_USER");
 
-    @PostMapping("/signup")
-    public Map<String, Object> signup(@RequestBody Account account) {
-        String validation = validateSignup(account);
-        if (validation != null) {
-            return ResponseUtils.fail(validation);
-        }
-
-        account.setRole("ROLE_USER");
-        if (isBlank(account.getFullname())) {
-            account.setFullname(account.getUsername());
-        }
-        account.setPassword(passwordEncoder.encode(account.getPassword()));
-
-        Account saved = accountRepo.save(account);
-        return Map.of(
+    if ("ROLE_ADMIN".equals(account.getRole())) {
+    
+        account.setEnabled(true);
+    
+    } else {
+    
+        account.setEnabled(false);
+    
+        String otp = otpService.generateOtp();
+    
+        account.setVerificationCode(otp);
+    
+        account.setVerificationExpired(
+            otpService.expiredTime()
+        );
+    }
+    
+            // Mã hóa mật khẩu
+            account.setPassword(passwordEncoder.encode(account.getPassword()));
+            
+            // Lưu tài khoản
+            Account saved = accountRepo.save(account);
+            
+            // Nếu là USER thì gửi OTP
+            if (!"ROLE_ADMIN".equals(saved.getRole())) {
+            
+                emailVerificationService.sendVerificationEmail(
+                    saved.getEmail(),
+                    saved.getFullname(),
+                    saved.getVerificationCode()
+                );
+            }
+            
+            return Map.of(
                 "success", true,
-                "message", "Account created successfully",
-                "username", saved.getUsername());
+                "message", "Đăng ký thành công. Vui lòng kiểm tra Gmail để lấy mã OTP.",
+                "username", saved.getUsername()
+            );
+}
+// code xac thuc tai khoankhoan
+    @PostMapping("/verify")
+    public Map<String, Object> verify(@RequestBody VerifyOtpRequest request) {
+
+        Account account = accountRepo.findByEmail(request.getEmail())
+                .orElse(null);
+
+        if (account == null) {
+            return ResponseUtils.fail("Email không tồn tại");
+        }
+
+        if (account.getVerificationCode() == null) {
+            return ResponseUtils.fail("Không tìm thấy mã xác thực");
+        }
+
+        if (!account.getVerificationCode().equals(request.getOtp())) {
+            return ResponseUtils.fail("Mã OTP không đúng");
+        }
+
+        if (otpService.isExpired(account.getVerificationExpired())) {
+            return ResponseUtils.fail("Mã OTP đã hết hạn");
+        }
+
+        account.setEnabled(true);
+        account.setVerificationCode(null);
+        account.setVerificationExpired(null);
+
+        accountRepo.save(account);
+
+        return ResponseUtils.ok("Xác thực tài khoản thành công");
     }
 
-    @PostMapping("/login")
-    public Map<String, Object> login(@RequestBody Map<String, String> credentials,
-                                     HttpServletRequest request) {
-        String username = credentials == null ? null : credentials.get("username");
-        String password = credentials == null ? null : credentials.get("password");
 
-        if (isBlank(username)) {
-            return ResponseUtils.fail("Username is required");
-        }
-        if (isBlank(password)) {
-            return ResponseUtils.fail("Password is required");
+
+        @PostMapping("/resend-otp")
+        public Map<String, Object> resendOtp(@RequestBody Map<String, String> request) {
+
+            String email = request.get("email");
+
+            Optional<Account> accountOpt = accountRepo.findByEmail(email);
+
+            if (accountOpt.isEmpty()) {
+                return ResponseUtils.fail("Email không tồn tại");
+            }
+
+            Account account = accountOpt.get();
+
+            String otp = otpService.generateOtp();
+
+                account.setVerificationCode(otp);
+                account.setVerificationExpired(otpService.expiredTime());
+
+                accountRepo.save(account);
+
+                emailVerificationService.sendVerificationEmail(
+                        account.getEmail(),
+                        account.getFullname(),
+                        otp
+                );
+
+            return ResponseUtils.ok("Đã gửi lại mã OTP");
         }
 
-        java.util.Optional<Account> accountOpt = accountRepo.findById(username);
-        if (accountOpt.isEmpty()) return ResponseUtils.fail("Sai tài khoản hoặc mật khẩu");
-        Account account = accountOpt.get();
-        if (!passwordEncoder.matches(password, account.getPassword())) {
-            return ResponseUtils.fail("Sai tài khoản hoặc mật khẩu");
-        }
 
-        saveLoginSession(account, request);
-        Map<String, Object> result = new HashMap<>();
-        result.put("success", true);
-        result.put("message", "Đăng nhập thành công");
-        result.put("username", account.getUsername());
-        result.put("fullname", account.getFullname());
-        result.put("email", account.getEmail());
-        result.put("role", account.getRole());
-        return result;
+
+@PostMapping("/login")
+public Map<String, Object> login(@RequestBody Map<String, String> credentials,
+                                 HttpServletRequest request) {
+    String username = credentials == null ? null : credentials.get("username");
+    String password = credentials == null ? null : credentials.get("password");
+
+    if (isBlank(username)) {
+        return ResponseUtils.fail("Username is required");
     }
+    if (isBlank(password)) {
+        return ResponseUtils.fail("Password is required");
+    }
+
+    java.util.Optional<Account> accountOpt = accountRepo.findById(username);
+    if (accountOpt.isEmpty()) return ResponseUtils.fail("Sai tài khoản hoặc mật khẩu");
+    Account account = accountOpt.get();
+        // Admin không cần xác thực email
+    if (!"ROLE_ADMIN".equals(account.getRole())
+        && !Boolean.TRUE.equals(account.getEnabled())) {
+
+    return ResponseUtils.fail(
+        "Tài khoản chưa xác thực email. Vui lòng kiểm tra Gmail để nhập mã OTP."
+    );
+    }
+    if (!passwordEncoder.matches(password, account.getPassword())) {
+        return ResponseUtils.fail("Sai tài khoản hoặc mật khẩu");
+    }
+
+    saveLoginSession(account, request);
+    Map<String, Object> result = new HashMap<>();
+    result.put("success", true);
+    result.put("message", "Đăng nhập thành công");
+    result.put("username", account.getUsername());
+    result.put("fullname", account.getFullname());
+    result.put("email", account.getEmail());
+    result.put("role", account.getRole());
+    return result;
+}
 
     @GetMapping("/check-username/{username}")
     public Map<String, Object> checkUsernameAvailability(@PathVariable String username) {

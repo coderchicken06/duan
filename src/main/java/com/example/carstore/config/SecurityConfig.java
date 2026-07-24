@@ -18,7 +18,7 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 public class SecurityConfig {
     private final CustomOAuth2UserService oAuth2UserService;
     private final AccountUserDetailsService accountUserDetailsService;
-
+    
     public SecurityConfig(CustomOAuth2UserService oAuth2UserService,
                           AccountUserDetailsService accountUserDetailsService) {
         this.oAuth2UserService = oAuth2UserService;
