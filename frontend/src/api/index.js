@@ -3,8 +3,6 @@ import api from './client'
 export const authApi = {
   login: (username, password) => api.post('/api/auth/login', { username, password }),
   signup: (account) => api.post('/api/auth/signup', account),
-  verifyEmail: (email, otp) => api.post('/api/auth/verify', { email, otp }),
-  resendOtp:(email)=>api.post('/api/auth/resend-otp',{email}),
   logout: () => api.post('/api/auth/logout'),
   me: () => api.get('/api/auth/me'),
   checkUsername: (username) => api.get(`/api/auth/check-username/${username}`),
@@ -17,10 +15,15 @@ export const authApi = {
 export const carApi = {
   getAll: (q) => api.get('/api/cars', { params: q ? { q } : {} }),
   getById: (id) => api.get(`/api/cars/${id}`),
-  search: (keyword) => api.get('/api/cars/search', { params: { keyword } }),
-  create: (car) => api.post('/api/cars', car),
-  update: (id, car) => api.put(`/api/cars/${id}`, car),
-  delete: (id) => api.delete(`/api/cars/${id}`),
+  getSimilar: (id) => api.get(`/api/cars/${id}/similar`),
+  getImages: (id) => api.get(`/api/cars/${id}/images`),
+  addImage: (id, image) => api.post(`/api/cars/${id}/images`, image),
+  updateImage: (id, imageId, image) => api.put(`/api/cars/${id}/images/${imageId}`, image),
+  deleteImage: (id, imageId) => api.delete(`/api/cars/${id}/images/${imageId}`),
+}
+
+export const brandApi = {
+  getAll: () => api.get('/api/brands'),
 }
 
 export const cartApi = {
@@ -38,6 +41,54 @@ export const orderApi = {
   getById: (id) => api.get(`/api/orders/${id}`),
   getDetails: (id) => api.get(`/api/orders/${id}/details`),
   checkout: (address) => api.post('/api/orders/checkout', { address }),
+  payDeposit: (id, method) => api.post(`/api/orders/${id}/deposit`, { method }),
+}
+
+export const contractApi = {
+  getByOrder: (orderId) => api.get(`/api/contracts/${orderId}`),
+  getPayments: (orderId) => api.get(`/api/contracts/${orderId}/payments`),
+  getAll: () => api.get('/api/contracts'),
+  update: (id, data) => api.put(`/api/contracts/manage/${id}`, data),
+}
+
+export const paymentTransactionApi = {
+  getByOrder: (orderId) => api.get(`/api/payment-transactions/orders/${orderId}`),
+}
+
+export const reviewApi = {
+  getByCar: (carId) => api.get(`/api/reviews/car/${carId}`),
+  create: (carId, data) => api.post(`/api/reviews/car/${carId}`, data),
+  update: (id, data) => api.put(`/api/reviews/${id}`, data),
+  delete: (id) => api.delete(`/api/reviews/${id}`),
+}
+
+export const quotationApi = {
+  create: (data) => api.post('/api/quotations', data),
+  getMine: () => api.get('/api/quotations/my'),
+  getById: (id) => api.get(`/api/quotations/${id}`),
+  confirm: (id) => api.post(`/api/quotations/${id}/confirm`),
+  getAll: () => api.get('/api/quotations'),
+  update: (id, data) => api.put(`/api/quotations/${id}`, data),
+  convertToOrder: (id, data) => api.post(`/api/quotations/${id}/convert-to-order`, data),
+}
+
+export const promotionApi = {
+  getActive: () => api.get('/api/promotions'),
+  getForCar: (carId) => api.get(`/api/promotions/car/${carId}`),
+  getAll: () => api.get('/api/promotions/admin'),
+  create: (data) => api.post('/api/promotions', data),
+  update: (id, data) => api.put(`/api/promotions/${id}`, data),
+  delete: (id) => api.delete(`/api/promotions/${id}`),
+  applyToCar: (id, carId) => api.post(`/api/promotions/${id}/cars/${carId}`),
+}
+
+export const newsApi = {
+  getPublished: () => api.get('/api/news'),
+  getBySlug: (slug) => api.get(`/api/news/${slug}`),
+  getAll: () => api.get('/api/news/admin/all'),
+  create: (data) => api.post('/api/news', data),
+  update: (id, data) => api.put(`/api/news/${id}`, data),
+  delete: (id) => api.delete(`/api/news/${id}`),
 }
 
 export const profileApi = {
@@ -69,9 +120,6 @@ export const adminApi = {
   updateCar: (id, car) => api.put(`/api/admin/cars/${id}`, car),
   deleteCar: (id) => api.delete(`/api/admin/cars/${id}`),
   getBrands: () => api.get('/api/admin/brands'),
-  getStats: () => api.get('/api/admin/stats'),
-  getRevenue: () => api.get('/api/admin/revenue'),
-  getTopCars: () => api.get('/api/admin/top-cars'),
   getDashboardInfo: () => api.get('/api/admin/dashboard-info'),
 }
 
@@ -91,5 +139,10 @@ export function formatPrice(price) {
 }
 
 export function carImageUrl(image) {
-  return image ? `/images/${image}` : '/images/camry.jpg'
+  if (!image) return '/images/default-car.jpg'
+  const value = String(image).trim().replaceAll('\\', '/')
+  if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value
+  if (value.startsWith('/images/')) return value
+  if (value.startsWith('images/')) return `/${value}`
+  return `/images/${value.replace(/^\/+/, '')}`
 }

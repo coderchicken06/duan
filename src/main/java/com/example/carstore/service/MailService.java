@@ -14,30 +14,11 @@ public class MailService {
     }
 
     public void sendOtp(String toEmail, String otp) {
-        
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
         message.setSubject("CarStore - Mã OTP đặt lại mật khẩu");
         message.setText("Mã OTP của bạn là: " + otp + "\nMã có hiệu lực trong phiên hiện tại.");
 
-        mailSender.send(message);
-    }
-    
-    public void sendVerifyEmail(String toEmail, String otp) {
-
-        SimpleMailMessage message = new SimpleMailMessage();
-    
-        message.setTo(toEmail);
-    
-        message.setSubject("CarStore - Xác thực tài khoản");
-    
-        message.setText(
-                "Xin chào!\n\n"
-                + "Cảm ơn bạn đã đăng ký tài khoản CarStore.\n\n"
-                + "Mã xác thực của bạn là: " + otp
-                + "\n\nMã có hiệu lực trong 5 phút."
-        );
-    
         mailSender.send(message);
     }
 }

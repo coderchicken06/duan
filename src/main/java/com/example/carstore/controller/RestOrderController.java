@@ -80,7 +80,6 @@ public class RestOrderController {
         return Map.of("success", true, "data", order);
     }
 
-
     /**
      * Giữ lại API cũ POST /api/orders để không làm hỏng frontend cũ nếu còn gọi endpoint này.
      * Logic lưu đơn vẫn đi qua OrderService để có transaction và username thật từ Spring Security.
@@ -125,7 +124,16 @@ public class RestOrderController {
 
         try {
             String address = payload == null ? null : payload.get("address");
-            Orders order = orderService.checkout(auth.getName(), address, cartService.getCart(session));
+            String registrationAddress = payload == null ? null : payload.get("registrationAddress");
+            String paymentMethod = payload == null ? null : payload.get("paymentMethod");
+
+            Orders order = orderService.checkout(
+                    auth.getName(),
+                    address,
+                    registrationAddress,
+                    paymentMethod,
+                    cartService.getCart(session)
+            );
             cartService.clear(session);
 
             return Map.of(
@@ -174,18 +182,16 @@ public class RestOrderController {
             return fail("Access denied");
         }
 
-        Optional<Orders> orderOpt = orderRepo.findById(id);
-        if (orderOpt.isEmpty()) return fail("Order not found");
-        Orders order = orderOpt.get();
-
         String status = payload == null ? null : payload.get("status");
         if (status == null || status.trim().isEmpty()) {
             return fail("Status is required");
         }
-
-        order.setStatus(status.trim());
-        orderRepo.save(order);
-        return Map.of("success", true, "message", "Order status updated successfully");
+        try {
+            orderService.updateStatus(id, status.trim());
+            return Map.of("success", true, "message", "Order status updated successfully");
+        } catch (IllegalArgumentException exception) {
+            return fail(exception.getMessage());
+        }
     }
 
     @DeleteMapping("/{id}")
@@ -225,10 +231,26 @@ public class RestOrderController {
         summary.put("username", order.getUsername());
         summary.put("address", order.getAddress());
         summary.put("status", order.getStatus());
-        summary.put("createDate", order.getCreate_date());
+        // Sửa lỗi gõ sai cú pháp và đổi thành getCreateDate()
+        summary.put("createDate", order.getCreateDate());
         summary.put("totalItems", totalItems);
         summary.put("totalAmount", totalAmount);
         return summary;
+    }
+
+    @PostMapping("/{id}/deposit")
+    public Map<String, Object> payDeposit(@PathVariable int id,
+                                          @RequestBody Map<String, String> payload,
+                                          Authentication auth) {
+        if (auth == null) return fail("Not authenticated");
+        try {
+            String method = payload == null ? null : payload.get("method");
+            Orders order = orderService.payDeposit(id, auth.getName(), method, isAdmin(auth));
+            return Map.of("success", true, "message", "Thanh toán tiền cọc thành công",
+                    "data", order, "depositAmount", order.getDepositAmount());
+        } catch (IllegalArgumentException e) {
+            return fail(e.getMessage());
+        }
     }
 
     @GetMapping("/revenue")

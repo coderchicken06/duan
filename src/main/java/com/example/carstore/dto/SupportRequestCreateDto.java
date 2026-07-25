@@ -10,6 +10,7 @@ public class SupportRequestCreateDto {
     private String type;
     private String content;
     private String carInfo;
+    private Integer carId;
     private String serviceType;
     private LocalDate appointmentDate;
     private LocalTime appointmentTime;
@@ -52,6 +53,14 @@ public class SupportRequestCreateDto {
 
     public void setCarInfo(String carInfo) {
         this.carInfo = carInfo;
+    }
+
+    public Integer getCarId() {
+        return carId;
+    }
+
+    public void setCarId(Integer carId) {
+        this.carId = carId;
     }
 
     public String getServiceType() {

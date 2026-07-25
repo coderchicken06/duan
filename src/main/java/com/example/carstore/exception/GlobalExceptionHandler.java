@@ -50,14 +50,7 @@ public class GlobalExceptionHandler {
 
         log.error("Unexpected error", ex);
 
-        Throwable root = ex;
-
-        while (root.getCause() != null) {
-            root = root.getCause();
-        }
-
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(ResponseUtils.fail(
-                        root.getClass().getName() + " : " + root.getMessage()));
+                .body(ResponseUtils.fail("Đã xảy ra lỗi hệ thống. Vui lòng thử lại sau."));
     }
 }

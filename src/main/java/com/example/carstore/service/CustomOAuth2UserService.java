@@ -8,10 +8,12 @@ import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest;
 import org.springframework.security.oauth2.core.user.DefaultOAuth2User;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.factory.PasswordEncoderFactories;
 
 import java.util.LinkedHashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 @Service
 public class CustomOAuth2UserService extends DefaultOAuth2UserService {
@@ -59,6 +61,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 changed = true;
             }
 
+            if ("{noop}oauth2".equals(account.getPassword())) {
+                account.setPassword(PasswordEncoderFactories.createDelegatingPasswordEncoder()
+                        .encode(UUID.randomUUID().toString()));
+                changed = true;
+            }
+
             if (changed) {
                 accountRepo.save(account);
             }
@@ -85,7 +93,8 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         account.setEmail(email);
         account.setUsername(email);
         account.setFullname(name == null || name.trim().isEmpty() ? email : name);
-        account.setPassword("{noop}oauth2");
+        account.setPassword(PasswordEncoderFactories.createDelegatingPasswordEncoder()
+                .encode(UUID.randomUUID().toString()));
         account.setRole("ROLE_USER");
         return accountRepo.save(account);
     }

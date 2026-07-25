@@ -21,6 +21,10 @@ public class CarService {
         return carRepo.findAll();
     }
 
+    public long count() {
+        return carRepo.count();
+    }
+
     public List<Car> search(String keyword) {
         return findAllFiltered(keyword);
     }
@@ -29,7 +33,19 @@ public class CarService {
         if (!StringUtils.hasText(keyword)) {
             return carRepo.findAll();
         }
-        return carRepo.findByNameContainingIgnoreCase(keyword.trim());
+        String query = keyword.trim();
+        return carRepo.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(query, query);
+    }
+
+
+    public List<Car> findSimilar(Car car) {
+        if (car == null || car.getId() == null) return List.of();
+        List<Car> result = car.getBodyType() == null ? List.of()
+                : carRepo.findTop6ByBodyTypeAndIdNotOrderByPriceAsc(car.getBodyType(), car.getId());
+        if (result.isEmpty() && car.getBrandId() != null) {
+            result = carRepo.findTop6ByBrandIdAndIdNotOrderByPriceAsc(car.getBrandId(), car.getId());
+        }
+        return result;
     }
 
     public Optional<Car> findById(Integer id) {
