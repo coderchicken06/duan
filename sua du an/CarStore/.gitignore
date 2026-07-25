@@ -1,6 +1,0 @@
-target/
-.vscode/
-.env
-*.log
-login_resp.txt
-.DS_Store
