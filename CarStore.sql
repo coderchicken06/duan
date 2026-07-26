@@ -114,6 +114,9 @@ CREATE TABLE dbo.Account (
     fullname NVARCHAR(100) NULL,
     email NVARCHAR(100) NULL,
     role NVARCHAR(20) NOT NULL,
+    enabled BIT NOT NULL CONSTRAINT DF_Account_Enabled DEFAULT 0,
+    verification_code NVARCHAR(10) NULL,
+    verification_expired DATETIME NULL,
     CONSTRAINT PK_Account PRIMARY KEY (username),
     CONSTRAINT CK_Account_Role CHECK (role IN ('ROLE_ADMIN', 'ROLE_USER', 'ROLE_EMPLOYEE'))
 );
@@ -458,6 +461,10 @@ INSERT INTO dbo.Account(username, password, fullname, email, role) VALUES
 ('user1', '{noop}123', N'Nguyễn Văn A', 'user1@carstore.com', 'ROLE_USER'),
 ('user2', '{noop}123', N'Trần Thị B', 'user2@carstore.com', 'ROLE_USER'),
 ('user3', '{noop}123', N'Lê Văn C', 'user3@carstore.com', 'ROLE_USER');
+
+UPDATE dbo.Account
+SET enabled = 1
+WHERE role = 'ROLE_ADMIN';
 GO
 
 -- =============================================================

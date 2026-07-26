@@ -2,6 +2,7 @@
   <header class="ford-header">
     <div class="ford-header-inner">
       <nav class="ford-nav-left" aria-label="Điều hướng chính">
+        <router-link to="/news">Tin tức</router-link>
         <router-link to="/car/list">Sản phẩm</router-link>
         <router-link to="/cart/view">Giỏ hàng</router-link>
         <router-link to="/service">Dịch vụ</router-link>
