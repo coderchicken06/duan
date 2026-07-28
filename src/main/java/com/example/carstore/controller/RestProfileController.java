@@ -2,11 +2,12 @@ package com.example.carstore.controller;
 
 import com.example.carstore.entity.Account;
 import com.example.carstore.repository.AccountRepository;
+import com.example.carstore.service.MailService;
 import com.example.carstore.util.ResponseUtils;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.CrossOrigin;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -17,6 +18,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Date;
+import java.security.SecureRandom;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpSession;
 
 @RestController
 @RequestMapping("/api/profile")
@@ -25,6 +30,8 @@ public class RestProfileController {
 
     private final AccountRepository accountRepo;
     private final PasswordEncoder passwordEncoder;
+    private final MailService mailService;
+    private final SecureRandom secureRandom = new SecureRandom();
 
     private Optional<Account> getCurrentAccount(Authentication auth) {
         if (auth == null) {
@@ -40,9 +47,11 @@ public class RestProfileController {
         return accountRepo.findByEmail(auth.getName());
     }
 
-    public RestProfileController(AccountRepository accountRepo, PasswordEncoder passwordEncoder) {
+    public RestProfileController(AccountRepository accountRepo, PasswordEncoder passwordEncoder,
+            MailService mailService) {
         this.accountRepo = accountRepo;
         this.passwordEncoder = passwordEncoder;
+        this.mailService = mailService;
     }
 
     @GetMapping
@@ -71,7 +80,8 @@ public class RestProfileController {
     }
 
     @PutMapping
-    public Map<String, Object> updateProfile(@RequestBody Account account, Authentication auth) {
+    public Map<String, Object> updateProfile(@RequestBody Account account, Authentication auth,
+            HttpServletRequest request) {
         if (auth == null) {
             return ResponseUtils.fail("Not authenticated");
         }
@@ -83,8 +93,36 @@ public class RestProfileController {
 
         if (hasText(account.getFullname()))
             existing.setFullname(account.getFullname());
-        if (hasText(account.getEmail()))
-            existing.setEmail(account.getEmail());
+        boolean emailChanged = false;
+        if (hasText(account.getEmail())) {
+            String email = account.getEmail().trim().toLowerCase();
+            if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                return ResponseUtils.fail("Email không hợp lệ");
+            }
+            Optional<Account> emailOwner = accountRepo.findByEmail(email);
+            if (emailOwner.isPresent() && !emailOwner.get().getUsername().equals(existing.getUsername())) {
+                return ResponseUtils.fail("Email đã được sử dụng");
+            }
+            emailChanged = !email.equalsIgnoreCase(existing.getEmail());
+            existing.setEmail(email);
+        }
+        if (emailChanged) {
+            String code = String.valueOf(100000 + secureRandom.nextInt(900000));
+            existing.setEnabled(false);
+            existing.setVerificationCode(code);
+            existing.setVerificationExpired(new Date(System.currentTimeMillis() + 15 * 60 * 1000L));
+            accountRepo.save(existing);
+            SecurityContextHolder.clearContext();
+            HttpSession session = request.getSession(false);
+            if (session != null) session.invalidate();
+            mailService.sendEmailVerificationCode(existing.getEmail(), code);
+            return Map.of(
+                    "success", true,
+                    "message", "Email đã thay đổi. Vui lòng xác thực địa chỉ email mới.",
+                    "requiresVerification", true,
+                    "username", existing.getUsername(),
+                    "email", existing.getEmail());
+        }
         accountRepo.save(existing);
         return ResponseUtils.ok("Profile updated successfully");
     }
@@ -114,20 +152,6 @@ public class RestProfileController {
         account.setPassword(passwordEncoder.encode(newPassword));
         accountRepo.save(account);
         return ResponseUtils.ok("Password changed successfully");
-    }
-
-    @DeleteMapping
-    public Map<String, Object> deleteAccount(Authentication auth) {
-        if (auth == null) {
-            return ResponseUtils.fail("Not authenticated");
-        }
-        Optional<Account> accountOpt = getCurrentAccount(auth);
-
-        if (accountOpt.isEmpty()) {
-            return ResponseUtils.fail("Account not found");
-        }
-        accountRepo.delete(accountOpt.get());
-        return ResponseUtils.ok("Account deleted successfully");
     }
 
     private String validatePassword(String oldPassword, String newPassword, String confirmPassword) {

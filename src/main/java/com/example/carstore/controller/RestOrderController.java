@@ -194,19 +194,6 @@ public class RestOrderController {
         }
     }
 
-    @DeleteMapping("/{id}")
-    public Map<String, Object> deleteOrder(@PathVariable int id, Authentication auth) {
-        if (!isAdmin(auth)) {
-            return fail("Access denied");
-        }
-        if (!orderRepo.existsById(id)) {
-            return fail("Order not found");
-        }
-
-        orderService.deleteOrder(id);
-        return Map.of("success", true, "message", "Order deleted successfully");
-    }
-
     @GetMapping("/summary/{id}")
     public Map<String, Object> getOrderSummary(@PathVariable int id, Authentication auth) {
         Optional<Orders> orderOpt = orderRepo.findById(id);

@@ -3,14 +3,18 @@
     <h2 class="cs-page-title mb-4">Lịch sử yêu cầu hỗ trợ</h2>
     <div class="table-responsive cs-card p-3">
       <table class="table cs-table mb-0">
-        <thead><tr><th>ID</th><th>Loại</th><th>Nội dung</th><th>Trạng thái</th><th>Ngày</th></tr></thead>
+        <thead><tr><th>ID</th><th>Loại</th><th>Chi tiết</th><th>Trạng thái</th><th>Lịch hẹn</th></tr></thead>
         <tbody>
           <tr v-for="r in requests" :key="r.id">
             <td>{{ r.id }}</td>
             <td>{{ r.type }}</td>
-            <td>{{ r.content }}</td>
+            <td>
+              <div>{{ r.content }}</div>
+              <small v-if="r.carInfo">Xe: {{ r.carInfo }}</small>
+              <small v-if="r.serviceType">Dịch vụ: {{ r.serviceType }}</small>
+            </td>
             <td>{{ r.status }}</td>
-            <td>{{ r.appointmentDate || '-' }}</td>
+            <td>{{ formatAppointment(r) }}</td>
           </tr>
         </tbody>
       </table>
@@ -34,6 +38,11 @@ import { supportApi, quotationApi, formatPrice } from '../api'
 const requests = ref([])
 const quotations = ref([])
 const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '-'
+const formatAppointment = (request) => {
+  if (!request.appointmentDate) return '-'
+  const date = new Date(`${request.appointmentDate}T00:00:00`).toLocaleDateString('vi-VN')
+  return `${date}${request.appointmentTime ? ` ${String(request.appointmentTime).slice(0, 5)}` : ''}`
+}
 
 onMounted(async () => {
   const [supportResult, quotationResult] = await Promise.all([supportApi.getMy(), quotationApi.getMine()])

@@ -60,6 +60,12 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                 account.setRole("ROLE_USER");
                 changed = true;
             }
+            if (!Boolean.TRUE.equals(account.getEnabled())) {
+                account.setEnabled(true);
+                account.setVerificationCode(null);
+                account.setVerificationExpired(null);
+                changed = true;
+            }
 
             if ("{noop}oauth2".equals(account.getPassword())) {
                 account.setPassword(PasswordEncoderFactories.createDelegatingPasswordEncoder()
@@ -96,6 +102,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
         account.setPassword(PasswordEncoderFactories.createDelegatingPasswordEncoder()
                 .encode(UUID.randomUUID().toString()));
         account.setRole("ROLE_USER");
+        account.setEnabled(true);
         return accountRepo.save(account);
     }
 }

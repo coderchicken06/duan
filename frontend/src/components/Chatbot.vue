@@ -47,7 +47,7 @@
 </template>
 
 <script>
-import axios from 'axios';
+import api from '../api/client';
 
 export default {
   name: 'ChatbotWidget',
@@ -72,8 +72,7 @@ export default {
       this.userMessage = '';
 
       try {
-        // Gọi API Spring Boot Backend của bạn (kiểm tra lại port 8080 hay 8082)
-        const response = await axios.post('http://localhost:8082/api/chat', {
+        const response = await api.post('/api/chat', {
           message: text
         });
 

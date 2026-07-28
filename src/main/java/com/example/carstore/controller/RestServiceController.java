@@ -78,7 +78,7 @@ public class RestServiceController {
             SupportRequest saved;
             if ("service".equalsIgnoreCase(request.getType())) {
                 saved = supportRequestService.createServiceBooking(
-                        request.getName(), request.getPhone(), request.getCarId(), request.getCarInfo(), request.getServiceType(),
+                        request.getName(), request.getPhone(), request.getCarInfo(), request.getServiceType(),
                         request.getAppointmentDate() == null ? null : request.getAppointmentDate().toString(),
                         request.getAppointmentTime() == null ? null : request.getAppointmentTime().toString(), auth);
             } else {
@@ -88,7 +88,6 @@ public class RestServiceController {
                 entity.setType(request.getType());
                 entity.setContent(request.getContent());
                 entity.setCarInfo(request.getCarInfo());
-                entity.setCarId(request.getCarId());
                 saved = supportRequestService.createFromRequest(entity, auth);
             }
 

@@ -13,6 +13,7 @@
             <form class="vstack gap-3" @submit.prevent="submit">
               <div v-if="error" class="alert alert-danger">{{ error }}</div>
               <div v-if="registered" class="alert alert-success">Đăng ký thành công. Vui lòng đăng nhập.</div>
+              <div v-if="verified" class="alert alert-success">Xác thực email thành công. Bạn có thể đăng nhập.</div>
               <div v-if="resetSuccess" class="alert alert-success">Đổi mật khẩu thành công. Vui lòng đăng nhập.</div>
               <div>
                 <label class="form-label cs-muted">Username</label>
@@ -55,6 +56,7 @@ const error = ref('')
 const loading = ref(false)
 const showPassword = ref(false)
 const registered = ref(route.query.registered === '1')
+const verified = ref(route.query.verified === '1')
 const resetSuccess = ref(route.query.resetSuccess === '1')
 
 async function submit() {
@@ -64,6 +66,8 @@ async function submit() {
     const data = await auth.login(username.value, password.value)
     if (data.success) {
       router.push(String(route.query.redirect || '/'))
+    } else if (data.requiresVerification) {
+      router.push({ path: '/verify-email', query: { username: data.username || username.value } })
     } else {
       error.value = data.message || 'Đăng nhập không thành công'
     }

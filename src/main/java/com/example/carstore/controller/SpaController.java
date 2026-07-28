@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class SpaController {
 
     @GetMapping({
-            "/login", "/signup", "/forgot-password", "/verify-otp", "/reset-password",
+            "/login", "/signup", "/verify-email", "/forgot-password", "/verify-otp", "/reset-password",
             "/profile", "/history", "/service", "/support", "/checkout", "/compare",
             "/car/list", "/car/create", "/car/detail/{id}", "/car/edit/{id}",
             "/cart/view", "/order/my-orders", "/order/detail/{id}",

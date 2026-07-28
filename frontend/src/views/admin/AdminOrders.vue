@@ -18,7 +18,13 @@
                 <option value="CANCELLED">CANCELLED - Đã hủy</option>
               </select>
             </td>
-            <td><button class="btn btn-sm cs-btn-danger" @click="remove(o.id)">Xóa</button></td>
+            <td>
+              <button
+                v-if="!['CANCELLED', 'DELIVERED'].includes(o.status)"
+                class="btn btn-sm cs-btn-danger"
+                @click="cancel(o)"
+              >Hủy đơn</button>
+            </td>
           </tr>
           <tr v-if="orders.length === 0"><td colspan="5" class="empty-cell">Chưa có đơn hàng nào.</td></tr>
         </tbody>
@@ -46,10 +52,10 @@ async function updateStatus(o) {
   await load()
 }
 
-async function remove(id) {
-  if (!confirm('Xóa đơn hàng?')) return
-  const { data } = await adminApi.deleteOrder(id)
-  if (!data.success) alert(data.message || 'Không thể xóa đơn hàng')
+async function cancel(order) {
+  if (!confirm('Hủy đơn hàng này? Tồn kho sẽ được hoàn lại nếu đơn chưa thanh toán cọc.')) return
+  const { data } = await adminApi.updateOrderStatus(order.id, 'CANCELLED')
+  if (!data.success) alert(data.message || 'Không thể hủy đơn hàng')
   await load()
 }
 </script>

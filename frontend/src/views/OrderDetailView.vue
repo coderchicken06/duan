@@ -5,7 +5,7 @@
       <p><strong>Khách hàng:</strong> {{ order.username }}</p>
       <p><strong>Địa chỉ:</strong> {{ order.address }}</p>
       <p><strong>Trạng thái:</strong> {{ order.status }}</p>
-      <p><strong>Ngày đặt:</strong> {{ formatDate(order.create_date) }}</p>
+      <p><strong>Ngày đặt:</strong> {{ formatDate(order.createDate) }}</p>
       <p><strong>Trạng thái tiền cọc:</strong> {{ order.depositStatus || 'UNPAID' }}</p>
       <p v-if="order.depositAmount"><strong>Tiền cọc:</strong> {{ formatPrice(order.depositAmount) }} VNĐ</p>
       <div class="d-flex flex-wrap gap-2 mb-3">

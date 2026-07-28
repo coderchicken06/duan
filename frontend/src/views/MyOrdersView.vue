@@ -7,7 +7,7 @@
         <tbody>
           <tr v-for="o in orders" :key="o.id">
             <td>#{{ o.id }}</td>
-            <td>{{ formatDate(o.create_date) }}</td>
+            <td>{{ formatDate(o.createDate) }}</td>
             <td>{{ o.address }}</td>
             <td><span class="badge bg-secondary">{{ o.status }}</span></td>
             <td>{{ o.depositStatus === 'PAID' ? 'Đã thanh toán' : (o.status === 'CONFIRMED' ? 'Chờ thanh toán' : 'Chưa mở') }}</td>

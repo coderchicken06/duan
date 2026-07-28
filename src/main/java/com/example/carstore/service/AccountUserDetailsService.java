@@ -32,6 +32,7 @@ public class AccountUserDetailsService implements UserDetailsService {
         return User.builder()
                 .username(account.getUsername())
                 .password(account.getPassword())
+                .disabled(!Boolean.TRUE.equals(account.getEnabled()))
                 .authorities(Collections.singletonList(new SimpleGrantedAuthority(resolveRole(account))))
                 .build();
     }

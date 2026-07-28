@@ -3,7 +3,8 @@ import com.example.carstore.entity.Promotion;import com.example.carstore.entity.
 @Service public class PromotionService{
  private final PromotionRepository r;private final PromotionCarRepository promotionCars;private final CarRepository cars;
  public PromotionService(PromotionRepository r,PromotionCarRepository promotionCars,CarRepository cars){this.r=r;this.promotionCars=promotionCars;this.cars=cars;}
- public List<Promotion> active(){return r.findActive();}public List<Promotion> activeForCar(Integer carId){return r.findActiveByCarId(carId);}public List<Promotion> all(){return r.findAll();}
+ private Date today(){return java.sql.Date.valueOf(java.time.LocalDate.now());}
+ public List<Promotion> active(){return r.findActive(today());}public List<Promotion> activeForCar(Integer carId){return r.findActiveByCarId(carId,today());}public List<Promotion> all(){return r.findAll();}
  public double priceAfterPromotion(Integer carId,double originalPrice){
   return activeForCar(carId).stream().mapToDouble(p->{
    double discount="PERCENT".equals(p.getType())?originalPrice*p.getValue()/100D:p.getValue();

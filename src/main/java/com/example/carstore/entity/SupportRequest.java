@@ -19,7 +19,7 @@ public class SupportRequest {
     @Column(columnDefinition = "NVARCHAR(50)")
     private String phone;
 
-    @Column(columnDefinition = "NVARCHAR(100)")
+    @Column(columnDefinition = "NVARCHAR(50)")
     private String username;
 
     @Column(columnDefinition = "NVARCHAR(255)")
@@ -33,9 +33,6 @@ public class SupportRequest {
 
     @Column(name = "car_info", columnDefinition = "NVARCHAR(255)")
     private String carInfo;
-
-    @Column(name = "car_id")
-    private Integer carId;
 
     @Column(name = "service_type", columnDefinition = "NVARCHAR(255)")
     private String serviceType;
@@ -130,14 +127,6 @@ public class SupportRequest {
 
     public void setCarInfo(String carInfo) {
         this.carInfo = carInfo;
-    }
-
-    public Integer getCarId() {
-        return carId;
-    }
-
-    public void setCarId(Integer carId) {
-        this.carId = carId;
     }
 
     public String getServiceType() {

@@ -126,26 +126,6 @@ public class OrderService {
     }
 
     @Transactional
-    public void deleteOrder(Integer orderId) {
-        Orders order = orderRepo.findForUpdateById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
-        if (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())
-                || OrderStatus.PROCESSING.equals(order.getStatus())
-                || OrderStatus.DELIVERED.equals(order.getStatus())) {
-            throw new IllegalArgumentException("Không thể xóa đơn đã cọc, đang xử lý hoặc đã giao.");
-        }
-
-        List<OrderDetail> details = detailRepo.findByOrderId(orderId);
-        if (!OrderStatus.CANCELLED.equals(order.getStatus())) {
-            restoreStock(details);
-        }
-        for (OrderDetail detail : details) {
-            detailRepo.deleteById(detail.getId());
-        }
-        orderRepo.deleteById(orderId);
-    }
-
-    @Transactional
     public Orders updateStatus(Integer orderId, String targetStatus) {
         if (!OrderStatus.VALID_STATUSES.contains(targetStatus)) {
             throw new IllegalArgumentException("Trạng thái đơn hàng không hợp lệ.");

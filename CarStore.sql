@@ -1,17 +1,4 @@
-﻿/*
-===============================================================================
- CARSTORE.SQL - DATABASE DUY NHẤT CỦA DỰ ÁN
-===============================================================================
-- Tạo mới database CarStore.
-- Có đầy đủ bảng, khóa ngoại, dữ liệu mẫu, cột stock và bảng CarImage.
-- Đồng bộ với entity Car.java và CarImage.java.
-- Không cần chạy thêm bất kỳ file SQL nào khác.
-
-CẢNH BÁO: Script xóa database CarStore cũ rồi tạo lại từ đầu.
-===============================================================================
-*/
-
-USE master;
+﻿USE master;
 GO
 
 IF DB_ID(N'CarStore') IS NOT NULL
@@ -118,7 +105,7 @@ CREATE TABLE dbo.Account (
     verification_code NVARCHAR(10) NULL,
     verification_expired DATETIME NULL,
     CONSTRAINT PK_Account PRIMARY KEY (username),
-    CONSTRAINT CK_Account_Role CHECK (role IN ('ROLE_ADMIN', 'ROLE_USER', 'ROLE_EMPLOYEE'))
+    CONSTRAINT CK_Account_Role CHECK (role IN ('ROLE_ADMIN', 'ROLE_USER'))
 );
 GO
 
@@ -132,13 +119,14 @@ CREATE TABLE dbo.Orders (
     address NVARCHAR(255) NULL,
     registration_address NVARCHAR(255) NULL,
     payment_method NVARCHAR(50) NULL,
-    status NVARCHAR(50) NULL CONSTRAINT DF_Orders_Status DEFAULT 'PENDING',
+    status NVARCHAR(50) NOT NULL CONSTRAINT DF_Orders_Status DEFAULT 'PENDING',
     deposit_status NVARCHAR(20) NOT NULL CONSTRAINT DF_Orders_DepositStatus DEFAULT 'UNPAID',
     deposit_amount FLOAT NULL,
     deposit_method NVARCHAR(50) NULL,
     deposit_paid_at DATETIME NULL,
     CONSTRAINT PK_Orders PRIMARY KEY (id),
     CONSTRAINT FK_Orders_Account FOREIGN KEY (username) REFERENCES dbo.Account(username),
+    CONSTRAINT CK_Orders_Status CHECK (status IN ('PENDING', 'CONFIRMED', 'PROCESSING', 'DELIVERED', 'CANCELLED')),
     CONSTRAINT CK_Orders_DepositAmount CHECK (deposit_amount IS NULL OR deposit_amount >= 0),
     CONSTRAINT CK_Orders_DepositStatus CHECK (deposit_status IN ('UNPAID', 'PAID'))
 );
@@ -163,19 +151,25 @@ GO
 -- =============================================================
 CREATE TABLE dbo.support_request (
     id INT IDENTITY(1,1) NOT NULL,
-    name NVARCHAR(255) NULL,
-    phone NVARCHAR(50) NULL,
-    username NVARCHAR(100) NULL,
-    type NVARCHAR(255) NULL,
-    content NVARCHAR(1000) NULL,
-    status NVARCHAR(255) NULL CONSTRAINT DF_Support_Status DEFAULT N'Chờ xử lý',
-    car_id INT NULL,
+    name NVARCHAR(255) NOT NULL,
+    phone NVARCHAR(50) NOT NULL,
+    username NVARCHAR(50) NOT NULL,
+    type NVARCHAR(255) NOT NULL,
+    content NVARCHAR(1000) NOT NULL,
+    status NVARCHAR(255) NOT NULL CONSTRAINT DF_Support_Status DEFAULT N'Chờ xử lý',
     car_info NVARCHAR(255) NULL,
     service_type NVARCHAR(255) NULL,
     appointment_date DATE NULL,
     appointment_time TIME NULL,
     CONSTRAINT PK_SupportRequest PRIMARY KEY (id),
-    CONSTRAINT FK_SupportRequest_Car FOREIGN KEY (car_id) REFERENCES dbo.Car(id)
+    CONSTRAINT FK_SupportRequest_Account FOREIGN KEY (username) REFERENCES dbo.Account(username),
+    CONSTRAINT CK_SupportRequest_Type CHECK (type IN ('chat', 'consulting', 'warranty', 'service')),
+    CONSTRAINT CK_SupportRequest_Status CHECK (status IN (N'Chờ xử lý', N'Đang xử lý', N'Đã xử lý', N'Đã hủy')),
+    CONSTRAINT CK_SupportRequest_ServiceFields CHECK (
+        type <> 'service'
+        OR (car_info IS NOT NULL AND service_type IS NOT NULL
+            AND appointment_date IS NOT NULL AND appointment_time IS NOT NULL)
+    )
 );
 GO
 
@@ -191,7 +185,7 @@ CREATE TABLE dbo.Quotation (
     discount FLOAT NOT NULL CONSTRAINT DF_Quotation_Discount DEFAULT 0,
     total_price FLOAT NOT NULL,
     note NVARCHAR(500) NULL,
-    status NVARCHAR(50) NULL CONSTRAINT DF_Quotation_Status DEFAULT N'Chờ xác nhận',
+    status NVARCHAR(50) NOT NULL CONSTRAINT DF_Quotation_Status DEFAULT N'Chờ xác nhận',
     quotation_no NVARCHAR(40) NULL,
     updated_at DATETIME NULL,
     order_id INT NULL,
@@ -199,7 +193,10 @@ CREATE TABLE dbo.Quotation (
     CONSTRAINT FK_Quotation_Account FOREIGN KEY (customer_username) REFERENCES dbo.Account(username),
     CONSTRAINT FK_Quotation_Car FOREIGN KEY (car_id) REFERENCES dbo.Car(id),
     CONSTRAINT FK_Quotation_Order FOREIGN KEY (order_id) REFERENCES dbo.Orders(id),
-    CONSTRAINT CK_Quotation_Amounts CHECK (car_price >= 0 AND discount >= 0 AND total_price >= 0)
+    CONSTRAINT CK_Quotation_Amounts CHECK (car_price >= 0 AND discount >= 0 AND total_price >= 0),
+    CONSTRAINT CK_Quotation_Status CHECK (
+        status IN (N'Chờ xác nhận', N'Đã duyệt', N'Khách đã xác nhận', N'Từ chối', N'Đã chuyển đơn')
+    )
 );
 GO
 
@@ -223,32 +220,15 @@ GO
 -- =============================================================
 CREATE TABLE dbo.Review (
     id INT IDENTITY(1,1) NOT NULL,
-    username NVARCHAR(50) NULL,
-    car_id INT NULL,
-    rating INT NULL,
-    comment NVARCHAR(1000) NULL,
+    username NVARCHAR(50) NOT NULL,
+    car_id INT NOT NULL,
+    rating INT NOT NULL,
+    comment NVARCHAR(1000) NOT NULL,
     review_date DATETIME NOT NULL CONSTRAINT DF_Review_Date DEFAULT GETDATE(),
     CONSTRAINT PK_Review PRIMARY KEY (id),
     CONSTRAINT FK_Review_Account FOREIGN KEY (username) REFERENCES dbo.Account(username),
     CONSTRAINT FK_Review_Car FOREIGN KEY (car_id) REFERENCES dbo.Car(id),
     CONSTRAINT CK_Review_Rating CHECK (rating BETWEEN 1 AND 5)
-);
-GO
-
--- =============================================================
--- 8. THANH TOÁN
--- =============================================================
-CREATE TABLE dbo.Payment (
-    id INT IDENTITY(1,1) NOT NULL,
-    order_id INT NOT NULL,
-    amount FLOAT NOT NULL,
-    payment_method NVARCHAR(50) NULL,
-    transaction_code NVARCHAR(100) NULL,
-    payment_date DATETIME NOT NULL CONSTRAINT DF_Payment_Date DEFAULT GETDATE(),
-    status NVARCHAR(50) NULL,
-    CONSTRAINT PK_Payment PRIMARY KEY (id),
-    CONSTRAINT FK_Payment_Order FOREIGN KEY (order_id) REFERENCES dbo.Orders(id),
-    CONSTRAINT CK_Payment_Amount CHECK (amount >= 0)
 );
 GO
 
@@ -264,7 +244,7 @@ CREATE TABLE dbo.Contract (
     deposit FLOAT NULL,
     total FLOAT NULL,
     payment_method NVARCHAR(50) NULL,
-    status NVARCHAR(50) NULL,
+    status NVARCHAR(50) NOT NULL CONSTRAINT DF_Contract_Status DEFAULT N'Chờ ký',
     deposit_status NVARCHAR(20) NOT NULL CONSTRAINT DF_Contract_DepositStatus DEFAULT 'UNPAID',
     deposit_amount FLOAT NULL,
     deposit_method NVARCHAR(50) NULL,
@@ -279,7 +259,8 @@ CREATE TABLE dbo.Contract (
     CONSTRAINT FK_Contract_Quotation FOREIGN KEY (quotation_id) REFERENCES dbo.Quotation(id),
     CONSTRAINT FK_Contract_Customer FOREIGN KEY (customer_username) REFERENCES dbo.Account(username),
     CONSTRAINT FK_Contract_Employee FOREIGN KEY (employee_username) REFERENCES dbo.Account(username),
-    CONSTRAINT CK_Contract_DepositStatus CHECK (deposit_status IN ('UNPAID', 'PAID'))
+    CONSTRAINT CK_Contract_DepositStatus CHECK (deposit_status IN ('UNPAID', 'PAID')),
+    CONSTRAINT CK_Contract_Status CHECK (status IN (N'Chờ ký', N'Đã ký', N'Hủy'))
 );
 GO
 
@@ -293,16 +274,16 @@ CREATE TABLE dbo.Promotion (
     type NVARCHAR(20) NOT NULL,
     value FLOAT NOT NULL,
     description NVARCHAR(MAX) NULL,
-    discount_percent INT NULL,             -- Giảm theo % (VD: 10)
-    discount_amount FLOAT NULL,            -- Giảm theo số tiền cố định (VD: 50000000)
     start_date DATE NULL,
     end_date DATE NULL,
     status BIT NOT NULL CONSTRAINT DF_Promotion_Status DEFAULT 1,
     created_at DATETIME NOT NULL CONSTRAINT DF_Promotion_CreatedAt DEFAULT GETDATE(),
 
     CONSTRAINT PK_Promotion PRIMARY KEY (id),
-    CONSTRAINT CK_Promotion_Discount CHECK (discount_percent IS NULL OR discount_percent BETWEEN 0 AND 100),
-    CONSTRAINT CK_Promotion_Amount CHECK (discount_amount IS NULL OR discount_amount >= 0),
+    CONSTRAINT CK_Promotion_Value CHECK (
+        (type = 'PERCENT' AND value > 0 AND value <= 100)
+        OR (type = 'FIXED' AND value > 0)
+    ),
     CONSTRAINT CK_Promotion_Date CHECK (end_date IS NULL OR start_date IS NULL OR end_date >= start_date)
 );
 GO
@@ -349,7 +330,8 @@ CREATE TABLE dbo.News (
     updated_at DATETIME NULL,
     author NVARCHAR(50) NULL,
     CONSTRAINT PK_News PRIMARY KEY (id),
-    CONSTRAINT FK_News_Author FOREIGN KEY (author) REFERENCES dbo.Account(username)
+    CONSTRAINT FK_News_Author FOREIGN KEY (author) REFERENCES dbo.Account(username),
+    CONSTRAINT CK_News_Status CHECK (status IN ('DRAFT', 'PUBLISHED'))
 );
 GO
 
@@ -359,6 +341,7 @@ GO
 CREATE INDEX IX_Car_BrandId ON dbo.Car(brand_id);
 CREATE INDEX IX_Orders_Username ON dbo.Orders(username);
 CREATE INDEX IX_Orders_Status ON dbo.Orders(status);
+CREATE UNIQUE INDEX UX_Account_Email ON dbo.Account(email) WHERE email IS NOT NULL;
 CREATE INDEX IX_OrderDetail_OrderId ON dbo.OrderDetail(order_id);
 CREATE INDEX IX_OrderDetail_CarId ON dbo.OrderDetail(car_id);
 CREATE INDEX IX_SupportRequest_Username ON dbo.support_request(username);
@@ -366,14 +349,9 @@ CREATE INDEX IX_SupportRequest_TypeStatus ON dbo.support_request(type, status);
 CREATE INDEX IX_Review_CarId ON dbo.Review(car_id);
 CREATE UNIQUE INDEX UX_Review_UserCar ON dbo.Review(username, car_id)
 WHERE username IS NOT NULL AND car_id IS NOT NULL;
-CREATE INDEX IX_Payment_OrderId ON dbo.Payment(order_id);
-CREATE UNIQUE INDEX UX_Payment_TransactionCode
-ON dbo.Payment(transaction_code)
-WHERE transaction_code IS NOT NULL;
 CREATE INDEX IX_Car_BrandPrice ON dbo.Car(brand_id, price);
 CREATE INDEX IX_Orders_UserStatusCreated ON dbo.Orders(username, status, create_date DESC);
 CREATE INDEX IX_Quotation_CustomerStatus ON dbo.Quotation(customer_username, status);
-CREATE INDEX IX_Payment_OrderTransaction ON dbo.Payment(order_id, transaction_code);
 CREATE INDEX IX_PaymentTransaction_OrderNo ON dbo.PaymentTransaction(order_id, transaction_no);
 CREATE INDEX IX_Promotion_CodeStatus ON dbo.Promotion(code, status);
 CREATE UNIQUE INDEX UX_News_Slug ON dbo.News(slug) WHERE slug IS NOT NULL;
@@ -462,23 +440,21 @@ INSERT INTO dbo.Account(username, password, fullname, email, role) VALUES
 ('user2', '{noop}123', N'Trần Thị B', 'user2@carstore.com', 'ROLE_USER'),
 ('user3', '{noop}123', N'Lê Văn C', 'user3@carstore.com', 'ROLE_USER');
 
-UPDATE dbo.Account
-SET enabled = 1
-WHERE role = 'ROLE_ADMIN';
+UPDATE dbo.Account SET enabled = 1;
 GO
 
 -- =============================================================
 -- 16. DỮ LIỆU MẪU HỖ TRỢ / DỊCH VỤ
 -- =============================================================
 INSERT INTO dbo.support_request
-(name, phone, username, type, content, status, car_id, car_info, service_type, appointment_date, appointment_time)
+(name, phone, username, type, content, status, car_info, service_type, appointment_date, appointment_time)
 VALUES
-(N'Nguyễn Văn A', N'0909123456', N'user1', N'service',
- N'Yêu cầu đặt lịch dịch vụ', N'Chờ xử lý', 1,
- N'51G-123.45 / Ford Ranger', N'Bảo dưỡng định kỳ', '2026-06-25', '09:00'),
+(N'Nguyễn Văn A', N'+84909123456', N'user1', N'service',
+ N'Yêu cầu đặt lịch dịch vụ', N'Chờ xử lý',
+ N'51G-123.45 / Toyota Camry', N'Bảo dưỡng định kỳ', CAST(DATEADD(DAY, 7, GETDATE()) AS DATE), '09:00'),
 
-(N'Trần Thị B', N'0912345678', N'user2', N'chat',
- N'Tư vấn thủ tục mua xe trả góp', N'Chờ xử lý', NULL,
+(N'Trần Thị B', N'+84912345678', N'user2', N'chat',
+ N'Tư vấn thủ tục mua xe trả góp', N'Chờ xử lý',
  NULL, NULL, NULL, NULL);
 GO
 
@@ -491,7 +467,7 @@ INSERT INTO dbo.Orders
  deposit_status, deposit_amount, deposit_method, deposit_paid_at)
 VALUES
 -- Đơn 1: Toyota Camry (Giá 1.2 tỷ) -> Cọc 10% = 120 triệu
-('user1', N'TP Hồ Chí Minh', N'TP Hồ Chí Minh', N'Chuyển khoản QR', N'CONFIRMED',
+('user1', N'TP Hồ Chí Minh', N'TP Hồ Chí Minh', N'Chuyển khoản QR', N'DELIVERED',
  'PAID', 120000000, N'VietQR', GETDATE()),
 
 -- Đơn 2: BMW X5 (Giá 3.5 tỷ) -> Cọc 10% = 350 triệu
@@ -512,27 +488,32 @@ GO
 INSERT INTO dbo.Quotation
 (customer_username, car_id, car_price, discount, total_price, note, status)
 VALUES
-('user1', 1, 850000000, 20000000, 830000000, N'Khách muốn trả góp', N'Chờ xác nhận'),
-('user1', 2, 1250000000, 50000000, 1200000000, N'Ưu đãi tháng 7', N'Đã xác nhận');
+('user1', 1, 1200000000, 20000000, 1180000000, N'Khách muốn trả góp', N'Chờ xác nhận'),
+('user1', 2, 3500000000, 50000000, 3450000000, N'Ưu đãi tháng 7', N'Khách đã xác nhận');
+GO
+
+INSERT INTO dbo.QuotationItem
+(quotation_id, car_id, quantity, unit_price, discount, total)
+VALUES
+(1, 1, 1, 1200000000, 20000000, 1180000000),
+(2, 2, 1, 3500000000, 50000000, 3450000000);
 GO
 
 -- =============================================================
 -- 19. DỮ LIỆU MẪU ĐÁNH GIÁ XE
 -- =============================================================
 INSERT INTO dbo.Review(username, car_id, rating, comment) VALUES
-('user1', 1, 5, N'Xe đẹp, chạy rất êm'),
-('user1', 2, 4, N'Nội thất đẹp, giá hơi cao'),
-('admin', 3, 5, N'Đáng mua');
+('user1', 1, 5, N'Xe đẹp, chạy rất êm');
 GO
 
 -- =============================================================
 -- 20. DỮ LIỆU MẪU THANH TOÁN
 -- =============================================================
-INSERT INTO dbo.Payment
-(order_id, amount, payment_method, transaction_code, status)
+INSERT INTO dbo.PaymentTransaction
+(order_id, gateway, transaction_no, amount, status, response_code, paid_at)
 VALUES
-(1, 50000000, N'VNPay', 'VNP001', N'Thành công'),
-(2, 100000000, N'MoMo', 'MOMO002', N'Thành công');
+(1, N'VietQR', 'VQR001', 120000000, 'SUCCESS', '00', GETDATE()),
+(2, N'VietQR', 'VQR002', 350000000, 'SUCCESS', '00', GETDATE());
 GO
 
 -- =============================================================
@@ -542,21 +523,21 @@ INSERT INTO dbo.Contract
 (order_id, customer_username, employee_username, deposit, total,
  payment_method, status, deposit_status, deposit_amount, deposit_method, deposit_paid_at)
 VALUES
-(1, 'user1', 'admin', 50000000, 830000000,
- N'Chuyển khoản', N'Đã ký', 'PAID', 50000000, N'VNPay', GETDATE()),
+(1, 'user1', 'admin', 120000000, 1200000000,
+ N'Chuyển khoản', N'Đã ký', 'PAID', 120000000, N'VietQR', GETDATE()),
 
-(2, 'user1', 'admin', 100000000, 1200000000,
- N'Trả góp', N'Chờ thanh toán', 'PAID', 100000000, N'MoMo', GETDATE());
+(2, 'user1', 'admin', 350000000, 3500000000,
+ N'Trả góp', N'Đã ký', 'PAID', 350000000, N'VietQR', GETDATE());
 GO
 
 -- =============================================================
 -- 22. DỮ LIỆU MẪU KHUYẾN MÃI
 -- =============================================================
 INSERT INTO dbo.Promotion
-(title, code, type, value, description, discount_percent, start_date, end_date, status)
+(title, code, type, value, description, start_date, end_date, status)
 VALUES
-(N'Khuyến mãi tháng 7', 'THANG7', 'PERCENT', 10, N'Giảm giá toàn bộ xe Ford', 10, '2026-07-01', '2026-07-31', 1),
-(N'Ưu đãi khai trương', 'KHAITRUONG', 'PERCENT', 15, N'Tặng bảo hiểm thân vỏ', 15, '2026-08-01', '2026-08-31', 1);
+(N'Khuyến mãi tháng 7', 'THANG7', 'PERCENT', 10, N'Giảm giá cho các xe áp dụng', '2026-07-01', '2026-07-31', 1),
+(N'Ưu đãi khai trương', 'KHAITRUONG', 'PERCENT', 15, N'Tặng bảo hiểm thân vỏ', '2026-08-01', '2026-08-31', 1);
 GO
 
 INSERT INTO dbo.PromotionCar(promotion_id, car_id) VALUES
@@ -595,7 +576,7 @@ UNION ALL SELECT N'OrderDetail', COUNT(*) FROM dbo.OrderDetail
 UNION ALL SELECT N'support_request', COUNT(*) FROM dbo.support_request
 UNION ALL SELECT N'Quotation', COUNT(*) FROM dbo.Quotation
 UNION ALL SELECT N'Review', COUNT(*) FROM dbo.Review
-UNION ALL SELECT N'Payment', COUNT(*) FROM dbo.Payment
+UNION ALL SELECT N'PaymentTransaction', COUNT(*) FROM dbo.PaymentTransaction
 UNION ALL SELECT N'Contract', COUNT(*) FROM dbo.Contract
 UNION ALL SELECT N'Promotion', COUNT(*) FROM dbo.Promotion
 UNION ALL SELECT N'PromotionCar', COUNT(*) FROM dbo.PromotionCar
@@ -611,7 +592,7 @@ SELECT * FROM dbo.OrderDetail;
 SELECT * FROM dbo.support_request;
 SELECT * FROM dbo.Quotation;
 SELECT * FROM dbo.Review;
-SELECT * FROM dbo.Payment;
+SELECT * FROM dbo.PaymentTransaction;
 SELECT * FROM dbo.Contract;
 SELECT * FROM dbo.Promotion;
 SELECT * FROM dbo.PromotionCar;

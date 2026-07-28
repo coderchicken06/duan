@@ -36,7 +36,7 @@ public class SecurityConfig {
                         .antMatchers(HttpMethod.POST, "/api/quotations/**").authenticated()
                         .antMatchers("/api/auth/**", "/api/chat").permitAll()
                         .antMatchers(
-                                "/", "/login", "/signup", "/forgot-password", "/verify-otp",
+                                "/", "/login", "/signup", "/verify-email", "/forgot-password", "/verify-otp",
                                 "/reset-password", "/compare", "/cart/view", "/checkout",
                                 "/profile", "/history", "/service", "/support", "/news", "/news/**",
                                 "/css/**", "/js/**", "/assets/**", "/images/**", "/videos/**",

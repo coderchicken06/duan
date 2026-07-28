@@ -25,8 +25,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { profileApi } from '../api'
+import { useAuthStore } from '../stores/auth'
 
+const router = useRouter()
+const auth = useAuthStore()
 const profile = ref(null)
 const msg = ref('')
 const pwd = ref({ oldPassword: '', newPassword: '', confirmPassword: '' })
@@ -41,6 +45,10 @@ onMounted(async () => {
 async function updateProfile() {
   const { data } = await profileApi.update(profile.value)
   msg.value = data.message || 'Cập nhật thành công'
+  if (data.requiresVerification) {
+    auth.user = null
+    router.push({ path: '/verify-email', query: { username: data.username, email: data.email } })
+  }
 }
 
 async function changePassword() {

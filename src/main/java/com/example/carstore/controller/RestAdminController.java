@@ -76,6 +76,12 @@ public class RestAdminController {
             if (account.getRole() == null || account.getRole().trim().isEmpty()) {
                 account.setRole("ROLE_USER");
             }
+            if (!List.of("ROLE_USER", "ROLE_ADMIN").contains(account.getRole())) {
+                return Map.of("success", false, "message", "Role must be ROLE_USER or ROLE_ADMIN");
+            }
+            account.setEnabled(true);
+            account.setVerificationCode(null);
+            account.setVerificationExpired(null);
 
             if (account.getFullname() == null || account.getFullname().trim().isEmpty()) {
                 account.setFullname(account.getUsername());
@@ -112,6 +118,9 @@ public class RestAdminController {
             }
 
             if (account.getRole() != null) {
+                if (!List.of("ROLE_USER", "ROLE_ADMIN").contains(account.getRole())) {
+                    return Map.of("success", false, "message", "Role must be ROLE_USER or ROLE_ADMIN");
+                }
                 existing.setRole(account.getRole());
             }
 
@@ -165,21 +174,6 @@ public class RestAdminController {
             if (status == null) return Map.of("success", false, "message", "Status is required");
             orderService.updateStatus(id, status.trim());
             return Map.of("success", true, "message", "Order status updated successfully");
-        } catch (IllegalArgumentException e) {
-            return Map.of("success", false, "message", e.getMessage());
-        }
-    }
-
-    @DeleteMapping("/orders/{id}")
-    public Map<String, Object> deleteOrder(@PathVariable int id) {
-        try {
-            if (!orderRepo.existsById(id)) {
-                return Map.of("success", false, "message", "Order not found");
-            }
-
-            orderService.deleteOrder(id);
-
-            return Map.of("success", true, "message", "Order deleted successfully");
         } catch (IllegalArgumentException e) {
             return Map.of("success", false, "message", e.getMessage());
         }

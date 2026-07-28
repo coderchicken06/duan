@@ -36,7 +36,7 @@
         <h2>Thông tin đơn hàng và đặt cọc</h2>
         <div class="info-grid">
           <p><span>Order ID</span><strong>#{{ order.id }}</strong></p>
-          <p><span>Ngày đặt</span><strong>{{ formatDate(order.create_date) }}</strong></p>
+          <p><span>Ngày đặt</span><strong>{{ formatDate(order.createDate) }}</strong></p>
           <p><span>Trạng thái đơn</span><strong>{{ order.status }}</strong></p>
           <p><span>Trạng thái cọc</span><b class="status-badge" :class="{ paid: contract.depositStatus === 'PAID' }">{{ contract.depositStatus }}</b></p>
           <p><span>Phương thức</span><strong>{{ contract.depositMethod || 'Chưa thanh toán' }}</strong></p>
@@ -71,7 +71,7 @@ const route = useRoute(), loading = ref(true), error = ref(''), data = ref({})
 const contract = computed(() => data.value.contract || {}), order = computed(() => data.value.order || {})
 const customer = computed(() => data.value.customer || {}), details = computed(() => data.value.details || []), payments = computed(() => data.value.payments || [])
 const paidAmount = computed(() => {
-  const historyTotal = payments.value.filter(p => p.status === 'Thành công').reduce((sum, p) => sum + Number(p.amount || 0), 0)
+  const historyTotal = payments.value.filter(p => p.status === 'SUCCESS').reduce((sum, p) => sum + Number(p.amount || 0), 0)
   return historyTotal || (contract.value.depositStatus === 'PAID' ? Number(contract.value.depositAmount || 0) : 0)
 })
 const remaining = computed(() => Math.max(0, Number(contract.value.total || 0) - paidAmount.value))

@@ -1,11 +1,15 @@
 package com.example.carstore.entity;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import javax.persistence.Entity;
 import javax.persistence.Id;
 import javax.persistence.Table;
 import javax.persistence.Column;
-import java.time.LocalDateTime;
+import javax.persistence.Temporal;
+import javax.persistence.TemporalType;
+import java.util.Date;
+
 @Entity
 @Table(name = "account")
 public class Account {
@@ -16,17 +20,14 @@ public class Account {
     private String fullname;
     private String email;
     private String role;
-
-    // code xac thucthuc
-            @Column(name = "enabled")
-        private Boolean enabled = false;
-
-        @Column(name = "verification_code")
-        private String verificationCode;
-
-        @Column(name = "verification_expired")
-        private LocalDateTime verificationExpired;
-
+    private Boolean enabled;
+    @JsonIgnore
+    @Column(name = "verification_code")
+    private String verificationCode;
+    @JsonIgnore
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "verification_expired")
+    private Date verificationExpired;
 
     public Account() {}
 
@@ -78,28 +79,27 @@ public class Account {
         this.role = role;
     }
 
-
     public Boolean getEnabled() {
         return enabled;
     }
-    
+
     public void setEnabled(Boolean enabled) {
         this.enabled = enabled;
     }
-    
+
     public String getVerificationCode() {
         return verificationCode;
     }
-    // code xac thucthuc
+
     public void setVerificationCode(String verificationCode) {
         this.verificationCode = verificationCode;
     }
-    
-    public LocalDateTime getVerificationExpired() {
+
+    public Date getVerificationExpired() {
         return verificationExpired;
     }
-    
-    public void setVerificationExpired(LocalDateTime verificationExpired) {
+
+    public void setVerificationExpired(Date verificationExpired) {
         this.verificationExpired = verificationExpired;
     }
 }

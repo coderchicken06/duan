@@ -1,6 +1,5 @@
 package com.example.carstore.service;
 
-import com.example.carstore.repository.CarRepository;
 import com.example.carstore.repository.SupportRequestRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,8 +17,7 @@ class SupportRequestServiceTest {
     @BeforeEach
     void setUp() {
         service = new SupportRequestService(
-                mock(SupportRequestRepository.class),
-                mock(CarRepository.class));
+                mock(SupportRequestRepository.class));
     }
 
     @Test
@@ -43,7 +41,7 @@ class SupportRequestServiceTest {
     void rejectsAppointmentInThePast() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> service.createServiceBooking(
-                        "Nguyễn Văn A", "+84912345678", null, "Toyota Camry",
+                        "Nguyễn Văn A", "+84912345678", "Toyota Camry",
                         "Bảo dưỡng định kỳ", LocalDate.now().minusDays(1).toString(),
                         "09:00", null));
 
@@ -54,7 +52,7 @@ class SupportRequestServiceTest {
     void rejectsPastTimeToday() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> service.createServiceBooking(
-                        "Nguyễn Văn A", "+84912345678", null, "Xe của khách",
+                        "Nguyễn Văn A", "+84912345678", "Xe của khách",
                         "Bảo dưỡng định kỳ", LocalDate.now().toString(),
                         "00:00", null));
 
@@ -65,7 +63,7 @@ class SupportRequestServiceTest {
     void rejectsOverlongCarInformation() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> service.createServiceBooking(
-                        "Nguyễn Văn A", "+84912345678", null, "A".repeat(256),
+                        "Nguyễn Văn A", "+84912345678", "A".repeat(256),
                         "Bảo dưỡng định kỳ", null, null, null));
 
         assertEquals("Thông tin xe không được vượt quá 255 ký tự.", error.getMessage());

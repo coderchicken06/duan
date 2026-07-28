@@ -43,8 +43,8 @@
           </div>
           <div class="field">
             <label for="service-car">Thông tin xe / biển số *</label>
-            <input id="service-car" v-model.trim="form.carInfo" class="form-control" :readonly="form.carId != null" maxlength="255" placeholder="Tên xe hoặc biển số" />
-            <small v-if="form.carId">Xe được chọn từ trang chi tiết sản phẩm.</small>
+            <input id="service-car" v-model.trim="form.carInfo" class="form-control" maxlength="255" placeholder="Tên xe hoặc biển số" />
+            <small v-if="selectedFromCatalog">Thông tin được điền sẵn từ trang chi tiết và có thể chỉnh sửa.</small>
           </div>
           <div class="field">
             <label for="service-type">Loại dịch vụ *</label>
@@ -108,7 +108,6 @@ const form = ref({
   phone: '',
   type: 'service',
   content: 'Yêu cầu đặt lịch dịch vụ',
-  carId: null,
   carInfo: '',
   serviceType: '',
   appointmentDate: '',
@@ -117,6 +116,7 @@ const form = ref({
 const msg = ref('')
 const ok = ref(false)
 const submitting = ref(false)
+const selectedFromCatalog = ref(false)
 const minimumAppointmentTime = computed(() => {
   if (form.value.appointmentDate !== today) return undefined
   const nextMinute = new Date(Date.now() + 60_000)
@@ -128,9 +128,9 @@ onMounted(async () => {
   try {
     const { data } = await carApi.getById(String(route.query.carId))
     if (!data.success || !data.data) throw new Error(data.message || 'Không tìm thấy xe')
-    form.value.carId = data.data.id
     form.value.carInfo = data.data.name
     form.value.serviceType = 'Kiểm tra tổng thể'
+    selectedFromCatalog.value = true
   } catch (error) {
     ok.value = false
     msg.value = error.response?.data?.message || error.message || 'Không tìm thấy xe cần đặt lịch'
@@ -165,10 +165,9 @@ async function submit() {
     if (data.success) {
       form.value.appointmentDate = ''
       form.value.appointmentTime = ''
-      if (form.value.carId == null) {
-        form.value.carInfo = ''
-        form.value.serviceType = ''
-      }
+      form.value.carInfo = ''
+      form.value.serviceType = ''
+      selectedFromCatalog.value = false
     }
   } catch (error) {
     ok.value = false

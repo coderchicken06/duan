@@ -2,9 +2,9 @@ package com.example.carstore.service;
 
 import com.example.carstore.entity.Contract;
 import com.example.carstore.entity.Orders;
-import com.example.carstore.entity.Payment;
+import com.example.carstore.entity.PaymentTransaction;
 import com.example.carstore.repository.ContractRepository;
-import com.example.carstore.repository.PaymentRepository;
+import com.example.carstore.repository.PaymentTransactionRepository;
 import com.example.carstore.repository.QuotationRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -14,13 +14,13 @@ import java.util.List;
 @Service
 public class ContractService {
     private final ContractRepository contractRepo;
-    private final PaymentRepository paymentRepo;
+    private final PaymentTransactionRepository paymentTransactionRepo;
     private final QuotationRepository quotationRepo;
 
-    public ContractService(ContractRepository contractRepo, PaymentRepository paymentRepo,
+    public ContractService(ContractRepository contractRepo, PaymentTransactionRepository paymentTransactionRepo,
             QuotationRepository quotationRepo) {
         this.contractRepo = contractRepo;
-        this.paymentRepo = paymentRepo;
+        this.paymentTransactionRepo = paymentTransactionRepo;
         this.quotationRepo = quotationRepo;
     }
 
@@ -48,8 +48,8 @@ public class ContractService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hợp đồng."));
     }
 
-    public List<Payment> getPayments(Integer orderId) {
-        return paymentRepo.findByOrderIdOrderByPaymentDateDesc(orderId);
+    public List<PaymentTransaction> getPayments(Integer orderId) {
+        return paymentTransactionRepo.findByOrderIdOrderByPaidAtDesc(orderId);
     }
 
     public List<Contract> getByCustomer(String username) {

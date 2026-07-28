@@ -3,8 +3,8 @@ import api from './client'
 export const authApi = {
   login: (username, password) => api.post('/api/auth/login', { username, password }),
   signup: (account) => api.post('/api/auth/signup', account),
-  verifyEmail: (email, otp) => api.post('/api/auth/verify', { email, otp }),
-  resendOtp:(email)=>api.post('/api/auth/resend-otp',{email}),
+  verifyEmail: (username, code) => api.post('/api/auth/verify-email', { username, code }),
+  resendVerification: (username) => api.post('/api/auth/resend-verification', { username }),
   logout: () => api.post('/api/auth/logout'),
   me: () => api.get('/api/auth/me'),
   checkUsername: (username) => api.get(`/api/auth/check-username/${username}`),
@@ -97,7 +97,6 @@ export const profileApi = {
   get: () => api.get('/api/profile'),
   update: (data) => api.put('/api/profile', data),
   changePassword: (payload) => api.post('/api/profile/change-password', payload),
-  delete: () => api.delete('/api/profile'),
 }
 
 export const supportApi = {
@@ -116,7 +115,6 @@ export const adminApi = {
   deleteUser: (username) => api.delete(`/api/admin/users/${username}`),
   getOrders: () => api.get('/api/admin/orders'),
   updateOrderStatus: (id, status) => api.put(`/api/admin/orders/${id}/status`, { status }),
-  deleteOrder: (id) => api.delete(`/api/admin/orders/${id}`),
   getCars: () => api.get('/api/admin/cars'),
   createCar: (car) => api.post('/api/admin/cars', car),
   updateCar: (id, car) => api.put(`/api/admin/cars/${id}`, car),

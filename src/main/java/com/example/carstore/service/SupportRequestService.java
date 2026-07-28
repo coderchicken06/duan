@@ -2,7 +2,6 @@ package com.example.carstore.service;
 
 import com.example.carstore.entity.SupportRequest;
 import com.example.carstore.repository.SupportRequestRepository;
-import com.example.carstore.repository.CarRepository;
 import com.example.carstore.util.SecurityUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
@@ -33,11 +32,9 @@ public class SupportRequestService {
     );
 
     private final SupportRequestRepository supportRepo;
-    private final CarRepository carRepo;
 
-    public SupportRequestService(SupportRequestRepository supportRepo, CarRepository carRepo) {
+    public SupportRequestService(SupportRequestRepository supportRepo) {
         this.supportRepo = supportRepo;
-        this.carRepo = carRepo;
     }
 
     public boolean isValidStatus(String status) {
@@ -69,7 +66,6 @@ public class SupportRequestService {
     public SupportRequest createServiceBooking(
             String name,
             String phone,
-            Integer carId,
             String carInfo,
             String serviceType,
             String date,
@@ -82,9 +78,6 @@ public class SupportRequestService {
         }
         if (carInfo.trim().length() > 255) {
             throw new IllegalArgumentException("Thông tin xe không được vượt quá 255 ký tự.");
-        }
-        if (carId != null && !carRepo.existsById(carId)) {
-            throw new IllegalArgumentException("Không tìm thấy xe cần đặt lịch.");
         }
         if (!StringUtils.hasText(serviceType)) {
             throw new IllegalArgumentException("Loại dịch vụ không được để trống.");
@@ -127,7 +120,6 @@ public class SupportRequestService {
         );
 
         request.setUsername(username);
-        request.setCarId(carId);
         request.setStatus(STATUS_PENDING);
 
         return supportRepo.save(request);
