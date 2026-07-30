@@ -6,6 +6,10 @@
           <label class="form-label cs-muted">Địa chỉ giao hàng</label>
           <textarea v-model="address" class="form-control" rows="3" required placeholder="Nhập địa chỉ nhận xe"></textarea>
         </div>
+        <div>
+          <label class="form-label cs-muted">Phương thức thanh toán</label>
+          <div><strong>Thanh toán QR SePay</strong></div>
+        </div>
         <div class="order-total"><span>Tổng giá trị xe</span><strong>{{ formatPrice(total) }} VNĐ</strong></div>
         <div v-if="error" class="alert alert-danger">{{ error }}</div>
         <div v-if="success" class="alert alert-success">Gửi yêu cầu đặt xe thành công! Mã đơn: #{{ orderId }}</div>
@@ -22,6 +26,7 @@ import { cartApi, orderApi, formatPrice } from '../api'
 
 const router = useRouter()
 const address = ref('')
+const paymentMethod = 'SePay'
 const total = ref(0)
 const error = ref('')
 const success = ref(false)
@@ -38,11 +43,11 @@ async function submit() {
   submitting.value = true
   error.value = ''
   try {
-    const { data } = await orderApi.checkout(address.value)
+    const { data } = await orderApi.checkout(address.value, paymentMethod)
     if (data.success) {
       success.value = true
       orderId.value = data.orderId
-      setTimeout(() => router.push('/order/my-orders'), 2000)
+      router.push({ path: `/orders/${data.orderId}/payment`, query: { method: 'sepay' } })
     } else {
       error.value = data.message
     }

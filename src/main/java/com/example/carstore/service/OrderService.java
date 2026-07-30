@@ -78,7 +78,11 @@ public class OrderService {
 
         // 2. Bổ sung địa chỉ đăng ký & phương thức thanh toán
         order.setRegistrationAddress(StringUtils.hasText(registrationAddress) ? registrationAddress.trim() : address.trim());
-        order.setPaymentMethod(StringUtils.hasText(paymentMethod) ? paymentMethod.trim() : "Chuyển khoản QR");
+        String normalizedPaymentMethod = StringUtils.hasText(paymentMethod) ? paymentMethod.trim() : "SePay";
+        if (!"SePay".equalsIgnoreCase(normalizedPaymentMethod)) {
+            throw new IllegalArgumentException("Phương thức thanh toán chỉ hỗ trợ QR SePay.");
+        }
+        order.setPaymentMethod("SePay");
 
         order.setStatus(OrderStatus.PENDING);
         order.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
@@ -122,7 +126,7 @@ public class OrderService {
     // Overload hàm checkout cũ để tránh vỡ code ở các Controller hiện tại chưa truyền đủ tham số
     @Transactional
     public Orders checkout(String username, String address, Map<Integer, CartItem> cart) {
-        return checkout(username, address, address, "Chuyển khoản QR", cart);
+        return checkout(username, address, address, "SePay", cart);
     }
 
     @Transactional
@@ -146,7 +150,12 @@ public class OrderService {
                 && !OrderStatus.PENDING.equals(current)) {
             throw new IllegalArgumentException("Chỉ đơn đang chờ mới được xác nhận.");
         } else if (OrderStatus.PROCESSING.equals(targetStatus)) {
-            throw new IllegalArgumentException("Đơn tự chuyển sang xử lý sau khi thanh toán cọc.");
+            if (!OrderStatus.CONFIRMED.equals(current)) {
+                throw new IllegalArgumentException("Chỉ đơn đã xác nhận mới được chuyển sang xử lý.");
+            }
+            if (!OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
+                throw new IllegalArgumentException("Đơn thanh toán QR phải được xác nhận tiền cọc trước khi xử lý.");
+            }
         } else if (OrderStatus.DELIVERED.equals(targetStatus)
                 && !OrderStatus.PROCESSING.equals(current)) {
             throw new IllegalArgumentException("Chỉ đơn đang xử lý mới được đánh dấu đã giao.");
@@ -168,43 +177,8 @@ public class OrderService {
 
     @Transactional
     public Orders payDeposit(Integer orderId, String username, String method, boolean admin) {
-        Orders order = orderRepo.findForUpdateById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
-
-        if (!admin && !order.getUsername().equals(username)) {
-            throw new IllegalArgumentException("Bạn không có quyền thanh toán đơn hàng này.");
-        }
-        if (!OrderStatus.CONFIRMED.equals(order.getStatus())) {
-            throw new IllegalArgumentException("Chỉ được thanh toán cọc sau khi đơn hàng đã được duyệt.");
-        }
-        if (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
-            throw new IllegalArgumentException("Đơn hàng này đã thanh toán tiền cọc.");
-        }
-        if (!StringUtils.hasText(method)) {
-            throw new IllegalArgumentException("Vui lòng chọn phương thức thanh toán.");
-        }
-
-        List<OrderDetail> details = detailRepo.findByOrderId(orderId);
-        double total = details.stream()
-                .mapToDouble(d -> d.getPrice() * d.getQuantity())
-                .sum();
-        if (total <= 0) {
-            throw new IllegalArgumentException("Đơn hàng không có giá trị hợp lệ.");
-        }
-
-        order.setDepositAmount((double) Math.round(total * 0.10D));
-        order.setDepositMethod(method.trim());
-        order.setDepositStatus(OrderStatus.DEPOSIT_PAID);
-        order.setDepositPaidAt(new Date());
-        order.setStatus(OrderStatus.PROCESSING);
-        Orders paidOrder = orderRepo.save(order);
-        if (contractService != null) {
-            contractService.syncDeposit(paidOrder, method.trim());
-        }
-        if (paymentTransactionService != null) {
-            paymentTransactionService.recordSuccessfulDeposit(paidOrder, method.trim());
-        }
-        return paidOrder;
+        throw new IllegalArgumentException(
+                "Thanh toán cọc chỉ được xác nhận qua webhook QR SePay.");
     }
 
     public double calculateTotal(Integer orderId) {

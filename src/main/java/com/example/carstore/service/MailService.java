@@ -31,4 +31,18 @@ public class MailService {
                 + "\nNếu bạn không đăng ký tài khoản, hãy bỏ qua email này.");
         mailSender.send(message);
     }
+
+    public void sendSePayPaymentSuccess(String toEmail, Integer orderId, double amount, boolean admin) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(toEmail);
+        message.setSubject(admin
+                ? "CarStore - Đơn hàng đã thanh toán qua SePay"
+                : "CarStore - Xác nhận thanh toán thành công");
+        message.setText((admin
+                ? "Đơn hàng #" + orderId + " đã nhận thanh toán qua SePay."
+                : "Thanh toán cho đơn hàng #" + orderId + " của bạn đã được xác nhận.")
+                + "\nSố tiền: " + String.format("%,.0f", amount) + " VNĐ"
+                + "\nNội dung chuyển khoản: VELORA-" + orderId);
+        mailSender.send(message);
+    }
 }

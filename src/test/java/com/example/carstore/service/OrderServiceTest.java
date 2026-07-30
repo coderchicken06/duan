@@ -51,10 +51,25 @@ class OrderServiceTest {
 
         assertEquals(10, result.getId());
         assertEquals(2, car.getStock());
+        ArgumentCaptor<Orders> orderCaptor = ArgumentCaptor.forClass(Orders.class);
+        verify(orderRepo).save(orderCaptor.capture());
+        assertEquals("SePay", orderCaptor.getValue().getPaymentMethod());
         ArgumentCaptor<OrderDetail> detailCaptor = ArgumentCaptor.forClass(OrderDetail.class);
         verify(detailRepo).save(detailCaptor.capture());
         assertEquals(1_200_000_000D, detailCaptor.getValue().getPrice());
         assertEquals(1, detailCaptor.getValue().getQuantity());
+    }
+
+    @Test
+    void checkoutRejectsUnsupportedPaymentMethod() {
+        CartItem item = new CartItem(1, "Xe", 1D, 1);
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> orderService.checkout(
+                        "user1", "Hà Nội", "Hà Nội", "UNSUPPORTED", Map.of(1, item)));
+
+        assertTrue(error.getMessage().contains("QR SePay"));
+        verifyNoInteractions(orderRepo, detailRepo, carRepo);
     }
 
     @Test
@@ -75,35 +90,12 @@ class OrderServiceTest {
     }
 
     @Test
-    void payDepositCalculatesTenPercentAndChangesStatus() {
-        Orders order = confirmedOrder();
-        OrderDetail detail = new OrderDetail();
-        detail.setPrice(1_000_000_000D);
-        detail.setQuantity(1);
-
-        when(orderRepo.findForUpdateById(20)).thenReturn(Optional.of(order));
-        when(detailRepo.findByOrderId(20)).thenReturn(List.of(detail));
-        when(orderRepo.save(order)).thenReturn(order);
-
-        Orders result = orderService.payDeposit(20, "user1", "BANK_TRANSFER", false);
-
-        assertEquals(100_000_000D, result.getDepositAmount());
-        assertEquals(OrderStatus.DEPOSIT_PAID, result.getDepositStatus());
-        assertEquals(OrderStatus.PROCESSING, result.getStatus());
-        assertNotNull(result.getDepositPaidAt());
-    }
-
-    @Test
-    void payDepositRejectsRepeatedPayment() {
-        Orders order = confirmedOrder();
-        order.setDepositStatus(OrderStatus.DEPOSIT_PAID);
-        when(orderRepo.findForUpdateById(20)).thenReturn(Optional.of(order));
-
+    void manualDepositIsRejected() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
-                () -> orderService.payDeposit(20, "user1", "BANK_TRANSFER", false));
+                () -> orderService.payDeposit(20, "user1", "SePay", false));
 
-        assertTrue(error.getMessage().contains("đã thanh toán"));
-        verify(orderRepo, never()).save(any());
+        assertTrue(error.getMessage().contains("webhook QR SePay"));
+        verifyNoInteractions(orderRepo, detailRepo, carRepo);
     }
 
     @Test
@@ -137,6 +129,32 @@ class OrderServiceTest {
 
         assertTrue(error.getMessage().contains("đã thanh toán cọc"));
         verify(detailRepo, never()).findByOrderId(anyInt());
+        verify(orderRepo, never()).save(any());
+    }
+
+    @Test
+    void paidSePayOrderCanMoveToProcessing() {
+        Orders order = confirmedOrder();
+        order.setPaymentMethod("SePay");
+        order.setDepositStatus(OrderStatus.DEPOSIT_PAID);
+        when(orderRepo.findForUpdateById(20)).thenReturn(Optional.of(order));
+        when(orderRepo.save(order)).thenReturn(order);
+
+        Orders result = orderService.updateStatus(20, OrderStatus.PROCESSING);
+
+        assertEquals(OrderStatus.PROCESSING, result.getStatus());
+    }
+
+    @Test
+    void unpaidQrOrderCannotMoveToProcessing() {
+        Orders order = confirmedOrder();
+        order.setPaymentMethod("SePay");
+        when(orderRepo.findForUpdateById(20)).thenReturn(Optional.of(order));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> orderService.updateStatus(20, OrderStatus.PROCESSING));
+
+        assertTrue(error.getMessage().contains("xác nhận tiền cọc"));
         verify(orderRepo, never()).save(any());
     }
 

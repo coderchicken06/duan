@@ -8,7 +8,7 @@
       <section><h2>Thông tin xe</h2><div v-if="car" class="car-row"><img :src="carImageUrl(car.image)" :alt="car.name"><div><h3>{{ car.name }}</h3><p>{{ car.year }} · {{ car.color }} · {{ car.transmission }}</p></div></div></section>
       <section class="amounts"><p><span>Số lượng</span><strong>{{ quote.items?.[0]?.quantity || 1 }}</strong></p><p><span>Đơn giá</span><strong>{{ formatPrice(quote.carPrice) }} VNĐ</strong></p><p><span>Giảm giá được duyệt</span><strong>-{{ formatPrice(quote.discount) }} VNĐ</strong></p><p class="total"><span>Tổng báo giá</span><strong>{{ formatPrice(quote.totalPrice) }} VNĐ</strong></p></section>
       <section><h2>Trạng thái</h2><span class="status">{{ quote.status }}</span><p v-if="quote.note" class="mt-3 mb-0">{{ quote.note }}</p></section>
-      <section v-if="quote.status==='Khách đã xác nhận'" class="order-form"><h2>Thông tin tạo đơn hàng</h2><input v-model.trim="orderForm.address" class="form-control" maxlength="500" placeholder="Địa chỉ nhận xe" required><input v-model.trim="orderForm.registrationAddress" class="form-control" maxlength="500" placeholder="Địa chỉ đăng ký xe (nếu khác)"><select v-model="orderForm.paymentMethod" class="form-select"><option value="VNPay">VNPay</option><option value="Chuyển khoản QR">Chuyển khoản QR</option></select></section>
+      <section v-if="quote.status==='Khách đã xác nhận'" class="order-form"><h2>Thông tin tạo đơn hàng</h2><input v-model.trim="orderForm.address" class="form-control" maxlength="500" placeholder="Địa chỉ nhận xe" required><input v-model.trim="orderForm.registrationAddress" class="form-control" maxlength="500" placeholder="Địa chỉ đăng ký xe (nếu khác)"><div class="form-control">Thanh toán QR SePay</div></section>
       <footer><button class="btn btn-outline-secondary" @click="$router.back()">Quay lại</button><button class="btn btn-dark" @click="printQuote">In / Lưu PDF</button><button v-if="quote.status==='Đã duyệt'" class="btn btn-danger" :disabled="submitting" @click="confirmQuote">Xác nhận báo giá</button><button v-if="quote.status==='Khách đã xác nhận'" class="btn btn-danger" :disabled="submitting || !orderForm.address" @click="convertToOrder">Tạo đơn hàng</button><router-link v-if="quote.orderId" class="btn btn-danger" :to="`/order/detail/${quote.orderId}`">Xem đơn hàng</router-link></footer>
     </article>
   </div></main>
@@ -18,7 +18,7 @@ import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { carApi, carImageUrl, formatPrice, quotationApi } from '../api'
 const route=useRoute(),router=useRouter(),quote=ref({}),car=ref(null),loading=ref(true),submitting=ref(false),error=ref('')
-const orderForm=ref({address:'',registrationAddress:'',paymentMethod:'VNPay'})
+const orderForm=ref({address:'',registrationAddress:'',paymentMethod:'SePay'})
 const formatDate=v=>v?new Date(v).toLocaleDateString('vi-VN'):''
 const printQuote=()=>window.print()
 async function load(){try{const {data}=await quotationApi.getById(route.params.id);quote.value=data.data;const response=await carApi.getById(quote.value.carId);car.value=response.data.data||response.data}catch(e){error.value=e.response?.data?.message||'Không thể tải báo giá'}finally{loading.value=false}}

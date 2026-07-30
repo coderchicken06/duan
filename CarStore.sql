@@ -467,12 +467,12 @@ INSERT INTO dbo.Orders
  deposit_status, deposit_amount, deposit_method, deposit_paid_at)
 VALUES
 -- Đơn 1: Toyota Camry (Giá 1.2 tỷ) -> Cọc 10% = 120 triệu
-('user1', N'TP Hồ Chí Minh', N'TP Hồ Chí Minh', N'Chuyển khoản QR', N'DELIVERED',
- 'PAID', 120000000, N'VietQR', GETDATE()),
+('user1', N'TP Hồ Chí Minh', N'TP Hồ Chí Minh', N'SePay', N'DELIVERED',
+ 'PAID', 120000000, N'SePay', GETDATE()),
 
 -- Đơn 2: BMW X5 (Giá 3.5 tỷ) -> Cọc 10% = 350 triệu
-('user1', N'Bình Dương', N'Bình Dương', N'Chuyển khoản QR', N'PROCESSING',
- 'PAID', 350000000, N'VietQR', GETDATE());
+('user1', N'Bình Dương', N'Bình Dương', N'SePay', N'PROCESSING',
+ 'PAID', 350000000, N'SePay', GETDATE());
 GO
 
 -- 2. Thêm dữ liệu Chi tiết đơn hàng (OrderDetail)
@@ -512,8 +512,8 @@ GO
 INSERT INTO dbo.PaymentTransaction
 (order_id, gateway, transaction_no, amount, status, response_code, paid_at)
 VALUES
-(1, N'VietQR', 'VQR001', 120000000, 'SUCCESS', '00', GETDATE()),
-(2, N'VietQR', 'VQR002', 350000000, 'SUCCESS', '00', GETDATE());
+(1, N'SePay', 'VQR001', 120000000, 'SUCCESS', '00', GETDATE()),
+(2, N'SePay', 'VQR002', 350000000, 'SUCCESS', '00', GETDATE());
 GO
 
 -- =============================================================
@@ -524,10 +524,10 @@ INSERT INTO dbo.Contract
  payment_method, status, deposit_status, deposit_amount, deposit_method, deposit_paid_at)
 VALUES
 (1, 'user1', 'admin', 120000000, 1200000000,
- N'Chuyển khoản', N'Đã ký', 'PAID', 120000000, N'VietQR', GETDATE()),
+ N'Chuyển khoản', N'Đã ký', 'PAID', 120000000, N'SePay', GETDATE()),
 
 (2, 'user1', 'admin', 350000000, 3500000000,
- N'Trả góp', N'Đã ký', 'PAID', 350000000, N'VietQR', GETDATE());
+ N'Trả góp', N'Đã ký', 'PAID', 350000000, N'SePay', GETDATE());
 GO
 
 -- =============================================================

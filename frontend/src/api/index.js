@@ -42,8 +42,7 @@ export const orderApi = {
   getMyOrders: () => api.get('/api/orders/my-orders'),
   getById: (id) => api.get(`/api/orders/${id}`),
   getDetails: (id) => api.get(`/api/orders/${id}/details`),
-  checkout: (address) => api.post('/api/orders/checkout', { address }),
-  payDeposit: (id, method) => api.post(`/api/orders/${id}/deposit`, { method }),
+  checkout: (address, paymentMethod) => api.post('/api/orders/checkout', { address, paymentMethod }),
 }
 
 export const contractApi = {
@@ -55,6 +54,7 @@ export const contractApi = {
 
 export const paymentTransactionApi = {
   getByOrder: (orderId) => api.get(`/api/payment-transactions/orders/${orderId}`),
+  createQr: (orderId) => api.post('/api/payment/create-qr', { orderId }),
 }
 
 export const reviewApi = {

@@ -152,8 +152,12 @@ public class QuotationService {
         order.setAddress(request.getAddress().trim());
         order.setRegistrationAddress(StringUtils.hasText(request.getRegistrationAddress())
                 ? request.getRegistrationAddress().trim() : request.getAddress().trim());
-        order.setPaymentMethod(StringUtils.hasText(request.getPaymentMethod())
-                ? request.getPaymentMethod().trim() : "VNPay");
+        String paymentMethod = StringUtils.hasText(request.getPaymentMethod())
+                ? request.getPaymentMethod().trim() : "SePay";
+        if (!"SePay".equalsIgnoreCase(paymentMethod)) {
+            throw new IllegalArgumentException("Phương thức thanh toán chỉ hỗ trợ QR SePay.");
+        }
+        order.setPaymentMethod("SePay");
         order.setStatus(OrderStatus.PENDING);
         order.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
         Orders savedOrder = orderRepo.save(order);
