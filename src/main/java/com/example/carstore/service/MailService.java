@@ -42,7 +42,7 @@ public class MailService {
                 ? "Đơn hàng #" + orderId + " đã nhận thanh toán qua SePay."
                 : "Thanh toán cho đơn hàng #" + orderId + " của bạn đã được xác nhận.")
                 + "\nSố tiền: " + String.format("%,.0f", amount) + " VNĐ"
-                + "\nNội dung chuyển khoản: VELORA-" + orderId);
+                + "\nNội dung chuyển khoản: VELOR" + orderId);
         mailSender.send(message);
     }
 }

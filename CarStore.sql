@@ -651,3 +651,37 @@ FROM dbo.CarImage
 WHERE car_id = 1
 ORDER BY is_primary DESC, sort_order ASC, id ASC;
 GO
+
+select deposit_status, deposit_amount
+from Orders
+where id=1;
+
+select *
+from PaymentTransaction
+where order_id=1;
+
+select deposit_status
+from Contract
+where order_id=1;
+
+select
+id,
+status,
+deposit_status,
+deposit_amount,
+deposit_method,
+deposit_paid_at
+from Orders;
+
+SELECT *
+FROM PaymentTransaction
+ORDER BY id DESC;
+
+SELECT
+order_id,
+deposit_status,
+deposit_amount
+FROM Contract;
+
+SELECT id,name,stock
+FROM Car;

@@ -60,7 +60,7 @@ class PaymentTransactionServiceTest {
         @SuppressWarnings("unchecked")
         Map<String, String> fields = (Map<String, String>) result.get("fields");
         assertEquals("SP-TEST", fields.get("merchant"));
-        assertEquals("VELORA-9", fields.get("order_invoice_number"));
+        assertEquals("VELOR9", fields.get("order_invoice_number"));
         assertEquals("100", fields.get("order_amount"));
         assertNotNull(fields.get("signature"));
         assertFalse(fields.get("signature").isBlank());
@@ -79,7 +79,7 @@ class PaymentTransactionServiceTest {
         service.processSePayWebhook(Map.of(
                 "referenceCode", "TX-001",
                 "transferAmount", 100,
-                "transactionContent", "Thanh toan VELORA-9"));
+                "transactionContent", "Thanh toan VELOR9"));
 
         assertEquals(OrderStatus.DEPOSIT_PAID, order.getDepositStatus());
         assertEquals("SePay", order.getDepositMethod());
@@ -101,7 +101,7 @@ class PaymentTransactionServiceTest {
         service.processSePayWebhook(Map.of(
                 "referenceCode", "TX-001",
                 "transferAmount", 100,
-                "content", "VELORA-9"));
+                "content", "VELOR9"));
 
         verify(orderRepo, never()).findForUpdateById(anyInt());
         verify(transactionRepo, never()).save(any());
@@ -120,7 +120,7 @@ class PaymentTransactionServiceTest {
                 () -> service.processSePayWebhook(Map.of(
                         "referenceCode", "TX-002",
                         "transferAmount", 99,
-                        "description", "VELORA-9")));
+                        "description", "VELOR9")));
 
         assertTrue(error.getMessage().contains("không khớp"));
         assertEquals(OrderStatus.DEPOSIT_UNPAID, order.getDepositStatus());

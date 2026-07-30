@@ -31,8 +31,7 @@ import java.util.regex.Pattern;
 
 @Service
 public class PaymentTransactionService {
-    private static final Pattern ORDER_CODE_PATTERN =
-            Pattern.compile("(?i)\\bVELORA-(\\d+)\\b");
+    private static final Pattern ORDER_CODE_PATTERN = Pattern.compile("(?i)\\bVELOR?(\\d+)\\b");
 
     private final PaymentTransactionRepository repo;
     private final OrderRepository orderRepo;
@@ -51,16 +50,19 @@ public class PaymentTransactionService {
     @Value("${sepay.api-key:}")
     private String apiKey;
 
+    @Value("${sepay.secret-key:${SEPAY_SECRET_KEY:}}")
+    private String sepaySecretKey;
+
     @Value("${sepay.checkout-url:https://pay-sandbox.sepay.vn/v1/checkout/init}")
     private String checkoutUrl;
 
     public PaymentTransactionService(PaymentTransactionRepository repo,
-                                     OrderRepository orderRepo,
-                                     OrderDetailRepository detailRepo,
-                                     ContractRepository contractRepo,
-                                     AccountRepository accountRepo,
-                                     MailService mailService,
-                                     ObjectMapper objectMapper) {
+            OrderRepository orderRepo,
+            OrderDetailRepository detailRepo,
+            ContractRepository contractRepo,
+            AccountRepository accountRepo,
+            MailService mailService,
+            ObjectMapper objectMapper) {
         this.repo = repo;
         this.orderRepo = orderRepo;
         this.detailRepo = detailRepo;
@@ -92,7 +94,9 @@ public class PaymentTransactionService {
     }
 
     public Map<String, Object> createQr(Orders order) {
-        requireSePayConfig();
+        // Đã bỏ requireSePayConfig() vì chúng ta không dùng trang trung gian của SePay
+        // nữa
+
         if (OrderStatus.CANCELLED.equals(order.getStatus())
                 || OrderStatus.DELIVERED.equals(order.getStatus())) {
             throw new IllegalArgumentException("Không thể thanh toán đơn hàng đã kết thúc.");
@@ -100,37 +104,63 @@ public class PaymentTransactionService {
         if (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
             throw new IllegalArgumentException("Đơn hàng đã được thanh toán.");
         }
+
         double amount = paymentAmount(order.getId());
         if (amount <= 0) {
             throw new IllegalArgumentException("Đơn hàng không có giá trị hợp lệ.");
         }
 
-        Map<String, String> fields = new LinkedHashMap<>();
-        fields.put("order_amount", String.valueOf(Math.round(amount)));
-        fields.put("merchant", merchantId);
-        fields.put("currency", "VND");
-        fields.put("operation", "PURCHASE");
-        fields.put("order_description", "Thanh toan don hang VELORA-" + order.getId());
-        fields.put("order_invoice_number", "VELORA-" + order.getId());
-        fields.put("customer_id", order.getUsername());
-        fields.put("payment_method", "BANK_TRANSFER");
-        fields.put("signature", sign(fields));
+        try {
+            long finalAmount = Math.round(amount);
 
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("checkoutUrl", checkoutUrl);
-        result.put("method", "POST");
-        result.put("fields", fields);
-        result.put("orderCode", "VELORA-" + order.getId());
-        result.put("amount", Math.round(amount));
-        return result;
+            // QUAN TRỌNG: Bắt buộc nối thêm "VELOR" + order.getId() vào nội dung chuyển
+            // khoản
+            // Nếu không có phần này, Webhook SePay sẽ không biết tiền của đơn hàng nào.
+            String des = "SEVQR VELOR" + order.getId();
+
+            // Sử dụng mã VietQR chuẩn với số tiền (amount) và nội dung (des) tự động
+            String qrUrl = "https://vietqr.app/img?"
+                    + "bank=" + java.net.URLEncoder.encode("VietinBank", StandardCharsets.UTF_8)
+                    + "&acc=" + java.net.URLEncoder.encode("102880629915", StandardCharsets.UTF_8)
+                    + "&amount=" + finalAmount
+                    + "&des=" + java.net.URLEncoder.encode(des, StandardCharsets.UTF_8)
+                    + "&template=" + java.net.URLEncoder.encode("compact", StandardCharsets.UTF_8);
+
+            Map<String, Object> result = new LinkedHashMap<>();
+            // Trả về trực tiếp đường link ảnh QR thay vì trả về Form Submit như cũ
+            result.put("qrUrl", qrUrl);
+            result.put("orderCode", "VELOR" + order.getId());
+            result.put("amount", finalAmount);
+
+            return result;
+
+        } catch (Exception exception) {
+            throw new IllegalStateException("Không thể tạo mã VietQR.", exception);
+        }
     }
 
-    public boolean isValidWebhookSecret(String headerSecret, String authorization) {
-        if (apiKey == null || apiKey.isBlank()) {
-            return false;
+    public boolean isValidWebhookSecret(String secret, String authorization) {
+
+        System.out.println("===== VERIFY =====");
+        System.out.println("Config Secret : " + secretKey);
+        System.out.println("Header Secret : " + secret);
+        System.out.println("Authorization : " + authorization);
+
+        // SePay gửi Authorization: Apikey xxxx
+        if (authorization != null) {
+            String expected = "Apikey " + secretKey;
+
+            System.out.println("Expected      : " + expected);
+
+            return expected.equalsIgnoreCase(authorization.trim());
         }
-        return apiKey.equals(headerSecret)
-                || ("Apikey " + apiKey).equals(authorization);
+
+        // Một số trường hợp gửi X-Secret-Key
+        if (secret != null) {
+            return secretKey.equals(secret.trim());
+        }
+
+        return false;
     }
 
     public boolean isSePayConfigured() {
@@ -205,7 +235,11 @@ public class PaymentTransactionService {
         transaction.setRawResponse(rawPayload(payload));
         repo.save(transaction);
 
-        sendPaymentEmails(order, amount);
+        try {
+            sendPaymentEmails(order, amount);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     private Integer extractOrderId(Map<String, Object> payload, Map<String, Object> orderData) {
@@ -215,9 +249,10 @@ public class PaymentTransactionService {
                 text(payload.get("description")),
                 text(payload.get("content")),
                 text(payload.get("transactionContent")));
+        System.out.println("Search = " + searchable);
         Matcher matcher = ORDER_CODE_PATTERN.matcher(searchable);
         if (!matcher.find()) {
-            throw new IllegalArgumentException("Không tìm thấy mã đơn VELORA trong webhook.");
+            throw new IllegalArgumentException("Không tìm thấy mã đơn VELOR trong webhook.");
         }
         return Integer.valueOf(matcher.group(1));
     }
@@ -235,8 +270,8 @@ public class PaymentTransactionService {
     }
 
     private double webhookAmount(Map<String, Object> payload,
-                                 Map<String, Object> transactionData,
-                                 Map<String, Object> orderData) {
+            Map<String, Object> transactionData,
+            Map<String, Object> orderData) {
         String value = firstNonBlank(
                 text(transactionData.get("transaction_amount")),
                 text(payload.get("transferAmount")),
@@ -265,7 +300,7 @@ public class PaymentTransactionService {
         for (Account account : accountRepo.findAll()) {
             if (account.getRole() != null
                     && ("ADMIN".equalsIgnoreCase(account.getRole())
-                    || "ROLE_ADMIN".equalsIgnoreCase(account.getRole()))
+                            || "ROLE_ADMIN".equalsIgnoreCase(account.getRole()))
                     && account.getEmail() != null
                     && !account.getEmail().isBlank()) {
                 mailService.sendSePayPaymentSuccess(account.getEmail(), order.getId(), amount, true);
@@ -290,7 +325,8 @@ public class PaymentTransactionService {
     private String sign(Map<String, String> fields) {
         StringBuilder value = new StringBuilder();
         for (Map.Entry<String, String> field : fields.entrySet()) {
-            if (value.length() > 0) value.append(',');
+            if (value.length() > 0)
+                value.append(',');
             value.append(field.getKey()).append('=').append(field.getValue());
         }
         try {
@@ -310,7 +346,8 @@ public class PaymentTransactionService {
     }
 
     private Date transactionDate(String value) {
-        if (value.isBlank()) return new Date();
+        if (value.isBlank())
+            return new Date();
         try {
             return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(value);
         } catch (ParseException exception) {
@@ -333,7 +370,8 @@ public class PaymentTransactionService {
 
     private String firstNonBlank(String... values) {
         for (String value : values) {
-            if (value != null && !value.isBlank()) return value;
+            if (value != null && !value.isBlank())
+                return value;
         }
         return "";
     }

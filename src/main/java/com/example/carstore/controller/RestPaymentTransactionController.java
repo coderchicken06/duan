@@ -3,15 +3,18 @@ package com.example.carstore.controller;
 import com.example.carstore.entity.Orders;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.PaymentTransactionService;
-import org.springframework.http.HttpStatus;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Enumeration;
 import java.util.Map;
 
+import javax.servlet.http.HttpServletRequest;
+
 @RestController
-@RequestMapping({"/api/payment-transactions", "/api/payment"})
+@RequestMapping({ "/api/payment-transactions", "/api/payment" })
 public class RestPaymentTransactionController {
     private final PaymentTransactionService service;
     private final OrderRepository orders;
@@ -55,24 +58,53 @@ public class RestPaymentTransactionController {
     }
 
     @PostMapping("/sepay/webhook")
-    public ResponseEntity<Map<String, Object>> sePayWebhook(
-            @RequestBody Map<String, Object> payload,
-            @RequestHeader(value = "X-Secret-Key", required = false) String secretKey,
-            @RequestHeader(value = "Authorization", required = false) String authorization) {
-        if (!service.isSePayConfigured()) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("success", false, "message", "SePay chưa được cấu hình."));
-        }
-        if (!service.isValidWebhookSecret(secretKey, authorization)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(Map.of("success", false, "message", "Unauthorized"));
-        }
+    public ResponseEntity<?> sePayWebhook(
+
+            @RequestBody(required = false) Map<String, Object> payload,
+
+            @RequestHeader(value = "Authorization", required = false) String authorization,
+
+            @RequestHeader(value = "X-Secret-Key", required = false) String secret,
+
+            HttpServletRequest request) {
+
         try {
+
+            System.out.println("===== WEBHOOK =====");
+
+            System.out.println("Method = " + request.getMethod());
+            System.out.println("Content-Type = " + request.getContentType());
+            Enumeration<String> names = request.getHeaderNames();
+
+            while (names.hasMoreElements()) {
+                String h = names.nextElement();
+                System.out.println(h + " = " + request.getHeader(h));
+            }
+
+            System.out.println("Payload = " + payload);
+
+            System.out.println("Authorization = " + authorization);
+            System.out.println("Secret = " + secret);
+
+            // Nếu SePay chỉ gửi request kiểm tra mà không có body
+            if (payload == null) {
+                System.out.println("Webhook verify (no payload)");
+                return ResponseEntity.ok(Map.of(
+                        "success", true));
+            }
+
             service.processSePayWebhook(payload);
-            return ResponseEntity.ok(Map.of("success", true));
-        } catch (IllegalArgumentException exception) {
-            return ResponseEntity.badRequest()
-                    .body(Map.of("success", false, "message", exception.getMessage()));
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true));
+
+        } catch (Exception e) {
+
+            e.printStackTrace();
+
+            return ResponseEntity.badRequest().body(Map.of(
+                    "success", false,
+                    "error", e.getMessage()));
         }
     }
 }

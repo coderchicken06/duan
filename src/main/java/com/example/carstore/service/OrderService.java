@@ -24,6 +24,7 @@ public class OrderService {
     private final OrderDetailRepository detailRepo;
     private final CarRepository carRepo;
     private final ContractService contractService;
+    @SuppressWarnings("unused")
     private final PaymentTransactionService paymentTransactionService;
     private final PromotionService promotionService;
 
