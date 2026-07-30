@@ -31,7 +31,8 @@ import java.util.regex.Pattern;
 
 @Service
 public class PaymentTransactionService {
-    private static final Pattern ORDER_CODE_PATTERN = Pattern.compile("(?i)\\bVELOR?(\\d+)\\b");
+    // Hỗ trợ linh hoạt các biến thể như: VELOR5, VELORA-5, VELOR-5, velora3,...
+    private static final Pattern ORDER_CODE_PATTERN = Pattern.compile("(?i)VELOR[A-Z-]*(\\d+)");
 
     private final PaymentTransactionRepository repo;
     private final OrderRepository orderRepo;
@@ -94,9 +95,6 @@ public class PaymentTransactionService {
     }
 
     public Map<String, Object> createQr(Orders order) {
-        // Đã bỏ requireSePayConfig() vì chúng ta không dùng trang trung gian của SePay
-        // nữa
-
         if (OrderStatus.CANCELLED.equals(order.getStatus())
                 || OrderStatus.DELIVERED.equals(order.getStatus())) {
             throw new IllegalArgumentException("Không thể thanh toán đơn hàng đã kết thúc.");
@@ -112,13 +110,8 @@ public class PaymentTransactionService {
 
         try {
             long finalAmount = Math.round(amount);
-
-            // QUAN TRỌNG: Bắt buộc nối thêm "VELOR" + order.getId() vào nội dung chuyển
-            // khoản
-            // Nếu không có phần này, Webhook SePay sẽ không biết tiền của đơn hàng nào.
             String des = "SEVQR VELOR" + order.getId();
 
-            // Sử dụng mã VietQR chuẩn với số tiền (amount) và nội dung (des) tự động
             String qrUrl = "https://vietqr.app/img?"
                     + "bank=" + java.net.URLEncoder.encode("VietinBank", StandardCharsets.UTF_8)
                     + "&acc=" + java.net.URLEncoder.encode("102880629915", StandardCharsets.UTF_8)
@@ -127,7 +120,6 @@ public class PaymentTransactionService {
                     + "&template=" + java.net.URLEncoder.encode("compact", StandardCharsets.UTF_8);
 
             Map<String, Object> result = new LinkedHashMap<>();
-            // Trả về trực tiếp đường link ảnh QR thay vì trả về Form Submit như cũ
             result.put("qrUrl", qrUrl);
             result.put("orderCode", "VELOR" + order.getId());
             result.put("amount", finalAmount);
@@ -140,22 +132,17 @@ public class PaymentTransactionService {
     }
 
     public boolean isValidWebhookSecret(String secret, String authorization) {
-
         System.out.println("===== VERIFY =====");
         System.out.println("Config Secret : " + secretKey);
         System.out.println("Header Secret : " + secret);
         System.out.println("Authorization : " + authorization);
 
-        // SePay gửi Authorization: Apikey xxxx
         if (authorization != null) {
             String expected = "Apikey " + secretKey;
-
             System.out.println("Expected      : " + expected);
-
             return expected.equalsIgnoreCase(authorization.trim());
         }
 
-        // Một số trường hợp gửi X-Secret-Key
         if (secret != null) {
             return secretKey.equals(secret.trim());
         }
@@ -175,25 +162,35 @@ public class PaymentTransactionService {
             throw new IllegalArgumentException("Webhook payload is required.");
         }
 
-        String notificationType = text(payload.get("notification_type"));
-        if (!notificationType.isBlank() && !"ORDER_PAID".equalsIgnoreCase(notificationType)) {
-            throw new IllegalArgumentException("Webhook không phải thông báo thanh toán thành công.");
-        }
+        // 1. Kiểm tra chiều tiền vào (transferType = in)
         String transferType = text(payload.get("transferType"));
         if (!transferType.isBlank() && !"in".equalsIgnoreCase(transferType)) {
             throw new IllegalArgumentException("Webhook không phải giao dịch tiền vào.");
         }
 
-        Map<String, Object> orderData = map(payload.get("order"));
-        Map<String, Object> transactionData = map(payload.get("transaction"));
-        Integer orderId = extractOrderId(payload, orderData);
-        String transactionNo = transactionNo(payload, transactionData);
-        if (repo.existsByTransactionNo(transactionNo)) {
-            return;
+        // 2. Lấy nội dung chuyển khoản (content hoặc description) để bóc tách mã đơn hàng
+        String content = firstNonBlank(
+                text(payload.get("content")),
+                text(payload.get("description")));
+
+        Integer orderId = extractOrderIdFromContent(content);
+        if (orderId == null) {
+            throw new IllegalArgumentException("Không tìm thấy mã đơn hàng trong nội dung: " + content);
         }
 
+        // 3. Lấy mã giao dịch (transactionNo hoặc id)
+        String transactionNo = firstNonBlank(
+                text(payload.get("referenceCode")),
+                text(payload.get("id")),
+                String.valueOf(payload.get("id")));
+        if (repo.existsByTransactionNo(transactionNo)) {
+            return; 
+        }
+
+        // 4. Kiểm tra trạng thái đơn hàng trong Database
         Orders order = orderRepo.findForUpdateById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng ID: " + orderId));
+
         if (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
             return;
         }
@@ -202,28 +199,34 @@ public class PaymentTransactionService {
             throw new IllegalArgumentException("Không thể thanh toán đơn hàng đã kết thúc.");
         }
 
-        double amount = webhookAmount(payload, transactionData, orderData);
+        // 5. Kiểm tra số tiền chuyển khoản
+        double amount = parseAmount(payload.get("transferAmount"));
         double requiredAmount = paymentAmount(orderId);
         if (Double.compare(amount, requiredAmount) != 0) {
-            throw new IllegalArgumentException("Số tiền thanh toán không khớp số tiền cần thanh toán.");
+            throw new IllegalArgumentException(
+                    "Số tiền thanh toán (" + amount + ") không khớp số tiền cần thanh toán (" + requiredAmount + ").");
         }
 
+        // 6. Lấy thời gian giao dịch
         Date paidAt = transactionDate(firstNonBlank(
-                text(transactionData.get("transaction_date")),
-                text(payload.get("transactionDate"))));
+                text(payload.get("transactionDate")),
+                text(payload.get("transaction_date"))));
+
+        // 7. Cập nhật trạng thái đơn hàng thành đã cọc/đã thanh toán
         order.setDepositStatus(OrderStatus.DEPOSIT_PAID);
         order.setDepositAmount(amount);
         order.setDepositMethod("SePay");
         order.setDepositPaidAt(paidAt);
         orderRepo.save(order);
 
+        // 8. Cập nhật hợp đồng liên quan (nếu có)
         contractRepo.findByOrderId(orderId)
                 .ifPresent(contract -> updateContract(contract, amount, paidAt));
 
+        // 9. Lưu lịch sử giao dịch thanh toán (PaymentTransaction)
         PaymentTransaction transaction = new PaymentTransaction();
         transaction.setOrderId(orderId);
         transaction.setGateway(firstNonBlank(
-                text(transactionData.get("payment_method")),
                 text(payload.get("gateway")),
                 "SePay"));
         transaction.setTransactionNo(transactionNo);
@@ -235,6 +238,7 @@ public class PaymentTransactionService {
         transaction.setRawResponse(rawPayload(payload));
         repo.save(transaction);
 
+        // 10. Gửi email thông báo
         try {
             sendPaymentEmails(order, amount);
         } catch (Exception e) {
@@ -242,44 +246,30 @@ public class PaymentTransactionService {
         }
     }
 
-    private Integer extractOrderId(Map<String, Object> payload, Map<String, Object> orderData) {
-        String searchable = String.join(" ",
-                text(orderData.get("order_invoice_number")),
-                text(orderData.get("order_description")),
-                text(payload.get("description")),
-                text(payload.get("content")),
-                text(payload.get("transactionContent")));
-        System.out.println("Search = " + searchable);
-        Matcher matcher = ORDER_CODE_PATTERN.matcher(searchable);
-        if (!matcher.find()) {
-            throw new IllegalArgumentException("Không tìm thấy mã đơn VELOR trong webhook.");
+    private Integer extractOrderIdFromContent(String content) {
+        if (content == null || content.isBlank())
+            return null;
+        Matcher matcher = ORDER_CODE_PATTERN.matcher(content);
+        if (matcher.find()) {
+            try {
+                return Integer.parseInt(matcher.group(1));
+            } catch (NumberFormatException e) {
+                return null;
+            }
         }
-        return Integer.valueOf(matcher.group(1));
+        return null;
     }
 
-    private String transactionNo(Map<String, Object> payload, Map<String, Object> transactionData) {
-        String value = firstNonBlank(
-                text(transactionData.get("transaction_id")),
-                text(transactionData.get("id")),
-                text(payload.get("id")),
-                text(payload.get("referenceCode")));
-        if (value.isBlank()) {
-            throw new IllegalArgumentException("Webhook thiếu transaction ID của SePay.");
-        }
-        return "SEPAY-" + value;
-    }
-
-    private double webhookAmount(Map<String, Object> payload,
-            Map<String, Object> transactionData,
-            Map<String, Object> orderData) {
-        String value = firstNonBlank(
-                text(transactionData.get("transaction_amount")),
-                text(payload.get("transferAmount")),
-                text(orderData.get("order_amount")));
+    private double parseAmount(Object amountObj) {
+        if (amountObj == null)
+            return 0.0;
         try {
-            return Double.parseDouble(value);
-        } catch (NumberFormatException exception) {
-            throw new IllegalArgumentException("Số tiền giao dịch không hợp lệ.");
+            if (amountObj instanceof Number) {
+                return ((Number) amountObj).doubleValue();
+            }
+            return Double.parseDouble(amountObj.toString());
+        } catch (NumberFormatException e) {
+            return 0.0;
         }
     }
 
@@ -322,6 +312,7 @@ public class PaymentTransactionService {
                 .orElseGet(() -> orderTotal(orderId));
     }
 
+    @SuppressWarnings("unused")
     private String sign(Map<String, String> fields) {
         StringBuilder value = new StringBuilder();
         for (Map.Entry<String, String> field : fields.entrySet()) {
@@ -339,14 +330,8 @@ public class PaymentTransactionService {
         }
     }
 
-    private void requireSePayConfig() {
-        if (!isSePayConfigured()) {
-            throw new IllegalArgumentException("SePay chưa được cấu hình.");
-        }
-    }
-
     private Date transactionDate(String value) {
-        if (value.isBlank())
+        if (value == null || value.isBlank())
             return new Date();
         try {
             return new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(value);
@@ -361,11 +346,6 @@ public class PaymentTransactionService {
         } catch (JsonProcessingException exception) {
             return payload.toString();
         }
-    }
-
-    @SuppressWarnings("unchecked")
-    private Map<String, Object> map(Object value) {
-        return value instanceof Map ? (Map<String, Object>) value : Map.of();
     }
 
     private String firstNonBlank(String... values) {
