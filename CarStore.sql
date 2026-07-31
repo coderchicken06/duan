@@ -336,9 +336,8 @@ CREATE TABLE dbo.News (
 GO
 
 -- =============================================================
--- 12. CHỈ MỤC HỖ TRỢ TRUY VẤN
+-- 12. CHỈ MỤC HỖ TRỢ TRUY VẤN (Đã loại bỏ IX_Car_BrandId bị trùng)
 -- =============================================================
-CREATE INDEX IX_Car_BrandId ON dbo.Car(brand_id);
 CREATE INDEX IX_Orders_Username ON dbo.Orders(username);
 CREATE INDEX IX_Orders_Status ON dbo.Orders(status);
 CREATE UNIQUE INDEX UX_Account_Email ON dbo.Account(email) WHERE email IS NOT NULL;
@@ -368,7 +367,7 @@ INSERT INTO dbo.Brand(name) VALUES
 GO
 
 -- =============================================================
--- 14. DỮ LIỆU MẪU XE - GIỮ 6 XE CŨ, BỔ SUNG THÔNG TIN CHI TIẾT
+-- 14. DỮ LIỆU MẪU XE
 -- =============================================================
 INSERT INTO dbo.Car
 (name, price, image, description, brand_id, [year], color, stock,
@@ -401,35 +400,20 @@ VALUES
  N'Sedan thể thao, hiệu năng cao, lái cảm giác tuyệt vời', 2, 2024, N'Xanh đen', 4,
  N'Tháng 02 Năm 2024', 7000, N'Xăng', N'2.0L Turbo', N'Đen', N'Sedan', 5, N'RWD', N'Tự động 8 cấp', 184, N'300 Nm', N'Xăng', N'6.8 L/100km', N'18 tháng', N'CarStore Hà Nội', N'Nam Từ Liêm, Hà Nội', N'Premium Certified', N'Ngoại thất nguyên bản, ODO xác thực', N'ABS, DSC, hỗ trợ đỗ xe, cảnh báo va chạm', N'iDrive, ghế thể thao, điều hòa 3 vùng');
 GO
--- Tạo ảnh chính ban đầu từ cột Car.image; admin có thể bổ sung thêm nhiều ảnh sau.
+
 INSERT INTO dbo.CarImage(car_id, image_url, sort_order, is_primary)
 SELECT id, image, 0, 1 FROM dbo.Car WHERE image IS NOT NULL AND LTRIM(RTRIM(image)) <> '';
 GO
 
--- Bổ sung ảnh ngang cho thư viện chi tiết xe.
--- Các file gallery là bản riêng trong static/images nên không vi phạm khóa UNIQUE(car_id, image_url).
 INSERT INTO dbo.CarImage(car_id, image_url, sort_order, is_primary)
-SELECT id,
-       LEFT(image, LEN(image) - 4) + '-gallery1.jpg',
-       1, 0
-FROM dbo.Car
-WHERE image LIKE '%.jpg';
+SELECT id, LEFT(image, LEN(image) - 4) + '-gallery1.jpg', 1, 0 FROM dbo.Car WHERE image LIKE '%.jpg';
 
 INSERT INTO dbo.CarImage(car_id, image_url, sort_order, is_primary)
-SELECT id,
-       LEFT(image, LEN(image) - 4) + '-gallery2.jpg',
-       2, 0
-FROM dbo.Car
-WHERE image LIKE '%.jpg';
+SELECT id, LEFT(image, LEN(image) - 4) + '-gallery2.jpg', 2, 0 FROM dbo.Car WHERE image LIKE '%.jpg';
 
 INSERT INTO dbo.CarImage(car_id, image_url, sort_order, is_primary)
-SELECT id,
-       LEFT(image, LEN(image) - 4) + '-gallery3.jpg',
-       3, 0
-FROM dbo.Car
-WHERE image LIKE '%.jpg';
+SELECT id, LEFT(image, LEN(image) - 4) + '-gallery3.jpg', 3, 0 FROM dbo.Car WHERE image LIKE '%.jpg';
 GO
-
 
 -- =============================================================
 -- 15. DỮ LIỆU MẪU TÀI KHOẢN
@@ -459,27 +443,23 @@ VALUES
 GO
 
 -- =============================================================
--- 17. DỮ LIỆU MẪU ĐƠN HÀNG - PHẢI TẠO TRƯỚC PAYMENT/CONTRACT
+-- 17. DỮ LIỆU MẪU ĐƠN HÀNG
 -- =============================================================
--- 1. Thêm dữ liệu mẫu Đơn hàng (Orders)
 INSERT INTO dbo.Orders
 (username, address, registration_address, payment_method, status,
  deposit_status, deposit_amount, deposit_method, deposit_paid_at)
 VALUES
--- Đơn 1: Toyota Camry (Giá 1.2 tỷ) -> Cọc 10% = 120 triệu
 ('user1', N'TP Hồ Chí Minh', N'TP Hồ Chí Minh', N'SePay', N'DELIVERED',
  'PAID', 120000, N'SePay', GETDATE()),
 
--- Đơn 2: BMW X5 (Giá 3.5 tỷ) -> Cọc 10% = 350 triệu
 ('user1', N'Bình Dương', N'Bình Dương', N'SePay', N'PROCESSING',
  'PAID', 350000, N'SePay', GETDATE());
 GO
 
--- 2. Thêm dữ liệu Chi tiết đơn hàng (OrderDetail)
 INSERT INTO dbo.OrderDetail(order_id, car_id, price, quantity)
 VALUES
-(1, 1, 1200000, 1), -- Xe ID 1: Toyota Camry
-(2, 2, 3500000, 1); -- Xe ID 2: BMW X5
+(1, 1, 1200000, 1),
+(2, 2, 3500000, 1);
 GO
 
 -- =============================================================
@@ -561,7 +541,7 @@ VALUES
 GO
 
 -- =============================================================
--- 24. KIỂM TRA TOÀN BỘ DATABASE
+-- 24. KIỂM TRA TOÀN BỘ DATABASE & HOÀN TẤT
 -- =============================================================
 PRINT N'=============================================================';
 PRINT N'CARSTORE ĐÃ ĐƯỢC TẠO VÀ GỘP THÀNH CÔNG';
@@ -602,8 +582,6 @@ GO
 PRINT N'Setup hoàn thành!';
 GO
 
--- Khôi phục mapping cho tài khoản ứng dụng sau khi database được tạo lại.
--- LOGIN được quản lý bên ngoài script để mật khẩu không nằm trong source code.
 IF SUSER_ID(N'carstore_app') IS NOT NULL
 BEGIN
     IF DATABASE_PRINCIPAL_ID(N'carstore_app') IS NULL
@@ -616,72 +594,3 @@ BEGIN
         ALTER ROLE [db_datawriter] ADD MEMBER [carstore_app];
 END;
 GO
-
-
--- =====================================================================
--- XÁC NHẬN CÁC PHẦN NÂNG CẤP ĐÃ ĐƯỢC GỘP
--- =====================================================================
-SELECT
-    COL_LENGTH('dbo.Car', 'first_registration') AS first_registration,
-    COL_LENGTH('dbo.Car', 'mileage') AS mileage,
-    COL_LENGTH('dbo.Car', 'horsepower') AS horsepower,
-    COL_LENGTH('dbo.Car', 'fuel_type') AS fuel_type,
-    COL_LENGTH('dbo.Car', 'dealer_name') AS dealer_name,
-    COL_LENGTH('dbo.Orders', 'deposit_status') AS deposit_status,
-    COL_LENGTH('dbo.Orders', 'deposit_amount') AS deposit_amount,
-    COL_LENGTH('dbo.Orders', 'deposit_method') AS deposit_method,
-    COL_LENGTH('dbo.Orders', 'deposit_paid_at') AS deposit_paid_at;
-GO
-
--- =====================================================================
--- KIỂM TRA API CHI TIẾT XE /api/cars/1 VÀ THƯ VIỆN ẢNH
--- Nếu hai truy vấn dưới đây chạy được thì schema phù hợp với Spring Boot.
--- =====================================================================
-SELECT TOP (1)
-    id, name, price, image, description, brand_id, [year], color, stock,
-    first_registration, mileage, engine_type, engine_capacity, interior_color,
-    body_type, seats, drivetrain, transmission, horsepower, torque, fuel_type,
-    fuel_consumption, warranty, dealer_name, dealer_address, inspection_level,
-    inspection_note, safety_features, comfort_features
-FROM dbo.Car
-WHERE id = 1;
-
-SELECT id, car_id, image_url, sort_order, is_primary
-FROM dbo.CarImage
-WHERE car_id = 1
-ORDER BY is_primary DESC, sort_order ASC, id ASC;
-GO
-
-select deposit_status, deposit_amount
-from Orders
-where id=1;
-
-select *
-from PaymentTransaction
-where order_id=1;
-
-select deposit_status
-from Contract
-where order_id=1;
-
-select
-id,
-status,
-deposit_status,
-deposit_amount,
-deposit_method,
-deposit_paid_at
-from Orders;
-
-SELECT *
-FROM PaymentTransaction
-ORDER BY id DESC;
-
-SELECT
-order_id,
-deposit_status,
-deposit_amount
-FROM Contract;
-
-SELECT id,name,stock
-FROM Car;
