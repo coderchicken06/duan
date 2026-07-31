@@ -35,15 +35,18 @@
         <form class="booking-form" novalidate @submit.prevent="submit">
           <div class="field">
             <label for="service-name">Họ tên *</label>
-            <input id="service-name" v-model.trim="form.name" class="form-control" maxlength="255" autocomplete="name" />
+            <input id="service-name" v-model.trim="form.name" class="form-control" maxlength="255"
+              autocomplete="name" />
           </div>
           <div class="field">
             <label for="service-phone">Số điện thoại *</label>
-            <input id="service-phone" v-model.trim="form.phone" class="form-control" inputmode="tel" maxlength="12" autocomplete="tel" placeholder="+84xxxxxxxxx" />
+            <input id="service-phone" v-model.trim="form.phone" class="form-control" inputmode="tel" maxlength="12"
+              autocomplete="tel" placeholder="+84xxxxxxxxx" />
           </div>
           <div class="field">
             <label for="service-car">Thông tin xe / biển số *</label>
-            <input id="service-car" v-model.trim="form.carInfo" class="form-control" maxlength="255" placeholder="Tên xe hoặc biển số" />
+            <input id="service-car" v-model.trim="form.carInfo" class="form-control" maxlength="255"
+              placeholder="Tên xe hoặc biển số" />
             <small v-if="selectedFromCatalog">Thông tin được điền sẵn từ trang chi tiết và có thể chỉnh sửa.</small>
           </div>
           <div class="field">
@@ -62,18 +65,14 @@
           </div>
           <div class="field">
             <label for="service-time">Giờ hẹn *</label>
-            <input
-              id="service-time"
-              v-model="form.appointmentTime"
-              :min="minimumAppointmentTime"
-              type="time"
-              class="form-control"
-            />
+            <input id="service-time" v-model="form.appointmentTime" :min="minimumAppointmentTime" type="time"
+              class="form-control" />
             <small v-if="form.appointmentDate === today">Vui lòng chọn giờ sau thời điểm hiện tại.</small>
           </div>
 
           <div class="booking-actions">
-            <div v-if="msg" class="alert mb-0" :class="ok ? 'alert-success' : 'alert-danger'" role="alert">{{ msg }}</div>
+            <div v-if="msg" class="alert mb-0" :class="ok ? 'alert-success' : 'alert-danger'" role="alert">{{ msg }}
+            </div>
             <button class="btn cs-btn cs-btn-primary" type="submit" :disabled="submitting">
               {{ submitting ? 'Đang gửi yêu cầu...' : 'Xác nhận đặt lịch' }}
             </button>
@@ -139,7 +138,7 @@ onMounted(async () => {
 
 function validateForm() {
   if (!form.value.name || !form.value.phone || !form.value.carInfo || !form.value.serviceType
-      || !form.value.appointmentDate || !form.value.appointmentTime) {
+    || !form.value.appointmentDate || !form.value.appointmentTime) {
     return 'Vui lòng điền đầy đủ các trường bắt buộc.'
   }
   if (!/^\+84[0-9]{9}$/.test(form.value.phone.replace(/\s+/g, ''))) {
@@ -179,7 +178,187 @@ async function submit() {
 </script>
 
 <style scoped>
-.service-page{background:#f7f8fa;min-height:70vh}.service-hero{color:#fff;padding:38px}.service-hero h1{font-size:clamp(2rem,4vw,3.2rem);font-weight:800;max-width:720px;margin:8px 0 12px}.service-hero p{color:#d1d5db;font-size:1.05rem;max-width:650px;margin:0}.service-eyebrow{color:#ef4444;font-size:.76rem;font-weight:800;letter-spacing:.14em}.service-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:-78px;margin-bottom:32px}.service-card{display:flex;gap:16px;padding:24px;box-shadow:0 14px 35px rgba(17,24,39,.08)}.service-icon{display:grid;place-items:center;background:#fef2f2;border-radius:14px;font-size:1.7rem;height:52px;min-width:52px}.service-card h2{font-size:1.05rem;font-weight:800;margin:2px 0 8px}.service-card p{color:#6b7280;font-size:.92rem;margin:0}.booking-card{display:grid;grid-template-columns:300px 1fr;overflow:hidden}.booking-intro{background:#182333;color:#fff;padding:34px}.booking-intro h2{font-weight:800;margin:8px 0 12px}.booking-intro p{color:#cbd5e1}.booking-note{border-top:1px solid #425064;display:grid;gap:9px;margin-top:28px;padding-top:22px}.booking-note span{color:#cbd5e1;font-size:.9rem}.booking-form{display:grid;grid-template-columns:1fr 1fr;gap:20px;padding:34px}.field{display:grid;gap:7px}.field label{font-size:.88rem;font-weight:700}.field small{color:#6b7280}.booking-actions{display:flex;align-items:center;justify-content:space-between;gap:16px;grid-column:1/-1;margin-top:4px}.booking-actions .alert{flex:1}.booking-actions .btn{min-width:210px}@media(max-width:850px){.service-grid{grid-template-columns:1fr;margin-top:24px}.booking-card{grid-template-columns:1fr}.booking-intro{padding:26px}}@media(max-width:600px){.booking-form{grid-template-columns:1fr;padding:24px}.booking-actions{align-items:stretch;flex-direction:column}.booking-actions .btn{width:100%}}
-.service-hero{background:linear-gradient(120deg,#111827,#293547);padding:58px 0}
-.service-hero{padding:28px}.service-hero .ford-hero-panel-content{max-width:760px}
+.service-page {
+  background: #f7f8fa;
+  min-height: 70vh
+}
+
+.service-hero {
+  color: #fff;
+  padding: 38px
+}
+
+.service-hero h1 {
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 800;
+  max-width: 720px;
+  margin: 8px 0 12px
+}
+
+.service-hero p {
+  color: #d1d5db;
+  font-size: 1.05rem;
+  max-width: 650px;
+  margin: 0
+}
+
+.service-eyebrow {
+  color: #ef4444;
+  font-size: .76rem;
+  font-weight: 800;
+  letter-spacing: .14em
+}
+
+.service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 18px;
+  margin-top: -78px;
+  margin-bottom: 32px
+}
+
+.service-card {
+  display: flex;
+  gap: 16px;
+  padding: 24px;
+  box-shadow: 0 14px 35px rgba(17, 24, 39, .08)
+}
+
+.service-icon {
+  display: grid;
+  place-items: center;
+  background: #fef2f2;
+  border-radius: 14px;
+  font-size: 1.7rem;
+  height: 52px;
+  min-width: 52px
+}
+
+.service-card h2 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  margin: 2px 0 8px
+}
+
+.service-card p {
+  color: #6b7280;
+  font-size: .92rem;
+  margin: 0
+}
+
+.booking-card {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  overflow: hidden
+}
+
+.booking-intro {
+  background: #182333;
+  color: #fff;
+  padding: 34px
+}
+
+.booking-intro h2 {
+  font-weight: 800;
+  margin: 8px 0 12px
+}
+
+.booking-intro p {
+  color: #cbd5e1
+}
+
+.booking-note {
+  border-top: 1px solid #425064;
+  display: grid;
+  gap: 9px;
+  margin-top: 28px;
+  padding-top: 22px
+}
+
+.booking-note span {
+  color: #cbd5e1;
+  font-size: .9rem
+}
+
+.booking-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  padding: 34px
+}
+
+.field {
+  display: grid;
+  gap: 7px
+}
+
+.field label {
+  font-size: .88rem;
+  font-weight: 700
+}
+
+.field small {
+  color: #6b7280
+}
+
+.booking-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  grid-column: 1/-1;
+  margin-top: 4px
+}
+
+.booking-actions .alert {
+  flex: 1
+}
+
+.booking-actions .btn {
+  min-width: 210px
+}
+
+@media(max-width:850px) {
+  .service-grid {
+    grid-template-columns: 1fr;
+    margin-top: 24px
+  }
+
+  .booking-card {
+    grid-template-columns: 1fr
+  }
+
+  .booking-intro {
+    padding: 26px
+  }
+}
+
+@media(max-width:600px) {
+  .booking-form {
+    grid-template-columns: 1fr;
+    padding: 24px
+  }
+
+  .booking-actions {
+    align-items: stretch;
+    flex-direction: column
+  }
+
+  .booking-actions .btn {
+    width: 100%
+  }
+}
+
+.service-hero {
+  background: linear-gradient(120deg, #111827, #293547);
+  padding: 58px 0
+}
+
+.service-hero {
+  padding: 28px
+}
+
+.service-hero .ford-hero-panel-content {
+  max-width: 760px
+}
 </style>

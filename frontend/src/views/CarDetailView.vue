@@ -5,19 +5,16 @@
         <section class="gallery-card">
           <div class="main-image-wrap">
             <img class="main-image" :src="selectedImage" :alt="car.name" />
-            <button v-if="galleryImages.length > 1" class="gallery-arrow gallery-arrow-left" type="button" aria-label="Ảnh trước" @click="previousImage">‹</button>
-            <button v-if="galleryImages.length > 1" class="gallery-arrow gallery-arrow-right" type="button" aria-label="Ảnh tiếp theo" @click="nextImage">›</button>
+            <button v-if="galleryImages.length > 1" class="gallery-arrow gallery-arrow-left" type="button"
+              aria-label="Ảnh trước" @click="previousImage">‹</button>
+            <button v-if="galleryImages.length > 1" class="gallery-arrow gallery-arrow-right" type="button"
+              aria-label="Ảnh tiếp theo" @click="nextImage">›</button>
           </div>
 
           <div v-if="galleryImages.length > 0" class="thumbnail-row">
-            <button
-              v-for="(image, index) in galleryImages"
-              :key="`${image}-${index}`"
-              type="button"
+            <button v-for="(image, index) in galleryImages" :key="`${image}-${index}`" type="button"
               :class="['thumbnail-button', { active: image === selectedImage }]"
-              :aria-label="`Xem ảnh ${index + 1} của ${car.name}`"
-              @click="selectedImage = image"
-            >
+              :aria-label="`Xem ảnh ${index + 1} của ${car.name}`" @click="selectedImage = image">
               <img :src="image" :alt="`${car.name} - ảnh ${index + 1}`" />
             </button>
           </div>
@@ -46,7 +43,8 @@
           </div>
 
           <div class="action-grid">
-            <button class="ford-btn-primary hero-action" type="button" :disabled="Number(car.stock || 0) <= 0" @click="addToCart">
+            <button class="ford-btn-primary hero-action" type="button" :disabled="Number(car.stock || 0) <= 0"
+              @click="addToCart">
               <span class="action-icon" aria-hidden="true">🛒</span>
               <span>{{ Number(car.stock || 0) > 0 ? 'Thêm vào giỏ hàng' : 'Xe đã hết hàng' }}</span>
             </button>
@@ -54,7 +52,8 @@
               <span class="action-icon" aria-hidden="true">⚖</span>
               <span>{{ has(car.id) ? 'Bỏ khỏi so sánh' : 'Thêm vào so sánh' }}</span>
             </button>
-            <router-link class="ford-btn-outline hero-action text-center" :to="{ path: '/service', query: { carId: car.id } }">
+            <router-link class="ford-btn-outline hero-action text-center"
+              :to="{ path: '/service', query: { carId: car.id } }">
               <span class="action-icon" aria-hidden="true">▣</span>
               <span>Đặt lịch xem xe</span>
             </router-link>
@@ -125,15 +124,38 @@
       </section>
 
       <section class="detail-section review-section">
-        <div class="section-heading"><span>KHÁCH HÀNG</span><h2>Đánh giá xe</h2></div>
-        <div class="review-summary"><strong>{{ reviewAverage.toFixed(1) }}/5</strong><span>{{ reviews.length }} đánh giá từ khách đã mua</span></div>
-        <form v-if="auth.isLoggedIn && (!myReview || editingReviewId)" class="review-form" @submit.prevent="submitReview">
-          <select v-model.number="reviewForm.rating" class="form-select" required><option :value="0" disabled>Chọn số sao</option><option v-for="star in 5" :key="star" :value="star">{{ star }} sao</option></select>
-          <textarea v-model="reviewForm.comment" class="form-control" rows="3" maxlength="1000" placeholder="Chia sẻ trải nghiệm của bạn" required></textarea>
-          <div class="review-actions"><button class="ford-btn-primary" type="submit" :disabled="reviewSubmitting">{{ reviewSubmitting ? 'Đang lưu...' : (editingReviewId ? 'Lưu đánh giá' : 'Gửi đánh giá') }}</button><button v-if="editingReviewId" class="btn btn-outline-secondary" type="button" @click="cancelReviewEdit">Hủy</button></div>
+        <div class="section-heading"><span>KHÁCH HÀNG</span>
+          <h2>Đánh giá xe</h2>
+        </div>
+        <div class="review-summary"><strong>{{ reviewAverage.toFixed(1) }}/5</strong><span>{{ reviews.length }} đánh giá
+            từ khách đã mua</span></div>
+        <form v-if="auth.isLoggedIn && (!myReview || editingReviewId)" class="review-form"
+          @submit.prevent="submitReview">
+          <select v-model.number="reviewForm.rating" class="form-select" required>
+            <option :value="0" disabled>Chọn số sao</option>
+            <option v-for="star in 5" :key="star" :value="star">{{ star }} sao</option>
+          </select>
+          <textarea v-model="reviewForm.comment" class="form-control" rows="3" maxlength="1000"
+            placeholder="Chia sẻ trải nghiệm của bạn" required></textarea>
+          <div class="review-actions"><button class="ford-btn-primary" type="submit" :disabled="reviewSubmitting">{{
+            reviewSubmitting ? 'Đang lưu...' : (editingReviewId ? 'Lưu đánh giá' : 'Gửi đánh giá') }}</button><button
+              v-if="editingReviewId" class="btn btn-outline-secondary" type="button"
+              @click="cancelReviewEdit">Hủy</button></div>
         </form>
-        <div v-if="reviewMessage" class="alert mt-3" :class="reviewOk ? 'alert-success' : 'alert-danger'">{{ reviewMessage }}</div>
-        <div v-if="reviews.length" class="review-list"><article v-for="review in reviews" :key="review.id" class="review-item"><div class="review-avatar">{{ review.username?.charAt(0)?.toUpperCase() }}</div><div class="review-content"><strong>{{ review.username }}</strong><div class="review-stars">{{ '★'.repeat(review.rating) }}{{ '☆'.repeat(5-review.rating) }}</div><p>{{ review.comment }}</p><small>{{ new Date(review.reviewDate).toLocaleDateString('vi-VN') }}</small><div v-if="isOwnReview(review)" class="review-actions mt-2"><button class="btn btn-sm btn-outline-primary" type="button" @click="startReviewEdit(review)">Sửa</button><button class="btn btn-sm btn-outline-danger" type="button" @click="deleteReview(review)">Xóa</button></div></div></article></div>
+        <div v-if="reviewMessage" class="alert mt-3" :class="reviewOk ? 'alert-success' : 'alert-danger'">{{
+          reviewMessage }}</div>
+        <div v-if="reviews.length" class="review-list">
+          <article v-for="review in reviews" :key="review.id" class="review-item">
+            <div class="review-avatar">{{ review.username?.charAt(0)?.toUpperCase() }}</div>
+            <div class="review-content"><strong>{{ review.username }}</strong>
+              <div class="review-stars">{{ '★'.repeat(review.rating) }}{{ '☆'.repeat(5 - review.rating) }}</div>
+              <p>{{ review.comment }}</p><small>{{ new Date(review.reviewDate).toLocaleDateString('vi-VN') }}</small>
+              <div v-if="isOwnReview(review)" class="review-actions mt-2"><button class="btn btn-sm btn-outline-primary"
+                  type="button" @click="startReviewEdit(review)">Sửa</button><button
+                  class="btn btn-sm btn-outline-danger" type="button" @click="deleteReview(review)">Xóa</button></div>
+            </div>
+          </article>
+        </div>
         <p v-else class="ford-empty-state">Xe này chưa có đánh giá.</p>
       </section>
     </div>
@@ -142,7 +164,8 @@
   <div v-else class="container py-5 text-center">
     <div v-if="loadError" class="alert alert-danger">{{ loadError }}</div>
     <p v-else>Đang tải...</p>
-    <router-link v-if="loadError" class="ford-btn-outline text-center" to="/car/list">Quay lại danh sách xe</router-link>
+    <router-link v-if="loadError" class="ford-btn-outline text-center" to="/car/list">Quay lại danh sách
+      xe</router-link>
   </div>
 </template>
 
@@ -385,11 +408,86 @@ async function deleteReview(review) {
   }
 }
 
-loadReviews().catch(() => {})
+loadReviews().catch(() => { })
 </script>
 
 <style scoped>
-.review-summary{display:flex;align-items:baseline;gap:14px;margin-bottom:22px}.review-summary strong{color:#b91c1c;font-size:2rem}.review-summary span{color:#6b7280}.review-form{display:grid;gap:12px;max-width:620px}.review-form .form-select,.review-form .form-control{background:#fff;color:#111827;border-color:#d1d5db}.review-list{display:grid;gap:14px;margin-top:24px}.review-item{display:flex;gap:14px;border-top:1px solid #e5e7eb;padding-top:16px}.review-content{flex:1}.review-actions{display:flex;gap:8px;align-items:center}.review-avatar{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:50%;background:#fee2e2;color:#991b1b;font-weight:800}.review-stars{color:#f59e0b}.review-item p{margin:5px 0}.review-item small{color:#6b7280}
+.review-summary {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 22px
+}
+
+.review-summary strong {
+  color: #b91c1c;
+  font-size: 2rem
+}
+
+.review-summary span {
+  color: #6b7280
+}
+
+.review-form {
+  display: grid;
+  gap: 12px;
+  max-width: 620px
+}
+
+.review-form .form-select,
+.review-form .form-control {
+  background: #fff;
+  color: #111827;
+  border-color: #d1d5db
+}
+
+.review-list {
+  display: grid;
+  gap: 14px;
+  margin-top: 24px
+}
+
+.review-item {
+  display: flex;
+  gap: 14px;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 16px
+}
+
+.review-content {
+  flex: 1
+}
+
+.review-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center
+}
+
+.review-avatar {
+  width: 42px;
+  height: 42px;
+  flex: 0 0 42px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fee2e2;
+  color: #991b1b;
+  font-weight: 800
+}
+
+.review-stars {
+  color: #f59e0b
+}
+
+.review-item p {
+  margin: 5px 0
+}
+
+.review-item small {
+  color: #6b7280
+}
+
 .detail-page {
   min-height: 100vh;
   background: #f5f5f5;
@@ -557,7 +655,7 @@ loadReviews().catch(() => {})
   margin-top: 28px;
 }
 
-.action-grid > * {
+.action-grid>* {
   width: 100%;
   min-height: 66px;
   display: flex;
@@ -593,7 +691,7 @@ loadReviews().catch(() => {})
   line-height: 1;
 }
 
-.dealer-box > div {
+.dealer-box>div {
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -740,7 +838,7 @@ loadReviews().catch(() => {})
 
   .summary-meta span,
   .quick-specs small,
-  .dealer-box > div {
+  .dealer-box>div {
     font-size: 15px;
   }
 
@@ -748,13 +846,14 @@ loadReviews().catch(() => {})
     font-size: 19px;
   }
 
-  .action-grid > * {
+  .action-grid>* {
     min-height: 54px;
     font-size: 16px;
   }
 }
 
 @media (max-width: 900px) {
+
   .detail-hero,
   .two-columns,
   .inspection {
@@ -802,7 +901,7 @@ loadReviews().catch(() => {})
     padding: 13px;
   }
 
-  .action-grid > * {
+  .action-grid>* {
     min-height: 50px;
     font-size: 15px;
   }
@@ -833,8 +932,33 @@ loadReviews().catch(() => {})
   }
 }
 
-.gallery-arrow { position:absolute; top:50%; transform:translateY(-50%); width:50px; height:50px; border:0; border-radius:50%; background:rgba(255,255,255,.92); color:#111827; font-size:38px; line-height:1; cursor:pointer; box-shadow:0 4px 16px rgba(0,0,0,.18); z-index:2; }
-.gallery-arrow:hover { background:#fff; color:#d71920; }
-.gallery-arrow-left { left:16px; }
-.gallery-arrow-right { right:16px; }
+.gallery-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 50px;
+  height: 50px;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .92);
+  color: #111827;
+  font-size: 38px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, .18);
+  z-index: 2;
+}
+
+.gallery-arrow:hover {
+  background: #fff;
+  color: #d71920;
+}
+
+.gallery-arrow-left {
+  left: 16px;
+}
+
+.gallery-arrow-right {
+  right: 16px;
+}
 </style>

@@ -25,6 +25,7 @@ const router = createRouter({
     { path: '/orders/:id/contract', name: 'order-contract', meta: { auth: true }, component: () => import('../views/ContractView.vue') },
     { path: '/orders/:id/payment', name: 'order-payment', meta: { auth: true }, component: () => import('../views/PaymentView.vue') },
     { path: '/quotations/:id', name: 'quotation-detail', meta: { auth: true }, component: () => import('../views/QuotationView.vue') },
+    { path: '/quotation-history', name: 'quotation-history', meta: { auth: true }, component: () => import('../views/QuotationHistoryView.vue') },
     { path: '/history', name: 'history', meta: { auth: true }, component: () => import('../views/HistoryView.vue') },
     { path: '/service', name: 'service', meta: { auth: true }, component: () => import('../views/ServiceView.vue') },
     { path: '/support', name: 'support', meta: { auth: true }, component: () => import('../views/SupportView.vue') },

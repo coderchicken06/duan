@@ -37,42 +37,41 @@ async function submit() {
   }
 }
 </script>
-<style
-  scoped>
-  .cs-card {
-    max-width: 560px;
-    margin: auto;
-    box-shadow: 0 16px 40px rgba(31, 41, 55, .1)
-  }
+<style scoped>
+.cs-card {
+  max-width: 560px;
+  margin: auto;
+  box-shadow: 0 16px 40px rgba(31, 41, 55, .1)
+}
 
-  .step-label {
-    display: inline-block;
-    padding: .35rem .65rem;
-    border-radius: 999px;
-    background: #fee2e2;
-    color: #dc2626;
-    font-size: .75rem;
-    font-weight: 800
-  }
+.step-label {
+  display: inline-block;
+  padding: .35rem .65rem;
+  border-radius: 999px;
+  background: #fee2e2;
+  color: #dc2626;
+  font-size: .75rem;
+  font-weight: 800
+}
 
-  .form-label {
-    font-weight: 600;
-    color: #374151
-  }
+.form-label {
+  font-weight: 600;
+  color: #374151
+}
 
-  .otp-input {
-    min-height: 52px;
-    background: #fff;
-    color: #111827;
-    border-color: #d1d5db;
-    text-align: center;
-    font-size: 1.2rem;
-    font-weight: 700;
-    letter-spacing: .18em
-  }
+.otp-input {
+  min-height: 52px;
+  background: #fff;
+  color: #111827;
+  border-color: #d1d5db;
+  text-align: center;
+  font-size: 1.2rem;
+  font-weight: 700;
+  letter-spacing: .18em
+}
 
-  .cs-btn {
-    min-height: 44px;
-    font-weight: 600
-  }
+.cs-btn {
+  min-height: 44px;
+  font-weight: 600
+}
 </style>

@@ -72,7 +72,7 @@
         <div v-if="!payments.length" class="empty">Chưa có giao dịch nào.</div>
         <div v-for="item in payments" :key="item.id" class="history-row">
           <div><strong>{{ item.transactionNo }}</strong><small>{{ formatDate(item.paidAt) }} · {{ item.gateway
-          }}<template v-if="item.bankCode"> · {{ item.bankCode }}</template></small>
+              }}<template v-if="item.bankCode"> · {{ item.bankCode }}</template></small>
           </div>
           <div class="text-end"><strong>{{ formatPrice(item.amount) }} VNĐ</strong><span>{{ item.status }}<template
                 v-if="item.responseCode"> ({{ item.responseCode }})</template></span></div>

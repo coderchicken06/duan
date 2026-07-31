@@ -14,11 +14,7 @@
 
       <!-- Danh sách tin nhắn -->
       <div class="chat-body" ref="chatBody">
-        <div 
-          v-for="(msg, index) in messages" 
-          :key="index" 
-          :class="['chat-message', msg.sender]"
-        >
+        <div v-for="(msg, index) in messages" :key="index" :class="['chat-message', msg.sender]">
           <div class="message-bubble">
             <p>{{ msg.text }}</p>
 
@@ -35,11 +31,7 @@
 
       <!-- Khung nhập liệu -->
       <div class="chat-footer">
-        <input 
-          v-model="userMessage" 
-          @keyup.enter="sendMessage" 
-          placeholder="Nhập câu hỏi (VD: tìm xe vios)..." 
-        />
+        <input v-model="userMessage" @keyup.enter="sendMessage" placeholder="Nhập câu hỏi (VD: tìm xe vios)..." />
         <button @click="sendMessage">Gửi</button>
       </div>
     </div>
@@ -116,7 +108,7 @@ export default {
   border-radius: 25px;
   cursor: pointer;
   font-weight: bold;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .chat-window {
@@ -127,7 +119,7 @@ export default {
   height: 450px;
   background: white;
   border-radius: 12px;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
   display: flex;
   flex-direction: column;
   overflow: hidden;

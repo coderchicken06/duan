@@ -10,12 +10,20 @@
       <p v-if="order.depositAmount"><strong>Tiền cọc:</strong> {{ formatPrice(order.depositAmount) }} VNĐ</p>
       <div class="d-flex flex-wrap gap-2 mb-3">
         <router-link class="btn cs-btn cs-btn-ghost" :to="`/orders/${order.id}/contract`">Xem hợp đồng</router-link>
-        <router-link class="btn cs-btn cs-btn-primary" :to="`/orders/${order.id}/payment`">Thanh toán & lịch sử</router-link>
+        <router-link class="btn cs-btn cs-btn-primary" :to="`/orders/${order.id}/payment`">Thanh toán & lịch
+          sử</router-link>
       </div>
     </div>
     <div class="table-responsive cs-card p-3">
       <table class="table cs-table mb-0">
-        <thead><tr><th>Xe</th><th>Giá</th><th>SL</th><th>Thành tiền</th></tr></thead>
+        <thead>
+          <tr>
+            <th>Xe</th>
+            <th>Giá</th>
+            <th>SL</th>
+            <th>Thành tiền</th>
+          </tr>
+        </thead>
         <tbody>
           <tr v-for="d in details" :key="d.id">
             <td>{{ d.car?.name || 'Xe không còn tồn tại' }}</td>

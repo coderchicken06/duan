@@ -6,7 +6,8 @@
       <div class="ford-hero-panel-content">
         <span class="ford-badge">Xe mới • Giá tốt • Bảo hành dài hạn</span>
         <h1>Khám phá phương tiện hoàn hảo cho mọi hành trình</h1>
-        <p>Khám phá các mẫu xe mới, đặt lịch xem xe trực tuyến và sở hữu chiếc xe phù hợp nhất với phong cách của bạn.</p>
+        <p>Khám phá các mẫu xe mới, đặt lịch xem xe trực tuyến và sở hữu chiếc xe phù hợp nhất với phong cách của bạn.
+        </p>
         <div class="ford-intro-actions">
           <router-link class="ford-btn-primary" to="/car/list">Xem tất cả xe</router-link>
           <router-link class="ford-btn-outline" to="/cart/view">Giỏ hàng của bạn</router-link>
@@ -85,4 +86,25 @@ async function addToCart(id) {
   }
 }
 </script>
-<style scoped>.ford-api-error{margin:24px 0;padding:14px 16px;border:1px solid #fecaca;border-radius:12px;background:#fef2f2;color:#991b1b;text-align:center}.ford-api-error button{margin-left:12px;border:0;border-radius:999px;padding:7px 14px;background:#991b1b;color:#fff;font-weight:700}</style>
+<style
+  scoped>
+  .ford-api-error {
+    margin: 24px 0;
+    padding: 14px 16px;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    background: #fef2f2;
+    color: #991b1b;
+    text-align: center
+  }
+
+  .ford-api-error button {
+    margin-left: 12px;
+    border: 0;
+    border-radius: 999px;
+    padding: 7px 14px;
+    background: #991b1b;
+    color: #fff;
+    font-weight: 700
+  }
+</style>

@@ -3,7 +3,16 @@
     <h2 class="cs-page-title mb-4">Đơn hàng của tôi</h2>
     <div class="table-responsive cs-card p-3">
       <table class="table cs-table mb-0">
-        <thead><tr><th>Mã</th><th>Ngày</th><th>Địa chỉ</th><th>Trạng thái</th><th>Tiền cọc</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th>Mã</th>
+            <th>Ngày</th>
+            <th>Địa chỉ</th>
+            <th>Trạng thái</th>
+            <th>Tiền cọc</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
           <tr v-for="o in orders" :key="o.id">
             <td>#{{ o.id }}</td>

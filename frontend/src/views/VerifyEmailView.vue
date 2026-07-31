@@ -21,38 +21,24 @@
             <div>
               <label class="form-label">Email</label>
 
-              <input
-                v-model="email"
-                class="form-control"
-                readonly
-              />
+              <input v-model="email" class="form-control" readonly />
             </div>
 
             <div>
               <label class="form-label">Mã OTP</label>
 
-              <input
-                v-model="otp"
-                class="form-control"
-                maxlength="6"
-                required
-              />
+              <input v-model="otp" class="form-control" maxlength="6" required />
             </div>
 
-            <button
-              type="submit"
-              class="btn cs-btn cs-btn-primary">
+            <button type="submit" class="btn cs-btn cs-btn-primary">
 
               Xác thực
 
             </button>
 
-          <button
-            type="button"
-            class="btn btn-outline-primary w-100"
-            @click="resendOtp">
-            Gửi lại mã OTP
-        </button>
+            <button type="button" class="btn btn-outline-primary w-100" @click="resendOtp">
+              Gửi lại mã OTP
+            </button>
 
           </form>
 
@@ -79,77 +65,77 @@ const success = ref("")
 
 async function submit() {
 
-    error.value = ""
-    success.value = ""
+  error.value = ""
+  success.value = ""
 
-    try{
+  try {
 
     const { data } = await authApi.verifyEmail(
-        email.value,
-        otp.value
+      email.value,
+      otp.value
     )
 
     if (data.success) {
 
-success.value = "Xác thực thành công"
+      success.value = "Xác thực thành công"
 
-setTimeout(() => {
-    router.push({
-        path: "/login",
-        query: {
+      setTimeout(() => {
+        router.push({
+          path: "/login",
+          query: {
             verified: 1
-        }
-    })
-}, 1500)
+          }
+        })
+      }, 1500)
 
-} else {
+    } else {
 
-error.value = data.message
+      error.value = data.message
 
-}
+    }
 
-    } catch (e) {
+  } catch (e) {
 
     console.error(e)
 
     if (e.response) {
-        console.log("Status:", e.response.status)
-        console.log("Data:", e.response.data)
-        error.value = e.response.data?.message || "Có lỗi xảy ra"
+      console.log("Status:", e.response.status)
+      console.log("Data:", e.response.data)
+      error.value = e.response.data?.message || "Có lỗi xảy ra"
     } else {
-        error.value = e.message
+      error.value = e.message
     }
 
 
-    }
+  }
 
-    }
+}
 
 async function resendOtp() {
 
-    error.value = ""
-    success.value = ""
+  error.value = ""
+  success.value = ""
 
-    try {
+  try {
 
-        const { data } = await authApi.resendOtp(email.value)
+    const { data } = await authApi.resendOtp(email.value)
 
-        if (data.success) {
+    if (data.success) {
 
-            success.value = data.message
+      success.value = data.message
 
-        } else {
+    } else {
 
-            error.value = data.message
-
-        }
-
-    } catch (e) {
-
-        console.error(e)
-        error.value = "Không thể gửi lại mã OTP."
+      error.value = data.message
 
     }
+
+  } catch (e) {
+
+    console.error(e)
+    error.value = "Không thể gửi lại mã OTP."
+
+  }
 
 }
 

@@ -12,34 +12,32 @@
       <router-link class="ford-logo" to="/" aria-label="CarStore - Trang chủ">CarStore</router-link>
 
       <div class="ford-nav-right">
-        <button
-          v-if="showSearch"
-          type="button"
-          class="ford-icon-btn"
-          title="Tìm kiếm"
-          aria-label="Mở ô tìm kiếm"
-          :aria-expanded="searchOpen"
-          @click="searchOpen = !searchOpen"
-        >
-          <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <button v-if="showSearch" type="button" class="ford-icon-btn" title="Tìm kiếm" aria-label="Mở ô tìm kiếm"
+          :aria-expanded="searchOpen" @click="searchOpen = !searchOpen">
+          <svg viewBox="0 0 24 24">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
         </button>
 
         <router-link v-if="!auth.isLoggedIn" to="/login" class="ford-icon-btn" title="Đăng nhập" aria-label="Đăng nhập">
           <svg viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
           </svg>
         </router-link>
 
         <details v-if="auth.isUser" class="role-dropdown" ref="userMenuDetails">
           <summary class="ford-icon-btn" title="Lịch sử" aria-label="Mở menu lịch sử">
             <svg viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.7"/>
-              <polyline points="3 3 3 9 9 9"/><polyline points="12 7 12 12 16 14"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.7" />
+              <polyline points="3 3 3 9 9 9" />
+              <polyline points="12 7 12 12 16 14" />
             </svg>
           </summary>
           <div class="role-menu-panel">
             <router-link to="/order/my-orders" @click="closeUserMenu">📦 Lịch sử đơn hàng</router-link>
+            <router-link to="/quotation-history" @click="closeUserMenu">📋 Xem Lịch sử yêu cầu báo giá</router-link>
             <router-link to="/history" @click="closeUserMenu">📋 Lịch sử yêu cầu</router-link>
           </div>
         </details>
@@ -47,8 +45,9 @@
         <details v-if="auth.isAdmin" class="role-dropdown" ref="adminMenuDetails">
           <summary class="ford-icon-btn" title="Quản lý" aria-label="Mở menu quản lý">
             <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="3"/>
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/>
+              <circle cx="12" cy="12" r="3" />
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
             </svg>
           </summary>
           <div class="role-menu-panel">
@@ -63,17 +62,20 @@
           </div>
         </details>
 
-        <router-link v-if="auth.isLoggedIn" to="/profile" class="ford-icon-btn" title="Hồ sơ" aria-label="Hồ sơ cá nhân">
+        <router-link v-if="auth.isLoggedIn" to="/profile" class="ford-icon-btn" title="Hồ sơ"
+          aria-label="Hồ sơ cá nhân">
           <svg viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
-            <circle cx="12" cy="7" r="4"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
           </svg>
         </router-link>
 
-        <button v-if="auth.isLoggedIn" type="button" class="ford-icon-btn" title="Đăng xuất" aria-label="Đăng xuất" @click="handleLogout">
+        <button v-if="auth.isLoggedIn" type="button" class="ford-icon-btn" title="Đăng xuất" aria-label="Đăng xuất"
+          @click="handleLogout">
           <svg viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-            <polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+            <polyline points="16 17 21 12 16 7" />
+            <line x1="21" y1="12" x2="9" y2="12" />
           </svg>
         </button>
       </div>
@@ -81,7 +83,8 @@
 
     <div v-if="showSearch" class="ford-search-row" :class="{ 'is-open': searchOpen }">
       <form class="ford-search-form" @submit.prevent="doSearch">
-        <input v-model="searchQuery" type="search" aria-label="Tên xe cần tìm" placeholder="Tìm kiếm tên xe..." autocomplete="off" />
+        <input v-model="searchQuery" type="search" aria-label="Tên xe cần tìm" placeholder="Tìm kiếm tên xe..."
+          autocomplete="off" />
         <button type="submit">Tìm</button>
       </form>
     </div>

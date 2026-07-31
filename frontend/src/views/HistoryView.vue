@@ -1,9 +1,29 @@
 <template>
   <div class="container cs-container py-5">
     <h2 class="cs-page-title mb-4">Lịch sử yêu cầu hỗ trợ</h2>
-    <div class="table-responsive cs-card p-3">
+
+    <!-- Trạng thái đang tải -->
+    <div v-if="loading" class="text-center py-5">
+      <span class="spinner-border text-danger" role="status" aria-hidden="true"></span>
+    </div>
+
+    <!-- Thông báo lỗi nếu gọi API thất bại -->
+    <div v-else-if="error" class="alert alert-danger" role="alert">
+      {{ error }}
+    </div>
+
+    <!-- Bảng hiển thị dữ liệu -->
+    <div v-else class="table-responsive cs-card p-3">
       <table class="table cs-table mb-0">
-        <thead><tr><th>ID</th><th>Loại</th><th>Chi tiết</th><th>Trạng thái</th><th>Lịch hẹn</th></tr></thead>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Loại</th>
+            <th>Chi tiết</th>
+            <th>Trạng thái</th>
+            <th>Lịch hẹn</th>
+          </tr>
+        </thead>
         <tbody>
           <tr v-for="r in requests" :key="r.id">
             <td>{{ r.id }}</td>
@@ -20,24 +40,17 @@
       </table>
       <p v-if="requests.length === 0" class="text-center cs-muted py-4">Chưa có yêu cầu nào.</p>
     </div>
-    <h2 class="cs-page-title mb-4 mt-5">Báo giá của tôi</h2>
-    <div class="table-responsive cs-card p-3">
-      <table class="table cs-table mb-0">
-        <thead><tr><th>Mã</th><th>Ngày tạo</th><th>Tổng tiền</th><th>Trạng thái</th><th></th></tr></thead>
-        <tbody><tr v-for="quote in quotations" :key="quote.id"><td>{{ quote.quotationNo || `BG-${quote.id}` }}</td><td>{{ formatDate(quote.quotationDate) }}</td><td>{{ formatPrice(quote.totalPrice) }} VNĐ</td><td>{{ quote.status }}</td><td><router-link :to="`/quotations/${quote.id}`">Xem</router-link></td></tr></tbody>
-      </table>
-      <p v-if="quotations.length === 0" class="text-center cs-muted py-4">Chưa có báo giá nào.</p>
-    </div>
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { supportApi, quotationApi, formatPrice } from '../api'
+import { supportApi } from '../api'
 
 const requests = ref([])
-const quotations = ref([])
-const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '-'
+const loading = ref(true)
+const error = ref('')
+
 const formatAppointment = (request) => {
   if (!request.appointmentDate) return '-'
   const date = new Date(`${request.appointmentDate}T00:00:00`).toLocaleDateString('vi-VN')
@@ -45,8 +58,13 @@ const formatAppointment = (request) => {
 }
 
 onMounted(async () => {
-  const [supportResult, quotationResult] = await Promise.all([supportApi.getMy(), quotationApi.getMine()])
-  requests.value = supportResult.data.data || []
-  quotations.value = quotationResult.data.data || []
+  try {
+    const supportResult = await supportApi.getMy()
+    requests.value = supportResult.data.data || []
+  } catch (e) {
+    error.value = 'Không thể tải lịch sử yêu cầu hỗ trợ. Vui lòng thử lại sau.'
+  } finally {
+    loading.value = false
+  }
 })
 </script>

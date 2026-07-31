@@ -1836,7 +1836,7 @@ a:hover {
   white-space: nowrap;
 }
 
-.cart-qty-box > * {
+.cart-qty-box>* {
   flex: none;
 }
 

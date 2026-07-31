@@ -12,20 +12,14 @@
         <button type="button" aria-label="Bỏ xe khỏi so sánh" @click="remove(car.id)">×</button>
       </div>
 
-      <div
-        v-for="slot in Math.max(0, 3 - selectedCars.length)"
-        :key="`empty-${slot}`"
-        class="compare-chip compare-chip--empty"
-      >
+      <div v-for="slot in Math.max(0, 3 - selectedCars.length)" :key="`empty-${slot}`"
+        class="compare-chip compare-chip--empty">
         + Thêm xe
       </div>
     </div>
 
-    <router-link
-      v-if="selectedCars.length >= 2"
-      class="ford-btn-primary compare-go"
-      :to="`/compare?ids=${selectedCars.map((car) => car.id).join(',')}`"
-    >
+    <router-link v-if="selectedCars.length >= 2" class="ford-btn-primary compare-go"
+      :to="`/compare?ids=${selectedCars.map((car) => car.id).join(',')}`">
       SO SÁNH
     </router-link>
 
