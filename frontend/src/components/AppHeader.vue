@@ -31,7 +31,7 @@
           </svg>
         </router-link>
 
-        <details v-if="auth.isUser" class="role-dropdown">
+        <details v-if="auth.isUser" class="role-dropdown" ref="userMenuDetails">
           <summary class="ford-icon-btn" title="Lịch sử" aria-label="Mở menu lịch sử">
             <svg viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.7"/>
@@ -39,12 +39,12 @@
             </svg>
           </summary>
           <div class="role-menu-panel">
-            <router-link to="/order/my-orders">📦 Lịch sử đơn hàng</router-link>
-            <router-link to="/history">📋 Lịch sử yêu cầu</router-link>
+            <router-link to="/order/my-orders" @click="closeUserMenu">📦 Lịch sử đơn hàng</router-link>
+            <router-link to="/history" @click="closeUserMenu">📋 Lịch sử yêu cầu</router-link>
           </div>
         </details>
 
-        <details v-if="auth.isAdmin" class="role-dropdown">
+        <details v-if="auth.isAdmin" class="role-dropdown" ref="adminMenuDetails">
           <summary class="ford-icon-btn" title="Quản lý" aria-label="Mở menu quản lý">
             <svg viewBox="0 0 24 24">
               <circle cx="12" cy="12" r="3"/>
@@ -52,14 +52,14 @@
             </svg>
           </summary>
           <div class="role-menu-panel">
-            <router-link to="/admin/dashboard">📊 Thống kê</router-link>
-            <router-link to="/admin/inventory">🚗 Quản lý tồn kho</router-link>
-            <router-link to="/admin/orders">📦 Quản lý đơn hàng</router-link>
-            <router-link to="/admin/support">📋 Quản lý yêu cầu</router-link>
-            <router-link to="/admin/users">👥 Quản lý khách hàng</router-link>
-            <router-link to="/admin/marketing">📣 Khuyến mãi & tin tức</router-link>
-            <router-link to="/admin/contracts">📄 Quản lý hợp đồng</router-link>
-            <router-link to="/car/create">➕ Thêm xe mới</router-link>
+            <router-link to="/admin/dashboard" @click="closeAdminMenu">📊 Thống kê</router-link>
+            <router-link to="/admin/inventory" @click="closeAdminMenu">🚗 Quản lý tồn kho</router-link>
+            <router-link to="/admin/orders" @click="closeAdminMenu">📦 Quản lý đơn hàng</router-link>
+            <router-link to="/admin/support" @click="closeAdminMenu">📋 Quản lý yêu cầu</router-link>
+            <router-link to="/admin/users" @click="closeAdminMenu">👥 Quản lý khách hàng</router-link>
+            <router-link to="/admin/marketing" @click="closeAdminMenu">📣 Khuyến mãi & tin tức</router-link>
+            <router-link to="/admin/contracts" @click="closeAdminMenu">📄 Quản lý hợp đồng</router-link>
+            <router-link to="/car/create" @click="closeAdminMenu">➕ Thêm xe mới</router-link>
           </div>
         </details>
 
@@ -89,7 +89,7 @@
 </template>
 
 <script setup>
-import { computed, ref, watch } from 'vue'
+import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
 
@@ -99,6 +99,40 @@ const router = useRouter()
 const searchOpen = ref(false)
 const searchQuery = ref(String(route.query.q || ''))
 const showSearch = computed(() => ['home', 'car-list'].includes(String(route.name || '')))
+
+// Khai báo ref để tự động đóng menu quản lý/lịch sử khi click chọn hoặc click ra ngoài
+const adminMenuDetails = ref(null)
+const userMenuDetails = ref(null)
+
+function closeAdminMenu() {
+  if (adminMenuDetails.value) {
+    adminMenuDetails.value.removeAttribute('open')
+  }
+}
+
+function closeUserMenu() {
+  if (userMenuDetails.value) {
+    userMenuDetails.value.removeAttribute('open')
+  }
+}
+
+// Cốt lõi xử lý: Đóng menu khi click bất kỳ đâu bên ngoài khung menu
+function handleClickOutside(event) {
+  if (adminMenuDetails.value && !adminMenuDetails.value.contains(event.target)) {
+    adminMenuDetails.value.removeAttribute('open')
+  }
+  if (userMenuDetails.value && !userMenuDetails.value.contains(event.target)) {
+    userMenuDetails.value.removeAttribute('open')
+  }
+}
+
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 
 watch(
   () => route.query.q,

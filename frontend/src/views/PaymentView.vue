@@ -14,6 +14,10 @@
         <div v-if="contract.depositStatus === 'PAID'" class="alert alert-success">
           Tiền cọc đã được xác nhận thành công.
         </div>
+        <div v-else-if="isTimeout" class="alert alert-danger">
+          <i class="bi bi-x-circle-fill me-1"></i>
+          Giao dịch đã hết hạn (quá 3 phút). Vui lòng tạo mã QR mới để thanh toán lại.
+        </div>
         <div v-else>
           <!-- Nút lấy mã QR (ẩn đi khi QR đã được tạo) -->
           <button v-if="!qrUrl" class="btn btn-danger w-100" :disabled="submitting" @click="payDeposit">
@@ -23,6 +27,12 @@
           <!-- KHU VỰC HIỂN THỊ MÃ QR ĐẸP MẮT -->
           <div v-else class="text-center mt-4">
             <h5 class="fw-bold mb-3">Quét QR để thanh toán</h5>
+
+            <!-- Hiển thị đồng hồ đếm ngược 3 phút -->
+            <div class="alert alert-warning py-2 mb-3 fw-bold text-danger">
+              Thời gian giữ lệnh: {{ formatCountdown }}
+            </div>
+
             <div class="qr-wrapper mx-auto mb-3">
               <div class="qr-scanner-frame">
                 <!-- Biến qrUrl nhận trực tiếp từ Backend -->
@@ -73,15 +83,29 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
-import { useRoute } from 'vue-router'
+import { onMounted, onUnmounted, ref, computed } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { contractApi, paymentTransactionApi, formatPrice } from '../api'
 
-const route = useRoute(), loading = ref(true), submitting = ref(false), error = ref(''), contract = ref({}), payments = ref([])
+const route = useRoute(), router = useRouter()
+const loading = ref(true), submitting = ref(false), error = ref(''), contract = ref({}), payments = ref([])
 // Thêm biến lưu URL ảnh QR
 const qrUrl = ref('')
+let pollInterval = null
+let countdownInterval = null
+
+// Giới hạn thời gian 3 phút = 180 giây
+const timeLeft = ref(180)
+const isTimeout = ref(false)
 
 const formatDate = value => value ? new Date(value).toLocaleString('vi-VN') : ''
+
+// Format thời gian đếm ngược dạng phút:giây (ví dụ: 02:59)
+const formatCountdown = computed(() => {
+  const minutes = Math.floor(timeLeft.value / 60)
+  const seconds = timeLeft.value % 60
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
+})
 
 async function load() {
   loading.value = true;
@@ -96,6 +120,63 @@ async function load() {
   }
 }
 
+async function checkPaymentStatus() {
+  if (isTimeout.value) return;
+
+  try {
+    const [contractResponse, transactionResponse] = await Promise.all([
+      contractApi.getByOrder(route.params.id),
+      paymentTransactionApi.getByOrder(route.params.id)
+    ]);
+
+    const updatedContract = contractResponse.data.data.contract;
+    const updatedPayments = transactionResponse.data.data || [];
+
+    // Cập nhật lại danh sách lịch sử thanh toán trên giao diện real-time
+    payments.value = updatedPayments;
+
+    // Nếu trạng thái cọc đã chuyển thành PAID, tự động dừng mọi tiến trình và cập nhật
+    if (updatedContract && updatedContract.depositStatus === 'PAID') {
+      contract.value = updatedContract;
+      stopAllTimers();
+    }
+  } catch (e) {
+    // Bỏ qua lỗi ngầm trong lúc polling
+  }
+}
+
+function startPolling() {
+  if (!pollInterval) {
+    pollInterval = setInterval(checkPaymentStatus, 3000);
+  }
+
+  if (!countdownInterval) {
+    timeLeft.value = 180; // Reset lại đúng 3 phút
+    isTimeout.value = false;
+
+    countdownInterval = setInterval(() => {
+      if (timeLeft.value > 0) {
+        timeLeft.value--;
+      } else {
+        // Hết 3 phút -> Báo hết hạn / chuyển khoản thất bại
+        isTimeout.value = true;
+        stopAllTimers();
+      }
+    }, 1000);
+  }
+}
+
+function stopAllTimers() {
+  if (pollInterval) {
+    clearInterval(pollInterval);
+    pollInterval = null;
+  }
+  if (countdownInterval) {
+    clearInterval(countdownInterval);
+    countdownInterval = null;
+  }
+}
+
 async function payDeposit() {
   submitting.value = true;
   error.value = '';
@@ -106,6 +187,9 @@ async function payDeposit() {
     // Gán thẳng URL ảnh VietQR trả về từ Backend vào biến qrUrl thay vì tạo form chuyển hướng
     qrUrl.value = data.data.qrUrl;
 
+    // Bắt đầu bật luồng lắng nghe và đếm ngược 3 phút
+    startPolling();
+
   } catch (e) {
     error.value = e.response?.data?.message || e.message || 'Không thể tạo thanh toán mã QR'
   } finally {
@@ -115,7 +199,15 @@ async function payDeposit() {
 
 onMounted(async () => {
   await load();
-  if (route.query.method === 'sepay' && contract.value.depositStatus !== 'PAID') await payDeposit()
+  if (route.query.method === 'sepay' && contract.value.depositStatus !== 'PAID') {
+    await payDeposit();
+  } else if (contract.value.depositStatus !== 'PAID' && qrUrl.value) {
+    startPolling();
+  }
+})
+
+onUnmounted(() => {
+  stopAllTimers();
 })
 </script>
 
