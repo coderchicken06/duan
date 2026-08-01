@@ -156,6 +156,22 @@ class OrderServiceTest {
     }
 
     @Test
+    void cancelExpiredOrdersUsesThreeMinuteTimeout() {
+        long beforeCall = System.currentTimeMillis();
+        when(orderRepo.findByDepositStatusAndStatusAndCreateDateBefore(
+                eq(OrderStatus.DEPOSIT_UNPAID), eq(OrderStatus.PENDING), any(Date.class)))
+                .thenReturn(List.of());
+
+        orderService.cancelExpiredOrders();
+
+        ArgumentCaptor<Date> thresholdCaptor = ArgumentCaptor.forClass(Date.class);
+        verify(orderRepo).findByDepositStatusAndStatusAndCreateDateBefore(
+                eq(OrderStatus.DEPOSIT_UNPAID), eq(OrderStatus.PENDING), thresholdCaptor.capture());
+        long elapsed = beforeCall - thresholdCaptor.getValue().getTime();
+        assertTrue(Math.abs(elapsed - 3 * 60 * 1000L) < 5_000L);
+    }
+
+    @Test
     void manualDepositIsRejected() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> orderService.payDeposit(20, "user1", "SePay", false));

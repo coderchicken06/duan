@@ -272,7 +272,6 @@ GO
 CREATE TABLE dbo.Promotion (
     id INT IDENTITY(1,1) NOT NULL,
     title NVARCHAR(200) NOT NULL,
-    code NVARCHAR(50) NOT NULL,
     type NVARCHAR(20) NOT NULL,
     value FLOAT NOT NULL,
     description NVARCHAR(MAX) NULL,
@@ -354,7 +353,7 @@ CREATE INDEX IX_Car_BrandPrice ON dbo.Car(brand_id, price);
 CREATE INDEX IX_Orders_UserStatusCreated ON dbo.Orders(username, status, create_date DESC);
 CREATE INDEX IX_Quotation_CustomerStatus ON dbo.Quotation(customer_username, status);
 CREATE INDEX IX_PaymentTransaction_OrderNo ON dbo.PaymentTransaction(order_id, transaction_no);
-CREATE INDEX IX_Promotion_CodeStatus ON dbo.Promotion(code, status);
+CREATE INDEX IX_Promotion_StatusDates ON dbo.Promotion(status, start_date, end_date);
 CREATE UNIQUE INDEX UX_News_Slug ON dbo.News(slug) WHERE slug IS NOT NULL;
 GO
 
@@ -516,10 +515,10 @@ GO
 -- 22. DỮ LIỆU MẪU KHUYẾN MÃI
 -- =============================================================
 INSERT INTO dbo.Promotion
-(title, code, type, value, description, start_date, end_date, status)
+(title, type, value, description, start_date, end_date, status)
 VALUES
-(N'Khuyến mãi tháng 7', 'THANG7', 'PERCENT', 10, N'Giảm giá cho các xe áp dụng', '2026-07-01', '2026-07-31', 1),
-(N'Ưu đãi khai trương', 'KHAITRUONG', 'PERCENT', 15, N'Tặng bảo hiểm thân vỏ', '2026-08-01', '2026-08-31', 1);
+(N'Khuyến mãi tháng 7', 'PERCENT', 10, N'Giảm giá cho các xe áp dụng', '2026-07-01', '2026-07-31', 1),
+(N'Ưu đãi khai trương', 'PERCENT', 15, N'Tặng bảo hiểm thân vỏ', '2026-08-01', '2026-08-31', 1);
 GO
 
 -- =============================================================
@@ -743,7 +742,6 @@ GO
 
 INSERT INTO dbo.PromotionCar(promotion_id, car_id) VALUES
 (1, 1),
-(1, 2),
 (2, 3);
 GO
 

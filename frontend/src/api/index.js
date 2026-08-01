@@ -82,6 +82,8 @@ export const promotionApi = {
   update: (id, data) => api.put(`/api/promotions/${id}`, data),
   delete: (id) => api.delete(`/api/promotions/${id}`),
   applyToCar: (id, carId) => api.post(`/api/promotions/${id}/cars/${carId}`),
+  assignToCar: (id, carId) => api.put(`/api/promotions/${id}/car/${carId}`),
+  getAssignedCars: (id) => api.get(`/api/promotions/${id}/cars`),
 }
 
 export const newsApi = {

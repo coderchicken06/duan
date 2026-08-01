@@ -20,6 +20,8 @@ import java.util.Map;
 @Service
 public class OrderService {
 
+    private static final long UNPAID_ORDER_TIMEOUT_MILLIS = 3 * 60 * 1000L;
+
     private final OrderRepository orderRepo;
     private final OrderDetailRepository detailRepo;
     private final CarRepository carRepo;
@@ -181,7 +183,7 @@ public class OrderService {
 
     @Transactional
     public void cancelExpiredOrders() {
-        Date threshold = new Date(System.currentTimeMillis() - 15 * 60 * 1000L);
+        Date threshold = new Date(System.currentTimeMillis() - UNPAID_ORDER_TIMEOUT_MILLIS);
         List<Orders> expiredOrders = orderRepo.findByDepositStatusAndStatusAndCreateDateBefore(
                 OrderStatus.DEPOSIT_UNPAID, OrderStatus.PENDING, threshold);
 

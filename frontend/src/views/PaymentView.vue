@@ -16,7 +16,7 @@
         </div>
         <div v-else-if="isTimeout" class="alert alert-danger">
           <i class="bi bi-x-circle-fill me-1"></i>
-          Giao dịch đã hết hạn (quá 15 phút). Vui lòng tạo mã QR mới để thanh toán lại.
+          Giao dịch đã hết hạn (quá 3 phút). Đơn hàng chưa thanh toán sẽ được hủy và hoàn lại tồn kho.
         </div>
         <div v-else>
           <!-- Nút lấy mã QR (ẩn đi khi QR đã được tạo) -->
@@ -28,7 +28,7 @@
           <div v-else class="text-center mt-4">
             <h5 class="fw-bold mb-3">Quét QR để thanh toán</h5>
 
-            <!-- Hiển thị đồng hồ đếm ngược 15 phút -->
+            <!-- Hiển thị đồng hồ đếm ngược 3 phút -->
             <div class="alert alert-warning py-2 mb-3 fw-bold text-danger">
               Thời gian giữ lệnh: {{ formatCountdown }}
             </div>
@@ -96,8 +96,8 @@ const qrAmount = ref(null)
 let pollInterval = null
 let countdownInterval = null
 
-// Đồng bộ thời hạn thanh toán 15 phút với Backend Scheduler
-const timeLeft = ref(15 * 60)
+// Đồng bộ thời hạn thanh toán 3 phút với Backend Scheduler
+const timeLeft = ref(3 * 60)
 const isTimeout = ref(false)
 
 const formatDate = value => value ? new Date(value).toLocaleString('vi-VN') : ''
@@ -133,21 +133,22 @@ async function checkPaymentStatus() {
   if (isTimeout.value) return;
 
   try {
-    const [contractResponse, transactionResponse] = await Promise.all([
-      contractApi.getByOrder(route.params.id),
-      paymentTransactionApi.getByOrder(route.params.id)
-    ]);
-
+    // Trạng thái hợp đồng quyết định kết quả thanh toán, nên không để lỗi tải
+    // lịch sử giao dịch chặn việc cập nhật PAID trên giao diện.
+    const contractResponse = await contractApi.getByOrder(route.params.id);
     const updatedContract = contractResponse.data.data.contract;
-    const updatedPayments = transactionResponse.data.data || [];
-
-    // Cập nhật lại danh sách lịch sử thanh toán trên giao diện real-time
-    payments.value = updatedPayments;
+    contract.value = updatedContract || contract.value;
 
     // Nếu trạng thái cọc đã chuyển thành PAID, tự động dừng mọi tiến trình và cập nhật
     if (updatedContract && updatedContract.depositStatus === 'PAID') {
-      contract.value = updatedContract;
       stopAllTimers();
+    }
+
+    try {
+      const transactionResponse = await paymentTransactionApi.getByOrder(route.params.id);
+      payments.value = transactionResponse.data.data || [];
+    } catch (transactionError) {
+      // Lịch sử giao dịch có thể tải lại ở lần polling sau; trạng thái PAID đã được giữ.
     }
   } catch (e) {
     // Bỏ qua lỗi ngầm trong lúc polling
@@ -170,7 +171,7 @@ function startPolling() {
       if (timeLeft.value > 0) {
         timeLeft.value--;
       } else {
-        // Hết 15 phút -> đơn có thể được Backend Scheduler tự động hủy
+        // Hết 3 phút -> đơn được Backend Scheduler tự động hủy
         isTimeout.value = true;
         stopAllTimers();
       }
@@ -181,11 +182,11 @@ function startPolling() {
 function syncRemainingTime() {
   const createdAt = new Date(order.value?.createDate).getTime();
   if (!Number.isFinite(createdAt)) {
-    timeLeft.value = 15 * 60;
+    timeLeft.value = 3 * 60;
     isTimeout.value = false;
     return;
   }
-  timeLeft.value = Math.max(0, Math.ceil((createdAt + 15 * 60 * 1000 - Date.now()) / 1000));
+  timeLeft.value = Math.max(0, Math.ceil((createdAt + 3 * 60 * 1000 - Date.now()) / 1000));
   isTimeout.value = timeLeft.value === 0;
 }
 
@@ -211,7 +212,7 @@ async function payDeposit() {
     qrUrl.value = data.data.qrUrl;
     qrAmount.value = data.data.amount;
 
-    // Bắt đầu bật luồng lắng nghe và đếm ngược 15 phút
+    // Bắt đầu bật luồng lắng nghe và đếm ngược 3 phút
     startPolling();
 
   } catch (e) {

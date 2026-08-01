@@ -6,8 +6,9 @@
             <section class="cs-card p-4">
                 <h2>Khuyến mãi</h2>
                 <form class="form-grid" @submit.prevent="savePromotion"><input v-model.trim="promotion.name"
-                        class="form-control" placeholder="Tên" required><input v-model.trim="promotion.code"
-                        class="form-control" placeholder="Mã" required><select v-model="promotion.type"
+                        class="form-control" placeholder="Tiêu đề khuyến mãi" required><select v-model.number="selectedCarId"
+                        class="form-select" required><option disabled :value="null">Chọn xe áp dụng</option><option
+                            v-for="car in cars" :key="car.id" :value="car.id">{{ car.name }}</option></select><select v-model="promotion.type"
                         class="form-select">
                         <option value="PERCENT">Phần trăm</option>
                         <option value="FIXED">Số tiền</option>
@@ -17,13 +18,13 @@
                             v-model="promotion.status" type="checkbox"> Đang hoạt động</label><button
                         class="btn btn-danger">{{ promotion.id ? 'Cập nhật' : 'Thêm' }}</button></form>
                 <div v-for="item in promotions" :key="item.id" class="admin-row"><span><strong>{{ item.name
-                            }}</strong><small>{{ item.code }} · {{ item.value }} {{ item.type === 'PERCENT' ? '%' :
-                                'VNĐ'
-                            }}</small><span><input v-model.number="carIds[item.id]" class="form-control form-control-sm"
-                                type="number" min="1" placeholder="ID xe"><button class="btn btn-sm btn-outline-success"
-                                @click="applyPromotion(item.id)">Áp dụng</button></span></span><span><button
+                            }}</strong><small>{{ assignedCarName(item.id) }} giảm {{ item.value }}{{ item.type === 'PERCENT' ? '%' :
+                                ' VNĐ'
+                            }}</small></span><span><button v-if="!item.status"
+                                class="btn btn-sm btn-outline-success" @click="setPromotionStatus(item, true)">Áp dụng</button><button
+                                v-else class="btn btn-sm btn-outline-warning" @click="setPromotionStatus(item, false)">Ngừng áp dụng</button><button
                             class="btn btn-sm btn-outline-primary"
-                            @click="promotion = { ...item, startDate: dateInput(item.startDate), endDate: dateInput(item.endDate) }">Sửa</button><button
+                            @click="editPromotion(item)">Sửa</button><button
                             class="btn btn-sm btn-outline-danger" @click="removePromotion(item.id)">Xóa</button></span>
                 </div>
             </section>
@@ -51,8 +52,67 @@
         </div>
     </main>
 </template>
-<script
-    setup>    import { onMounted, ref } from 'vue'; import { promotionApi, newsApi, uploadApi } from '../../api'; const promotions = ref([]), articles = ref([]), message = ref(''), ok = ref(true), carIds = ref({}); const emptyPromotion = () => ({ name: '', code: '', type: 'PERCENT', value: null, startDate: '', endDate: '', status: true }), emptyNews = () => ({ title: '', slug: '', thumbnail: '', summary: '', content: '', status: 'DRAFT' }); const promotion = ref(emptyPromotion()), article = ref(emptyNews()); const dateInput = v => v ? String(v).slice(0, 10) : ''; async function load() { const [p, n] = await Promise.all([promotionApi.getAll(), newsApi.getAll()]); promotions.value = p.data.data || []; articles.value = n.data.data || [] } async function action(fn, success) { try { await fn(); ok.value = true; message.value = success; await load() } catch (e) { ok.value = false; message.value = e.response?.data?.message || 'Không thể thực hiện' } } async function savePromotion() { await action(() => promotion.value.id ? promotionApi.update(promotion.value.id, promotion.value) : promotionApi.create(promotion.value), 'Đã lưu khuyến mãi'); promotion.value = emptyPromotion() } async function removePromotion(id) { if (confirm('Xóa khuyến mãi này?')) await action(() => promotionApi.delete(id), 'Đã xóa khuyến mãi') } async function applyPromotion(id) { if (carIds.value[id]) await action(() => promotionApi.applyToCar(id, carIds.value[id]), 'Đã áp dụng khuyến mãi cho xe') } async function onNewsFileChange(e) { const file = e.target.files?.[0]; if (!file) return; try { const { data } = await uploadApi.upload(file); article.value.thumbnail = data; ok.value = true; message.value = 'Đã tải ảnh lên' } catch (error) { ok.value = false; message.value = error.response?.data?.message || 'Không thể tải ảnh lên' } finally { e.target.value = '' } } async function saveNews() { await action(() => article.value.id ? newsApi.update(article.value.id, article.value) : newsApi.create(article.value), 'Đã lưu tin tức'); article.value = emptyNews() } async function removeNews(id) { if (confirm('Xóa tin tức này?')) await action(() => newsApi.delete(id), 'Đã xóa tin tức') } onMounted(load)</script>
+<script setup>
+import { onMounted, ref } from 'vue'
+import { adminApi, promotionApi, newsApi, uploadApi } from '../../api'
+
+const promotions = ref([]), articles = ref([]), cars = ref([])
+const assignments = ref({}), message = ref(''), ok = ref(true)
+const selectedCarId = ref(null)
+const emptyPromotion = () => ({ name: '', type: 'PERCENT', value: null, startDate: '', endDate: '', status: true })
+const emptyNews = () => ({ title: '', slug: '', thumbnail: '', summary: '', content: '', status: 'DRAFT' })
+const promotion = ref(emptyPromotion()), article = ref(emptyNews())
+const dateInput = v => v ? String(v).slice(0, 10) : ''
+
+async function load() {
+    const [p, n, c] = await Promise.all([promotionApi.getAll(), newsApi.getAll(), adminApi.getCars()])
+    promotions.value = p.data.data || []
+    articles.value = n.data.data || []
+    cars.value = Array.isArray(c.data) ? c.data : c.data.data || []
+    const pairs = await Promise.all(promotions.value.map(async item => {
+        const { data } = await promotionApi.getAssignedCars(item.id)
+        return [item.id, data.data?.[0]?.carId || null]
+    }))
+    assignments.value = Object.fromEntries(pairs)
+}
+
+function assignedCarName(promotionId) {
+    const carId = assignments.value[promotionId]
+    return cars.value.find(car => car.id === carId)?.name || 'Chưa chọn xe'
+}
+
+async function action(fn, success) {
+    try { await fn(); ok.value = true; message.value = success; await load() }
+    catch (e) { ok.value = false; message.value = e.response?.data?.message || 'Không thể thực hiện' }
+}
+
+async function savePromotion() {
+    if (!selectedCarId.value) { ok.value = false; message.value = 'Vui lòng chọn xe áp dụng.'; return }
+    await action(async () => {
+        const response = promotion.value.id
+            ? await promotionApi.update(promotion.value.id, promotion.value)
+            : await promotionApi.create(promotion.value)
+        await promotionApi.assignToCar(response.data.data.id, selectedCarId.value)
+    }, 'Đã lưu và áp dụng khuyến mãi cho xe')
+    promotion.value = emptyPromotion()
+    selectedCarId.value = null
+}
+
+function editPromotion(item) {
+    promotion.value = { ...item, startDate: dateInput(item.startDate), endDate: dateInput(item.endDate) }
+    selectedCarId.value = assignments.value[item.id] || null
+}
+
+async function setPromotionStatus(item, status) {
+    await action(() => promotionApi.update(item.id, { ...item, status }), status ? 'Đã áp dụng khuyến mãi' : 'Đã ngừng áp dụng khuyến mãi')
+}
+
+async function removePromotion(id) { if (confirm('Xóa khuyến mãi này?')) await action(() => promotionApi.delete(id), 'Đã xóa khuyến mãi') }
+async function onNewsFileChange(e) { const file = e.target.files?.[0]; if (!file) return; try { const { data } = await uploadApi.upload(file); article.value.thumbnail = data; ok.value = true; message.value = 'Đã tải ảnh lên' } catch (error) { ok.value = false; message.value = error.response?.data?.message || 'Không thể tải ảnh lên' } finally { e.target.value = '' } }
+async function saveNews() { await action(() => article.value.id ? newsApi.update(article.value.id, article.value) : newsApi.create(article.value), 'Đã lưu tin tức'); article.value = emptyNews() }
+async function removeNews(id) { if (confirm('Xóa tin tức này?')) await action(() => newsApi.delete(id), 'Đã xóa tin tức') }
+onMounted(load)
+</script>
 <style scoped>
 .marketing-grid {
     display: grid;

@@ -133,18 +133,19 @@ public class PaymentTransactionService {
     }
 
     public boolean isValidWebhookSecret(String secret, String authorization) {
-        if (secretKey == null || secretKey.isBlank()) {
-            return false;
-        }
         if (authorization != null) {
             String value = authorization.trim();
             String prefix = "Apikey ";
             return value.regionMatches(true, 0, prefix, 0, prefix.length())
-                    && secretKey.equals(value.substring(prefix.length()).trim());
+                    && apiKey != null
+                    && !apiKey.isBlank()
+                    && apiKey.equals(value.substring(prefix.length()).trim());
         }
 
         if (secret != null) {
-            return secretKey.equals(secret.trim());
+            return secretKey != null
+                    && !secretKey.isBlank()
+                    && secretKey.equals(secret.trim());
         }
 
         return false;
@@ -220,6 +221,10 @@ public class PaymentTransactionService {
         order.setDepositAmount(amount);
         order.setDepositMethod("SePay");
         order.setDepositPaidAt(paidAt);
+        if (OrderStatus.PENDING.equals(order.getStatus())
+                || OrderStatus.CONFIRMED.equals(order.getStatus())) {
+            order.setStatus(OrderStatus.PROCESSING);
+        }
         orderRepo.save(order);
 
         // 8. Cập nhật hợp đồng liên quan (nếu có)

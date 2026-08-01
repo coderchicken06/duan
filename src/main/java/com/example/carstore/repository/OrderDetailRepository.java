@@ -12,7 +12,7 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Intege
     boolean existsByCar_Id(Integer carId);
 
     // Tính tổng doanh thu
-    @Query("SELECT SUM(d.price * d.quantity) FROM OrderDetail d")
+    @Query("SELECT SUM(o.depositAmount) FROM Orders o WHERE o.depositStatus = 'PAID'")
     Double getRevenue();
 
     // Lấy top xe bán chạy: d.car.name lấy từ quan hệ ManyToOne

@@ -69,7 +69,9 @@ public class RestPaymentTransactionController {
 
         try {
 
-            if (!service.isValidWebhookSecret(secret, authorization)) {
+            boolean authenticationProvided = (authorization != null && !authorization.isBlank())
+                    || (secret != null && !secret.isBlank());
+            if (authenticationProvided && !service.isValidWebhookSecret(secret, authorization)) {
                 return ResponseEntity.status(401).body(Map.of(
                         "success", false,
                         "error", "Webhook authentication failed"));

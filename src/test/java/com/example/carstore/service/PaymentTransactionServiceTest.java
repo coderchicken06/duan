@@ -73,15 +73,22 @@ class PaymentTransactionServiceTest {
         assertFalse(service.isValidWebhookSecret(null, "Apikey wrong-secret"));
         assertFalse(service.isValidWebhookSecret(null, null));
         assertTrue(service.isValidWebhookSecret("checkout-secret", null));
-        assertTrue(service.isValidWebhookSecret(null, "Apikey checkout-secret"));
+        assertTrue(service.isValidWebhookSecret(null, "Apikey webhook-api-key"));
     }
 
     @Test
-    void webhookAuthenticationRejectsRequestsWhenSecretIsNotConfigured() {
+    void webhookAuthorizationUsesApiKeyWhenSecretIsNotConfigured() {
         ReflectionTestUtils.setField(service, "secretKey", "");
 
         assertFalse(service.isValidWebhookSecret("", null));
-        assertFalse(service.isValidWebhookSecret(null, "Apikey "));
+        assertTrue(service.isValidWebhookSecret(null, "Apikey webhook-api-key"));
+    }
+
+    @Test
+    void webhookAuthenticationRejectsAuthorizationWhenApiKeyIsNotConfigured() {
+        ReflectionTestUtils.setField(service, "apiKey", "");
+
+        assertFalse(service.isValidWebhookSecret(null, "Apikey webhook-api-key"));
     }
 
     @Test
@@ -100,6 +107,21 @@ class PaymentTransactionServiceTest {
     }
 
     @Test
+    void webhookControllerAcceptsLegacySePayRequestWithoutAuthenticationHeaders() {
+        PaymentTransactionService paymentService = mock(PaymentTransactionService.class);
+        RestPaymentTransactionController controller =
+                new RestPaymentTransactionController(paymentService, orderRepo);
+        Map<String, Object> payload = Map.of("referenceCode", "TX-LEGACY");
+
+        ResponseEntity<?> response = controller.sePayWebhook(
+                payload, null, null, mock(HttpServletRequest.class));
+
+        assertEquals(200, response.getStatusCodeValue());
+        verify(paymentService).processSePayWebhook(payload);
+        verify(paymentService, never()).isValidWebhookSecret(any(), any());
+    }
+
+    @Test
     void flatWebhookUpdatesPaymentOrderAndContract() {
         Orders order = unpaidOrder();
         Contract contract = unpaidContract();
@@ -115,6 +137,7 @@ class PaymentTransactionServiceTest {
                 "transactionContent", "Thanh toan VELOR9"));
 
         assertEquals(OrderStatus.DEPOSIT_PAID, order.getDepositStatus());
+        assertEquals(OrderStatus.PROCESSING, order.getStatus());
         assertEquals("SePay", order.getDepositMethod());
         assertEquals("PAID", contract.getDepositStatus());
         assertEquals("SePay", contract.getDepositMethod());

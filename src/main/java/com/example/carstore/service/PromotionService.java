@@ -13,15 +13,15 @@ import com.example.carstore.entity.Promotion;import com.example.carstore.entity.
  }
  public Promotion save(Promotion p){
   if(p.getName()==null||p.getName().isBlank())throw new IllegalArgumentException("Tên khuyến mãi là bắt buộc.");
-  if(p.getCode()==null||p.getCode().isBlank())throw new IllegalArgumentException("Mã khuyến mãi là bắt buộc.");
-  p.setCode(p.getCode().trim().toUpperCase(Locale.ROOT));
-  if(r.existsByCodeAndIdNot(p.getCode(),p.getId()==null?0:p.getId()))throw new IllegalArgumentException("Mã khuyến mãi đã tồn tại.");
   if(!List.of("PERCENT","FIXED").contains(p.getType()))throw new IllegalArgumentException("Loại khuyến mãi phải là PERCENT hoặc FIXED.");
   if(p.getValue()==null||p.getValue()<=0||("PERCENT".equals(p.getType())&&p.getValue()>100))throw new IllegalArgumentException("Giá trị khuyến mãi không hợp lệ.");
   if(p.getStartDate()!=null&&p.getEndDate()!=null&&p.getEndDate().before(p.getStartDate()))throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu.");
   if(p.getStatus()==null)p.setStatus(true);if(p.getId()==null)p.setCreatedAt(new Date());return r.save(p);
  }
  @Transactional public void applyToCar(Integer promotionId,Integer carId){if(!r.existsById(promotionId))throw new IllegalArgumentException("Không tìm thấy khuyến mãi.");if(!cars.existsById(carId))throw new IllegalArgumentException("Không tìm thấy xe.");PromotionCarId key=new PromotionCarId(promotionId,carId);if(!promotionCars.existsById(key))promotionCars.save(new PromotionCar(promotionId,carId));}
+ @Transactional public void assignToCar(Integer promotionId,Integer carId){if(!r.existsById(promotionId))throw new IllegalArgumentException("Không tìm thấy khuyến mãi.");if(!cars.existsById(carId))throw new IllegalArgumentException("Không tìm thấy xe.");List<PromotionCar> current=promotionCars.findByPromotionId(promotionId);if(current.size()==1&&Objects.equals(current.get(0).getCarId(),carId))return;promotionCars.deleteByPromotionId(promotionId);promotionCars.flush();promotionCars.save(new PromotionCar(promotionId,carId));}
+ public List<PromotionCar> assignments(Integer promotionId){return promotionCars.findByPromotionId(promotionId);}
+ @Transactional public void stopApplying(Integer promotionId){if(!r.existsById(promotionId))throw new IllegalArgumentException("Không tìm thấy khuyến mãi.");promotionCars.deleteByPromotionId(promotionId);}
  @Transactional public void removeFromCar(Integer promotionId,Integer carId){promotionCars.deleteByPromotionIdAndCarId(promotionId,carId);}
  @Transactional public void delete(Integer id){if(!r.existsById(id))throw new IllegalArgumentException("Không tìm thấy khuyến mãi.");promotionCars.deleteByPromotionId(id);r.deleteById(id);}
 }
