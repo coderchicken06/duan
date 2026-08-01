@@ -36,7 +36,7 @@
       <section class="contract-section">
         <h2>Thông tin xe</h2>
         <div v-for="item in details" :key="item.id" class="vehicle-row">
-          <img :src="carImageUrl(item.car?.image)" :alt="item.car?.name" />
+          <img :src="carImageUrl(item.car?.image)" :alt="item.car?.name" @error="useDefaultCarImage" />
           <div>
             <h3>{{ item.car?.name }}</h3>
             <p>Năm sản xuất: {{ item.car?.year || 'Chưa cập nhật' }} · Màu: {{ item.car?.color || 'Chưa cập nhật' }}</p>
@@ -93,7 +93,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { carImageUrl, contractApi, formatPrice } from '../api'
+import { carImageUrl, contractApi, formatPrice, useDefaultCarImage } from '../api'
 const route = useRoute(), loading = ref(true), error = ref(''), data = ref({})
 const contract = computed(() => data.value.contract || {}), order = computed(() => data.value.order || {})
 const customer = computed(() => data.value.customer || {}), details = computed(() => data.value.details || []), payments = computed(() => data.value.payments || [])

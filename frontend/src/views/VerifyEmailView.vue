@@ -50,7 +50,7 @@
 
 <script setup>
 
-import { ref } from "vue"
+import { onUnmounted, ref } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { authApi } from "../api"
 
@@ -62,6 +62,7 @@ const otp = ref("")
 
 const error = ref("")
 const success = ref("")
+let redirectTimeout = null
 
 async function submit() {
 
@@ -79,7 +80,7 @@ async function submit() {
 
       success.value = "Xác thực thành công"
 
-      setTimeout(() => {
+      redirectTimeout = setTimeout(() => {
         router.push({
           path: "/login",
           query: {
@@ -106,6 +107,10 @@ async function submit() {
   }
 
 }
+
+onUnmounted(() => {
+  if (redirectTimeout) clearTimeout(redirectTimeout)
+})
 
 async function resendOtp() {
 

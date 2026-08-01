@@ -4,7 +4,7 @@
       <div class="detail-hero">
         <section class="gallery-card">
           <div class="main-image-wrap">
-            <img class="main-image" :src="selectedImage" :alt="car.name" />
+            <img class="main-image" :src="selectedImage" :alt="car.name" @error="useDefaultCarImage" />
             <button v-if="galleryImages.length > 1" class="gallery-arrow gallery-arrow-left" type="button"
               aria-label="Ảnh trước" @click="previousImage">‹</button>
             <button v-if="galleryImages.length > 1" class="gallery-arrow gallery-arrow-right" type="button"
@@ -15,7 +15,7 @@
             <button v-for="(image, index) in galleryImages" :key="`${image}-${index}`" type="button"
               :class="['thumbnail-button', { active: image === selectedImage }]"
               :aria-label="`Xem ảnh ${index + 1} của ${car.name}`" @click="selectedImage = image">
-              <img :src="image" :alt="`${car.name} - ảnh ${index + 1}`" />
+              <img :src="image" :alt="`${car.name} - ảnh ${index + 1}`" @error="useDefaultCarImage" />
             </button>
           </div>
         </section>
@@ -172,7 +172,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { carApi, cartApi, carImageUrl, formatPrice, quotationApi } from '../api'
+import { carApi, cartApi, carImageUrl, formatPrice, quotationApi, useDefaultCarImage } from '../api'
 import CarCard from '../components/CarCard.vue'
 import { useCompare } from '../composables/useCompare'
 import { useAuthStore } from '../stores/auth'

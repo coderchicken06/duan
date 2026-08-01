@@ -104,7 +104,7 @@ public class PaymentTransactionService {
             throw new IllegalArgumentException("Đơn hàng đã được thanh toán.");
         }
 
-        double amount = paymentAmount(order.getId());
+        double amount = paymentAmount(order);
         if (amount <= 0) {
             throw new IllegalArgumentException("Đơn hàng không có giá trị hợp lệ.");
         }
@@ -137,8 +137,10 @@ public class PaymentTransactionService {
             return false;
         }
         if (authorization != null) {
-            String expected = "Apikey " + secretKey;
-            return expected.equalsIgnoreCase(authorization.trim());
+            String value = authorization.trim();
+            String prefix = "Apikey ";
+            return value.regionMatches(true, 0, prefix, 0, prefix.length())
+                    && secretKey.equals(value.substring(prefix.length()).trim());
         }
 
         if (secret != null) {
@@ -202,7 +204,7 @@ public class PaymentTransactionService {
 
         // 5. Kiểm tra số tiền chuyển khoản
         double amount = parseAmount(payload.get("transferAmount"));
-        double requiredAmount = paymentAmount(orderId);
+        double requiredAmount = paymentAmount(order);
         if (Double.compare(amount, requiredAmount) != 0) {
             throw new IllegalArgumentException(
                     "Số tiền thanh toán (" + amount + ") không khớp số tiền cần thanh toán (" + requiredAmount + ").");
@@ -314,12 +316,15 @@ public class PaymentTransactionService {
                 .sum();
     }
 
-    private double paymentAmount(Integer orderId) {
-        return contractRepo.findByOrderId(orderId)
+    private double paymentAmount(Orders order) {
+        if (order.getDepositAmount() != null && order.getDepositAmount() > 0) {
+            return order.getDepositAmount();
+        }
+        return contractRepo.findByOrderId(order.getId())
                 .map(contract -> contract.getDepositAmount() != null
                         ? contract.getDepositAmount()
                         : contract.getDeposit())
-                .orElseGet(() -> orderTotal(orderId));
+                .orElseGet(() -> orderTotal(order.getId()));
     }
 
     @SuppressWarnings("unused")

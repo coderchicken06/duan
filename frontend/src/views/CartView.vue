@@ -26,7 +26,7 @@
       <div v-else class="cart-layout">
         <section class="cart-items" aria-label="Sản phẩm trong giỏ">
           <article v-for="item in items" :key="item.id" class="cs-card cart-item">
-            <img class="cart-image" :src="carImageUrl(item.image)" :alt="item.name" />
+            <img class="cart-image" :src="carImageUrl(item.image)" :alt="item.name" @error="useDefaultCarImage" />
 
             <div class="cart-info">
               <div class="cart-title-row">
@@ -91,7 +91,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { carImageUrl, cartApi, formatPrice } from '../api'
+import { carImageUrl, cartApi, formatPrice, useDefaultCarImage } from '../api'
 
 const items = ref([])
 const total = ref(0)

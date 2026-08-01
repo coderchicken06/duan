@@ -7,7 +7,7 @@
 
     <div class="compare-bar__cars">
       <div v-for="car in selectedCars" :key="car.id" class="compare-chip">
-        <img :src="carImageUrl(car.image)" :alt="car.name" />
+        <img :src="carImageUrl(car.image)" :alt="car.name" @error="useDefaultCarImage" />
         <span>{{ car.name }}</span>
         <button type="button" aria-label="Bỏ xe khỏi so sánh" @click="remove(car.id)">×</button>
       </div>
@@ -29,7 +29,7 @@
 
 <script setup>
 import { ref, watch } from 'vue'
-import { carApi, carImageUrl } from '../api'
+import { carApi, carImageUrl, useDefaultCarImage } from '../api'
 import { useCompare } from '../composables/useCompare'
 
 const { selectedIds, remove } = useCompare()

@@ -34,7 +34,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { authApi } from '../api'
 
@@ -47,6 +47,7 @@ const message = ref('')
 const success = ref(false)
 const loading = ref(false)
 const resending = ref(false)
+let redirectTimeout = null
 
 async function verify() {
   loading.value = true
@@ -56,7 +57,7 @@ async function verify() {
     success.value = data.success
     message.value = data.message
     if (data.success) {
-      setTimeout(() => router.push({ path: '/login', query: { verified: '1' } }), 1200)
+      redirectTimeout = setTimeout(() => router.push({ path: '/login', query: { verified: '1' } }), 1200)
     }
   } catch (error) {
     success.value = false
@@ -65,6 +66,10 @@ async function verify() {
     loading.value = false
   }
 }
+
+onUnmounted(() => {
+  if (redirectTimeout) clearTimeout(redirectTimeout)
+})
 
 async function resend() {
   resending.value = true

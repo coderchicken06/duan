@@ -1,7 +1,7 @@
 <template>
   <article class="ford-car-card h-100">
     <div class="ford-car-img">
-      <img :src="carImageUrl(car.image)" :alt="car.name" />
+      <img :src="carImageUrl(car.image)" :alt="car.name" @error="useDefaultCarImage" />
       <span v-if="car.inspectionLevel" class="ford-car-chip">{{ car.inspectionLevel }}</span>
     </div>
     <div class="ford-car-body">
@@ -25,7 +25,7 @@
 </template>
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { carImageUrl, formatPrice, promotionApi } from '../api'
+import { carImageUrl, formatPrice, promotionApi, useDefaultCarImage } from '../api'
 import { useCompare } from '../composables/useCompare'
 const props = defineProps({ car: { type: Object, required: true } })
 defineEmits(['add-cart'])

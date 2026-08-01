@@ -13,7 +13,7 @@
         <thead>
           <tr>
             <th class="label-col">Tiêu chí</th>
-            <th v-for="car in cars" :key="car.id"><img :src="carImageUrl(car.image)" :alt="car.name" />
+            <th v-for="car in cars" :key="car.id"><img :src="carImageUrl(car.image)" :alt="car.name" @error="useDefaultCarImage" />
               <h3>{{ car.name }}</h3>
               <div class="price">{{ formatPrice(car.price) }} VNĐ</div><router-link :to="`/car/detail/${car.id}`">Xem
                 chi tiết</router-link>
@@ -33,7 +33,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { carApi, carImageUrl, formatPrice } from '../api'
+import { carApi, carImageUrl, formatPrice, useDefaultCarImage } from '../api'
 import { useCompare } from '../composables/useCompare'
 const route = useRoute(), router = useRouter(), cars = ref([]), loading = ref(true)
 const { selectedIds, clear } = useCompare()

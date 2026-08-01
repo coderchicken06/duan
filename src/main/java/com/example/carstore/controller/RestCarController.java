@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/cars")
@@ -27,16 +28,20 @@ public class RestCarController {
 
     @GetMapping
     public List<Car> getAll(@RequestParam(required = false) String q) {
+        List<Car> cars;
         if (q != null && !q.trim().isEmpty()) {
             String query = q.trim();
-            return carRepo.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(query, query);
+            cars = carRepo.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(query, query);
+        } else {
+            cars = carRepo.findAll();
         }
-        return carRepo.findAll();
+        return cars.stream().filter(this::isAvailable).collect(Collectors.toList());
     }
 
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getCarById(@PathVariable int id) {
         return carRepo.findById(id)
+                .filter(this::isAvailable)
                 .map(car -> ResponseEntity.ok(Map.<String, Object>of("success", true, "data", car)))
                 .orElseGet(() -> ResponseEntity.status(404).body(ResponseUtils.fail("Car not found")));
     }
@@ -44,13 +49,13 @@ public class RestCarController {
 
     @GetMapping("/{id}/similar")
     public List<Car> getSimilar(@PathVariable int id) {
-        return carRepo.findById(id).map(car -> {
+        return carRepo.findById(id).filter(this::isAvailable).map(car -> {
             List<Car> similar = car.getBodyType() == null ? List.of()
                     : carRepo.findTop6ByBodyTypeAndIdNotOrderByPriceAsc(car.getBodyType(), id);
             if (similar.isEmpty() && car.getBrandId() != null) {
                 similar = carRepo.findTop6ByBrandIdAndIdNotOrderByPriceAsc(car.getBrandId(), id);
             }
-            return similar;
+            return similar.stream().filter(this::isAvailable).collect(Collectors.toList());
         }).orElse(List.of());
     }
 
@@ -59,12 +64,18 @@ public class RestCarController {
         String query = keyword == null ? "" : keyword.trim();
         List<Car> cars = query.isEmpty() ? carRepo.findAll()
                 : carRepo.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(query, query);
+        cars = cars.stream().filter(this::isAvailable).collect(Collectors.toList());
         return Map.of("success", true, "data", cars, "count", cars.size());
     }
 
     @GetMapping("/stats/count")
     public Map<String, Object> getCarsCount() {
-        return Map.of("success", true, "count", carRepo.count());
+        long count = carRepo.findAll().stream().filter(this::isAvailable).count();
+        return Map.of("success", true, "count", count);
+    }
+
+    private boolean isAvailable(Car car) {
+        return car != null && "AVAILABLE".equalsIgnoreCase(car.getStatus());
     }
 
 }

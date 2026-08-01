@@ -14,7 +14,7 @@
         </div>
       </div>
       <div class="ford-hero-side">
-        <div class="ford-hero-stat"><strong>120+</strong><span>mẫu xe đang chờ bạn</span></div>
+        <div class="ford-hero-stat"><strong>{{ cars.length }}</strong><span>mẫu xe đang chờ bạn</span></div>
         <div class="ford-hero-stat"><strong>4.9/5</strong><span>đánh giá khách hàng</span></div>
         <div class="ford-hero-stat"><strong>24/7</strong><span>hỗ trợ đặt lịch</span></div>
       </div>
@@ -46,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
@@ -59,6 +59,7 @@ const loadError = ref('')
 const alert = ref('')
 const q = ref(route.query.q || '')
 const videoSrc = '/videos/ford-intro.mp4'
+let alertTimeout = null
 
 onMounted(loadCars)
 
@@ -67,7 +68,8 @@ async function loadCars() {
   loadError.value = ''
   try {
     const { data } = await carApi.getAll(String(q.value || '') || undefined)
-    cars.value = Array.isArray(data) ? data : data.data || []
+    const result = Array.isArray(data) ? data : data.data || []
+    cars.value = result.filter((car) => String(car.status || '').toUpperCase() === 'AVAILABLE')
   } catch (error) {
     cars.value = []
     loadError.value = error.response?.data?.message
@@ -82,11 +84,16 @@ async function addToCart(id) {
   if (data.success) {
     showCartToast('Thêm vào giỏ hàng thành công!')
     alert.value = 'Thêm giỏ hàng thành công'
-    setTimeout(() => (alert.value = ''), 2500)
+    if (alertTimeout) clearTimeout(alertTimeout)
+    alertTimeout = setTimeout(() => (alert.value = ''), 2500)
   } else {
     alert.value = data.message || 'Không thể thêm vào giỏ'
   }
 }
+
+onUnmounted(() => {
+  if (alertTimeout) clearTimeout(alertTimeout)
+})
 </script>
 <style
   scoped>

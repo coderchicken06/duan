@@ -54,6 +54,9 @@ public class RestCartController {
         }
 
         Car car = carOpt.get();
+        if (!isAvailable(car)) {
+            return ResponseUtils.fail("Xe " + car.getName() + " hiện không khả dụng.");
+        }
         int safeQuantity = quantity == null || quantity < 1 ? 1 : quantity;
 
         CartItem existing = cartService.getCart(session).get(id);
@@ -105,6 +108,9 @@ public class RestCartController {
             return ResponseUtils.fail("Car not found");
         }
         Car car = carOpt.get();
+        if (!isAvailable(car)) {
+            return ResponseUtils.fail("Xe " + car.getName() + " hiện không khả dụng.");
+        }
         if (car.getStock() == null || quantity > car.getStock()) {
             return ResponseUtils.fail("Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock());
         }
@@ -155,6 +161,9 @@ public class RestCartController {
             return ResponseUtils.fail("Car not found");
         }
         Car car = carOpt.get();
+        if (!isAvailable(car)) {
+            return ResponseUtils.fail("Xe " + car.getName() + " hiện không khả dụng.");
+        }
         int newQuantity = item.getQuantity() + 1;
         if (car.getStock() == null || newQuantity > car.getStock()) {
             return ResponseUtils.fail("Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock());
@@ -189,7 +198,11 @@ public class RestCartController {
     }
 
     private void refreshCartItems(HttpSession session) {
-        cartService.getCart(session).values().forEach(item ->
+        Map<Integer, CartItem> cart = cartService.getCart(session);
+        cart.entrySet().removeIf(entry -> carService.findById(entry.getKey())
+                .map(car -> !isAvailable(car) || car.getStock() == null || car.getStock() <= 0)
+                .orElse(true));
+        cart.values().forEach(item ->
                 carService.findById(item.getId()).ifPresent(car -> {
                     item.setName(car.getName());
                     item.setPrice(car.getPrice());
@@ -199,5 +212,9 @@ public class RestCartController {
                     item.setColor(car.getColor());
                     item.setStock(car.getStock());
                 }));
+    }
+
+    private boolean isAvailable(Car car) {
+        return car != null && "AVAILABLE".equalsIgnoreCase(car.getStatus());
     }
 }

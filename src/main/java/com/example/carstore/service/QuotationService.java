@@ -130,7 +130,8 @@ public class QuotationService {
 
     @Transactional
     public Orders convertToOrder(Integer id, String username, QuotationRequestDto request) {
-        Quotation q = get(id);
+        Quotation q = repo.findForUpdateById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy báo giá."));
         if (!q.getCustomerUsername().equals(username)) {
             throw new IllegalArgumentException("Bạn không có quyền chuyển báo giá này.");
         }
@@ -186,6 +187,8 @@ public class QuotationService {
         q.setStatus(CONVERTED);
         q.setUpdatedAt(new Date());
         repo.save(q);
+        savedOrder.setDepositAmount(q.getTotalPrice() * 0.10D);
+        savedOrder = orderRepo.save(savedOrder);
         contractService.createForOrder(savedOrder, q.getTotalPrice());
         return savedOrder;
     }

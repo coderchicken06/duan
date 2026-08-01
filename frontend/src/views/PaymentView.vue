@@ -9,14 +9,14 @@
     <div v-else class="payment-grid">
       <section class="cs-card p-4">
         <h2>Thanh toán tiền cọc</h2>
-        <div class="amount">{{ formatPrice(contract.depositAmount || contract.deposit) }} VNĐ</div>
+        <div class="amount">{{ formatPrice(paymentAmount) }} VNĐ</div>
 
         <div v-if="contract.depositStatus === 'PAID'" class="alert alert-success">
           Tiền cọc đã được xác nhận thành công.
         </div>
         <div v-else-if="isTimeout" class="alert alert-danger">
           <i class="bi bi-x-circle-fill me-1"></i>
-          Giao dịch đã hết hạn (quá 3 phút). Vui lòng tạo mã QR mới để thanh toán lại.
+          Giao dịch đã hết hạn (quá 15 phút). Vui lòng tạo mã QR mới để thanh toán lại.
         </div>
         <div v-else>
           <!-- Nút lấy mã QR (ẩn đi khi QR đã được tạo) -->
@@ -28,7 +28,7 @@
           <div v-else class="text-center mt-4">
             <h5 class="fw-bold mb-3">Quét QR để thanh toán</h5>
 
-            <!-- Hiển thị đồng hồ đếm ngược 3 phút -->
+            <!-- Hiển thị đồng hồ đếm ngược 15 phút -->
             <div class="alert alert-warning py-2 mb-3 fw-bold text-danger">
               Thời gian giữ lệnh: {{ formatCountdown }}
             </div>
@@ -89,8 +89,10 @@ import { contractApi, paymentTransactionApi, formatPrice } from '../api'
 
 const route = useRoute()
 const loading = ref(true), submitting = ref(false), error = ref(''), contract = ref({}), payments = ref([])
+const order = ref({})
 // Thêm biến lưu URL ảnh QR
 const qrUrl = ref('')
+const qrAmount = ref(null)
 let pollInterval = null
 let countdownInterval = null
 
@@ -99,8 +101,13 @@ const timeLeft = ref(15 * 60)
 const isTimeout = ref(false)
 
 const formatDate = value => value ? new Date(value).toLocaleString('vi-VN') : ''
+const paymentAmount = computed(() => qrAmount.value
+  ?? order.value?.depositAmount
+  ?? contract.value?.depositAmount
+  ?? contract.value?.deposit
+  ?? 0)
 
-// Format thời gian đếm ngược dạng phút:giây (ví dụ: 02:59)
+// Format thời gian đếm ngược dạng phút:giây (ví dụ: 14:59)
 const formatCountdown = computed(() => {
   const minutes = Math.floor(timeLeft.value / 60)
   const seconds = timeLeft.value % 60
@@ -112,6 +119,8 @@ async function load() {
   try {
     const [contractResponse, transactionResponse] = await Promise.all([contractApi.getByOrder(route.params.id), paymentTransactionApi.getByOrder(route.params.id)]);
     contract.value = contractResponse.data.data.contract;
+    order.value = contractResponse.data.data.order || {};
+    syncRemainingTime();
     payments.value = transactionResponse.data.data || []
   } catch (e) {
     error.value = e.response?.data?.message || 'Không thể tải thông tin thanh toán'
@@ -146,14 +155,17 @@ async function checkPaymentStatus() {
 }
 
 function startPolling() {
+  syncRemainingTime();
+  if (isTimeout.value) {
+    stopAllTimers();
+    return;
+  }
+
   if (!pollInterval) {
     pollInterval = setInterval(checkPaymentStatus, 3000);
   }
 
   if (!countdownInterval) {
-    timeLeft.value = 15 * 60;
-    isTimeout.value = false;
-
     countdownInterval = setInterval(() => {
       if (timeLeft.value > 0) {
         timeLeft.value--;
@@ -164,6 +176,17 @@ function startPolling() {
       }
     }, 1000);
   }
+}
+
+function syncRemainingTime() {
+  const createdAt = new Date(order.value?.createDate).getTime();
+  if (!Number.isFinite(createdAt)) {
+    timeLeft.value = 15 * 60;
+    isTimeout.value = false;
+    return;
+  }
+  timeLeft.value = Math.max(0, Math.ceil((createdAt + 15 * 60 * 1000 - Date.now()) / 1000));
+  isTimeout.value = timeLeft.value === 0;
 }
 
 function stopAllTimers() {
@@ -186,8 +209,9 @@ async function payDeposit() {
 
     // Gán thẳng URL ảnh VietQR trả về từ Backend vào biến qrUrl thay vì tạo form chuyển hướng
     qrUrl.value = data.data.qrUrl;
+    qrAmount.value = data.data.amount;
 
-    // Bắt đầu bật luồng lắng nghe và đếm ngược 3 phút
+    // Bắt đầu bật luồng lắng nghe và đếm ngược 15 phút
     startPolling();
 
   } catch (e) {

@@ -146,3 +146,11 @@ export function carImageUrl(image) {
   if (value.startsWith('images/')) return `/${value}`
   return `/images/${value.replace(/^\/+/, '')}`
 }
+
+export function useDefaultCarImage(event) {
+  const image = event?.target
+  if (!image) return
+  const fallback = '/images/default-car.jpg'
+  if (new URL(image.src, window.location.origin).pathname === fallback) return
+  image.src = fallback
+}

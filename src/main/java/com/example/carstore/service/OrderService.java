@@ -127,7 +127,10 @@ public class OrderService {
         }
 
         if (contractService != null) {
-            contractService.createForOrder(savedOrder, calculateTotal(savedOrder.getId()));
+            double total = calculateTotal(savedOrder.getId());
+            savedOrder.setDepositAmount(total * 0.10D);
+            savedOrder = orderRepo.save(savedOrder);
+            contractService.createForOrder(savedOrder, total);
         }
         return savedOrder;
     }
@@ -169,6 +172,9 @@ public class OrderService {
                 && !OrderStatus.PROCESSING.equals(current)) {
             throw new IllegalArgumentException("Chỉ đơn đang xử lý mới được đánh dấu đã giao.");
         }
+        if (OrderStatus.DELIVERED.equals(targetStatus)) {
+            markOutOfStockCarsAsSold(detailRepo.findByOrderId(orderId));
+        }
         order.setStatus(targetStatus);
         return orderRepo.save(order);
     }
@@ -206,6 +212,18 @@ public class OrderService {
                 car.setStatus("AVAILABLE");
             }
             carRepo.save(car);
+        }
+    }
+
+    private void markOutOfStockCarsAsSold(List<OrderDetail> details) {
+        for (OrderDetail detail : details) {
+            if (detail.getCar() == null) continue;
+            Car car = carRepo.findForUpdateById(detail.getCar().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Xe trong đơn hàng không còn tồn tại."));
+            if (car.getStock() == 0) {
+                car.setStatus("SOLD");
+                carRepo.save(car);
+            }
         }
     }
 

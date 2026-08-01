@@ -17,7 +17,7 @@
         </section>
         <section>
           <h2>Thông tin xe</h2>
-          <div v-if="car" class="car-row"><img :src="carImageUrl(car.image)" :alt="car.name">
+          <div v-if="car" class="car-row"><img :src="carImageUrl(car.image)" :alt="car.name" @error="useDefaultCarImage">
             <div>
               <h3>{{ car.name }}</h3>
               <p>{{ car.year }} · {{ car.color }} · {{ car.transmission }}</p>
@@ -54,7 +54,7 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { carApi, carImageUrl, formatPrice, quotationApi } from '../api'
+import { carApi, carImageUrl, formatPrice, quotationApi, useDefaultCarImage } from '../api'
 const route = useRoute(), router = useRouter(), quote = ref({}), car = ref(null), loading = ref(true), submitting = ref(false), error = ref('')
 const orderForm = ref({ address: '', registrationAddress: '', paymentMethod: 'SePay' })
 const formatDate = v => v ? new Date(v).toLocaleDateString('vi-VN') : ''

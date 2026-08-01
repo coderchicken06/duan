@@ -38,9 +38,18 @@
             <span>Mức giá</span>
             <select v-model="filters.priceRange">
               <option value="">Tất cả</option>
-              <option value="under-1b">Dưới 1 tỷ</option>
+              <option value="demo">Đến 5 triệu (giá demo)</option>
+              <option value="5m-500m">Trên 5 triệu đến dưới 500 triệu</option>
+              <option value="500m-1b">Từ 500 triệu đến dưới 1 tỷ</option>
               <option value="1b-2b">Từ 1 đến 2 tỷ</option>
               <option value="2b-plus">Trên 2 tỷ</option>
+            </select>
+          </label>
+
+          <label>
+            <span>Trạng thái</span>
+            <select v-model="filters.status">
+              <option value="AVAILABLE">Đang bán</option>
             </select>
           </label>
 
@@ -92,6 +101,7 @@ const q = ref(route.query.q || '')
 const filters = ref({
   brandId: '',
   priceRange: '',
+  status: 'AVAILABLE',
   year: '',
   color: '',
 })
@@ -115,15 +125,18 @@ const filteredCars = computed(() => {
     const matchesBrand = !filters.value.brandId || String(car.brandId) === filters.value.brandId
     const matchesPrice = (() => {
       if (!filters.value.priceRange) return true
-      if (filters.value.priceRange === 'under-1b') return price < 1000000000
+      if (filters.value.priceRange === 'demo') return price <= 5000000
+      if (filters.value.priceRange === '5m-500m') return price > 5000000 && price < 500000000
+      if (filters.value.priceRange === '500m-1b') return price >= 500000000 && price < 1000000000
       if (filters.value.priceRange === '1b-2b') return price >= 1000000000 && price <= 2000000000
       if (filters.value.priceRange === '2b-plus') return price > 2000000000
       return true
     })()
+    const matchesStatus = String(car.status || '').toUpperCase() === filters.value.status
     const matchesYear = !filters.value.year || String(car.year) === filters.value.year
     const matchesColor = !filters.value.color || color.includes(filters.value.color.trim().toLowerCase())
 
-    return matchesQuery && matchesBrand && matchesPrice && matchesYear && matchesColor
+    return matchesQuery && matchesBrand && matchesPrice && matchesStatus && matchesYear && matchesColor
   })
 })
 
@@ -159,6 +172,7 @@ function resetFilters() {
   filters.value = {
     brandId: '',
     priceRange: '',
+    status: 'AVAILABLE',
     year: '',
     color: '',
   }

@@ -53,7 +53,7 @@
 
 <script setup>
 import { useRoute } from "vue-router"
-import { ref } from "vue"
+import { onUnmounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { authApi } from "../api"
 
@@ -68,6 +68,7 @@ const otp = ref("")
 
 const error = ref("")
 const message = ref("")
+let redirectTimeout = null
 
 async function verify() {
 
@@ -84,7 +85,7 @@ async function verify() {
 
       message.value = "Xác thực thành công"
 
-      setTimeout(() => {
+      redirectTimeout = setTimeout(() => {
 
         router.push("/login")
 
@@ -104,5 +105,9 @@ async function verify() {
 
   }
 }
+
+onUnmounted(() => {
+  if (redirectTimeout) clearTimeout(redirectTimeout)
+})
 
 </script>
