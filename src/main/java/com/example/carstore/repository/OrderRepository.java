@@ -17,4 +17,7 @@ public interface OrderRepository extends JpaRepository<Orders, Integer> {
 
     List<Orders> findByDepositStatusAndStatusAndCreateDateBefore(
             String depositStatus, String status, Date createDateBefore);
+
+    List<Orders> findByDepositStatusAndStatusInAndCreateDateBefore(
+            String depositStatus, List<String> statuses, Date createDateBefore);
 }

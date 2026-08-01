@@ -262,6 +262,9 @@ public class RestAuthController {
         if (isBlank(password)) {
             return ResponseUtils.fail("Password is required");
         }
+        if (password.length() < 6) {
+            return ResponseUtils.fail("Mật khẩu phải có ít nhất 6 ký tự");
+        }
         if (!password.equals(confirmPassword)) {
             return ResponseUtils.fail("Mật khẩu xác nhận không khớp");
         }

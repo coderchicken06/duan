@@ -19,12 +19,11 @@
             <td>{{ o.username }}</td>
             <td>{{ o.address }}</td>
             <td>
-              <select v-model="o.status" class="form-select form-select-sm" @change="updateStatus(o)">
-                <option value="PENDING">PENDING - Chờ duyệt</option>
-                <option value="CONFIRMED">CONFIRMED - Đã duyệt, chờ cọc</option>
-                <option value="PROCESSING">PROCESSING - Đã cọc, xử lý xe</option>
-                <option value="DELIVERED">DELIVERED - Hoàn thành</option>
-                <option value="CANCELLED">CANCELLED - Đã hủy</option>
+              <select v-model="o.status" class="form-select form-select-sm"
+                :disabled="['CANCELLED', 'DELIVERED'].includes(o.status)" @change="updateStatus(o)">
+                <option v-for="status in availableStatuses(o)" :key="status" :value="status">
+                  {{ statusLabels[status] }}
+                </option>
               </select>
             </td>
             <td>
@@ -47,6 +46,24 @@ import { adminApi } from '../../api'
 
 const orders = ref([])
 let pollInterval = null
+const statusLabels = {
+  PENDING: 'PENDING - Chờ duyệt',
+  CONFIRMED: 'CONFIRMED - Đã duyệt, chờ cọc',
+  PROCESSING: 'PROCESSING - Đã cọc, xử lý xe',
+  DELIVERED: 'DELIVERED - Hoàn thành',
+  CANCELLED: 'CANCELLED - Đã hủy',
+}
+
+function availableStatuses(order) {
+  if (order.status === 'PENDING') return ['PENDING', 'CONFIRMED', 'CANCELLED']
+  if (order.status === 'CONFIRMED') {
+    return order.depositStatus === 'PAID'
+      ? ['CONFIRMED', 'PROCESSING']
+      : ['CONFIRMED', 'CANCELLED']
+  }
+  if (order.status === 'PROCESSING') return ['PROCESSING', 'DELIVERED']
+  return [order.status]
+}
 
 onMounted(() => {
   load()
@@ -85,16 +102,26 @@ async function loadSilent() {
 }
 
 async function updateStatus(o) {
-  const { data } = await adminApi.updateOrderStatus(o.id, o.status)
-  if (!data.success) alert(data.message || 'Không thể cập nhật trạng thái')
-  await load()
+  try {
+    const { data } = await adminApi.updateOrderStatus(o.id, o.status)
+    if (!data.success) alert(data.message || 'Không thể cập nhật trạng thái')
+  } catch (error) {
+    alert(error.response?.data?.message || 'Không thể cập nhật trạng thái')
+  } finally {
+    await load()
+  }
 }
 
 async function cancel(order) {
   if (!confirm('Hủy đơn hàng này? Tồn kho sẽ được hoàn lại nếu đơn chưa thanh toán cọc.')) return
-  const { data } = await adminApi.updateOrderStatus(order.id, 'CANCELLED')
-  if (!data.success) alert(data.message || 'Không thể hủy đơn hàng')
-  await load()
+  try {
+    const { data } = await adminApi.updateOrderStatus(order.id, 'CANCELLED')
+    if (!data.success) alert(data.message || 'Không thể hủy đơn hàng')
+  } catch (error) {
+    alert(error.response?.data?.message || 'Không thể hủy đơn hàng')
+  } finally {
+    await load()
+  }
 }
 </script>
 <style

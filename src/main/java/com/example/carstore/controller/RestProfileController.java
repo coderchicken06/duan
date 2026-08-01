@@ -159,6 +159,8 @@ public class RestProfileController {
             return "Old password is required";
         if (!hasText(newPassword))
             return "New password is required";
+        if (newPassword.length() < 6)
+            return "Mật khẩu phải có ít nhất 6 ký tự";
         if (!newPassword.equals(confirmPassword))
             return "Passwords do not match";
         if (newPassword.equals(oldPassword))

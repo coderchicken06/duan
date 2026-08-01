@@ -57,6 +57,21 @@ class PromotionServiceTest {
     }
 
     @Test
+    void applyToCarUsesSingleCarAssignmentSemantics() {
+        when(promotionRepository.existsById(3)).thenReturn(true);
+        when(carRepository.existsById(2)).thenReturn(true);
+        when(promotionCarRepository.findByPromotionId(3)).thenReturn(List.of(new PromotionCar(3, 1)));
+
+        service.applyToCar(3, 2);
+
+        verify(promotionCarRepository).deleteByPromotionId(3);
+        verify(promotionCarRepository).flush();
+        ArgumentCaptor<PromotionCar> captor = ArgumentCaptor.forClass(PromotionCar.class);
+        verify(promotionCarRepository).save(captor.capture());
+        assertEquals(2, captor.getValue().getCarId());
+    }
+
+    @Test
     void stopApplyingRemovesCarAssignment() {
         when(promotionRepository.existsById(3)).thenReturn(true);
 

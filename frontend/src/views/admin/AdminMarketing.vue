@@ -32,7 +32,6 @@
                 <h2>Tin tức</h2>
                 <form class="form-grid" @submit.prevent="saveNews">
                     <input v-model.trim="article.title" class="form-control" placeholder="Tiêu đề" required>
-                    <input v-model.trim="article.slug" class="form-control" placeholder="Slug (có thể bỏ trống)">
                     <div class="d-flex gap-2">
                         <input v-model.trim="article.thumbnail" class="form-control" placeholder="tên file ảnh"><input
                             type="file" accept="image/*" class="form-control" @change="onNewsFileChange">
@@ -60,7 +59,7 @@ const promotions = ref([]), articles = ref([]), cars = ref([])
 const assignments = ref({}), message = ref(''), ok = ref(true)
 const selectedCarId = ref(null)
 const emptyPromotion = () => ({ name: '', type: 'PERCENT', value: null, startDate: '', endDate: '', status: true })
-const emptyNews = () => ({ title: '', slug: '', thumbnail: '', summary: '', content: '', status: 'DRAFT' })
+const emptyNews = () => ({ title: '', thumbnail: '', summary: '', content: '', status: 'DRAFT' })
 const promotion = ref(emptyPromotion()), article = ref(emptyNews())
 const dateInput = v => v ? String(v).slice(0, 10) : ''
 
@@ -82,20 +81,27 @@ function assignedCarName(promotionId) {
 }
 
 async function action(fn, success) {
-    try { await fn(); ok.value = true; message.value = success; await load() }
-    catch (e) { ok.value = false; message.value = e.response?.data?.message || 'Không thể thực hiện' }
+    try { await fn(); ok.value = true; message.value = success; await load(); return true }
+    catch (e) { ok.value = false; message.value = e.response?.data?.message || 'Không thể thực hiện'; return false }
 }
 
 async function savePromotion() {
     if (!selectedCarId.value) { ok.value = false; message.value = 'Vui lòng chọn xe áp dụng.'; return }
-    await action(async () => {
+    const saved = await action(async () => {
         const response = promotion.value.id
             ? await promotionApi.update(promotion.value.id, promotion.value)
             : await promotionApi.create(promotion.value)
+        promotion.value = {
+            ...response.data.data,
+            startDate: dateInput(response.data.data.startDate),
+            endDate: dateInput(response.data.data.endDate),
+        }
         await promotionApi.assignToCar(response.data.data.id, selectedCarId.value)
     }, 'Đã lưu và áp dụng khuyến mãi cho xe')
-    promotion.value = emptyPromotion()
-    selectedCarId.value = null
+    if (saved) {
+        promotion.value = emptyPromotion()
+        selectedCarId.value = null
+    }
 }
 
 function editPromotion(item) {
@@ -109,7 +115,16 @@ async function setPromotionStatus(item, status) {
 
 async function removePromotion(id) { if (confirm('Xóa khuyến mãi này?')) await action(() => promotionApi.delete(id), 'Đã xóa khuyến mãi') }
 async function onNewsFileChange(e) { const file = e.target.files?.[0]; if (!file) return; try { const { data } = await uploadApi.upload(file); article.value.thumbnail = data; ok.value = true; message.value = 'Đã tải ảnh lên' } catch (error) { ok.value = false; message.value = error.response?.data?.message || 'Không thể tải ảnh lên' } finally { e.target.value = '' } }
-async function saveNews() { await action(() => article.value.id ? newsApi.update(article.value.id, article.value) : newsApi.create(article.value), 'Đã lưu tin tức'); article.value = emptyNews() }
+async function saveNews() {
+    const payload = { ...article.value, slug: '' }
+    const saved = await action(async () => {
+        const response = article.value.id
+            ? await newsApi.update(article.value.id, payload)
+            : await newsApi.create(payload)
+        article.value = { ...response.data.data }
+    }, 'Đã lưu tin tức')
+    if (saved) article.value = emptyNews()
+}
 async function removeNews(id) { if (confirm('Xóa tin tức này?')) await action(() => newsApi.delete(id), 'Đã xóa tin tức') }
 onMounted(load)
 </script>

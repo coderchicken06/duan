@@ -185,8 +185,10 @@ public class PaymentTransactionService {
                 text(payload.get("reference_number")),
                 text(payload.get("referenceNumber")),
                 text(payload.get("referenceCode")),
-                text(payload.get("id")),
-                String.valueOf(payload.get("id")));
+                text(payload.get("id")));
+        if (transactionNo.isBlank() || "null".equalsIgnoreCase(transactionNo)) {
+            throw new IllegalArgumentException("Webhook không có mã giao dịch hợp lệ.");
+        }
         if (repo.existsByReferenceNumber(transactionNo)) {
             return; 
         }

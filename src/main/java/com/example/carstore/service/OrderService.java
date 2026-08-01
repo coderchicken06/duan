@@ -21,6 +21,8 @@ import java.util.Map;
 public class OrderService {
 
     private static final long UNPAID_ORDER_TIMEOUT_MILLIS = 3 * 60 * 1000L;
+    private static final List<String> EXPIRABLE_UNPAID_STATUSES =
+            List.of(OrderStatus.PENDING, OrderStatus.CONFIRMED);
 
     private final OrderRepository orderRepo;
     private final OrderDetailRepository detailRepo;
@@ -184,13 +186,16 @@ public class OrderService {
     @Transactional
     public void cancelExpiredOrders() {
         Date threshold = new Date(System.currentTimeMillis() - UNPAID_ORDER_TIMEOUT_MILLIS);
-        List<Orders> expiredOrders = orderRepo.findByDepositStatusAndStatusAndCreateDateBefore(
-                OrderStatus.DEPOSIT_UNPAID, OrderStatus.PENDING, threshold);
+        List<Orders> expiredOrders = new java.util.ArrayList<>();
+        for (String status : EXPIRABLE_UNPAID_STATUSES) {
+            expiredOrders.addAll(orderRepo.findByDepositStatusAndStatusAndCreateDateBefore(
+                    OrderStatus.DEPOSIT_UNPAID, status, threshold));
+        }
 
         for (Orders order : expiredOrders) {
             Orders lockedOrder = orderRepo.findForUpdateById(order.getId()).orElse(null);
             if (lockedOrder == null
-                    || !OrderStatus.PENDING.equals(lockedOrder.getStatus())
+                    || !EXPIRABLE_UNPAID_STATUSES.contains(lockedOrder.getStatus())
                     || !OrderStatus.DEPOSIT_UNPAID.equals(lockedOrder.getDepositStatus())
                     || lockedOrder.getCreateDate() == null
                     || !lockedOrder.getCreateDate().before(threshold)) {

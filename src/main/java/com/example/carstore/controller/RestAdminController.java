@@ -194,6 +194,7 @@ public class RestAdminController {
                 return Map.of("success", false, "message", validation);
             }
             car.setImage(ImagePathUtils.normalizeForStorage(car.getImage()));
+            synchronizeStatusWithStock(car);
             Car saved = carRepo.save(car);
             carImageService.synchronizeCarImage(saved.getId());
 
@@ -260,6 +261,7 @@ public class RestAdminController {
             existing.setInspectionNote(car.getInspectionNote());
             existing.setSafetyFeatures(car.getSafetyFeatures());
             existing.setComfortFeatures(car.getComfortFeatures());
+            synchronizeStatusWithStock(existing);
 
             Car updated = carRepo.save(existing);
             carImageService.synchronizeCarImage(updated.getId());
@@ -468,5 +470,34 @@ public class RestAdminController {
             return "Stock cannot be negative";
         }
         return null;
+    }
+
+    /**
+     * Stock is the source of truth for sellable inventory. Keep explicit INACTIVE
+     * untouched, and preserve the terminal SOLD/DEPOSITED distinction while stock
+     * remains zero. Replenishing either stock-depleted state makes the car
+     * available again.
+     */
+    private void synchronizeStatusWithStock(Car car) {
+        int stock = car.getStock();
+        String status = car.getStatus() == null ? "AVAILABLE" : car.getStatus().trim().toUpperCase();
+
+        if ("INACTIVE".equals(status)) {
+            car.setStatus(status);
+            return;
+        }
+        if (stock <= 0) {
+            if ("AVAILABLE".equals(status)) {
+                car.setStatus("DEPOSITED");
+            } else {
+                car.setStatus(status);
+            }
+            return;
+        }
+        if ("DEPOSITED".equals(status) || "SOLD".equals(status)) {
+            car.setStatus("AVAILABLE");
+        } else {
+            car.setStatus(status);
+        }
     }
 }

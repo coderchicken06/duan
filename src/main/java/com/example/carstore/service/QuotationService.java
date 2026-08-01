@@ -85,6 +85,11 @@ public class QuotationService {
     @Transactional
     public Quotation update(Integer id, QuotationRequestDto request) {
         Quotation q = get(id);
+        if ((CONVERTED.equals(q.getStatus()) || q.getOrderId() != null)
+                && request.getStatus() != null
+                && !CONVERTED.equals(request.getStatus())) {
+            throw new IllegalArgumentException("Không thể thay đổi trạng thái báo giá đã chuyển thành đơn hàng.");
+        }
         double discount = request.getDiscount() == null ? 0D : request.getDiscount();
         if (discount < 0 || discount > q.getCarPrice()) {
             throw new IllegalArgumentException("Giảm giá không hợp lệ.");
@@ -236,9 +241,16 @@ public class QuotationService {
 
     @Transactional
     public void deleteQuotation(int id) {
-        if (!repo.existsById(id)) {
-            throw new IllegalArgumentException("Không tìm thấy báo giá.");
+        Quotation quotation = get(id);
+        if (quotation.getOrderId() != null || contractService.existsByQuotationId(id)) {
+            throw new IllegalArgumentException(
+                    "Không thể xóa báo giá đã liên kết với đơn hàng hoặc hợp đồng.");
         }
-        repo.deleteById(id);
+        List<QuotationItem> items = itemRepo.findByQuotationIdOrderByIdAsc(id);
+        if (!items.isEmpty()) {
+            itemRepo.deleteAll(items);
+            itemRepo.flush();
+        }
+        repo.delete(quotation);
     }
 }

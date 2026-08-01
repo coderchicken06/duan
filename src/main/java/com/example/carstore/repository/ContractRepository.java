@@ -8,4 +8,5 @@ import java.util.List;
 public interface ContractRepository extends JpaRepository<Contract, Integer> {
     Optional<Contract> findByOrderId(Integer orderId);
     List<Contract> findByCustomerUsernameOrderByContractDateDesc(String username);
+    boolean existsByQuotationId(Integer quotationId);
 }

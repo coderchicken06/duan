@@ -15,8 +15,9 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Intege
     @Query("SELECT SUM(o.depositAmount) FROM Orders o WHERE o.depositStatus = 'PAID'")
     Double getRevenue();
 
-    // Lấy top xe bán chạy: d.car.name lấy từ quan hệ ManyToOne
-    @Query("SELECT d.car.name, SUM(d.quantity) FROM OrderDetail d " +
+    // Chỉ tính xe trong các đơn đã thanh toán cọc.
+    @Query("SELECT d.car.name, SUM(d.quantity) FROM OrderDetail d, Orders o " +
+           "WHERE d.orderId = o.id AND o.depositStatus = 'PAID' " +
            "GROUP BY d.car.name " +
            "ORDER BY SUM(d.quantity) DESC")
     List<Object[]> topCars();

@@ -4,6 +4,7 @@ import com.example.carstore.entity.Car;
 import com.example.carstore.entity.CartItem;
 import com.example.carstore.service.CarService;
 import com.example.carstore.service.CartService;
+import com.example.carstore.service.PromotionService;
 import com.example.carstore.util.ResponseUtils;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -27,10 +28,13 @@ public class RestCartController {
 
     private final CartService cartService;
     private final CarService carService;
+    private final PromotionService promotionService;
 
-    public RestCartController(CartService cartService, CarService carService) {
+    public RestCartController(CartService cartService, CarService carService,
+                              PromotionService promotionService) {
         this.cartService = cartService;
         this.carService = carService;
+        this.promotionService = promotionService;
     }
 
     @GetMapping
@@ -68,8 +72,9 @@ public class RestCartController {
         }
 
         cartService.add(new CartItem(
-                car.getId(), car.getName(), car.getPrice(), safeQuantity,
+                car.getId(), car.getName(), effectivePrice(car), safeQuantity,
                 car.getImageUrl(), car.getYear(), car.getBodyType(), car.getColor(), car.getStock()), session);
+        refreshCartItems(session);
         return Map.of(
                 "success", true,
                 "message", "Added to cart",
@@ -205,7 +210,7 @@ public class RestCartController {
         cart.values().forEach(item ->
                 carService.findById(item.getId()).ifPresent(car -> {
                     item.setName(car.getName());
-                    item.setPrice(car.getPrice());
+                    item.setPrice(effectivePrice(car));
                     item.setImage(car.getImageUrl());
                     item.setYear(car.getYear());
                     item.setBodyType(car.getBodyType());
@@ -216,5 +221,9 @@ public class RestCartController {
 
     private boolean isAvailable(Car car) {
         return car != null && "AVAILABLE".equalsIgnoreCase(car.getStatus());
+    }
+
+    private double effectivePrice(Car car) {
+        return promotionService.priceAfterPromotion(car.getId(), car.getPrice());
     }
 }

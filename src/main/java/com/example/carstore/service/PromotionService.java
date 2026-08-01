@@ -1,5 +1,5 @@
 package com.example.carstore.service;
-import com.example.carstore.entity.Promotion;import com.example.carstore.entity.PromotionCar;import com.example.carstore.entity.PromotionCarId;import com.example.carstore.repository.CarRepository;import com.example.carstore.repository.PromotionCarRepository;import com.example.carstore.repository.PromotionRepository;import org.springframework.stereotype.Service;import org.springframework.transaction.annotation.Transactional;import java.util.*;
+import com.example.carstore.entity.Promotion;import com.example.carstore.entity.PromotionCar;import com.example.carstore.repository.CarRepository;import com.example.carstore.repository.PromotionCarRepository;import com.example.carstore.repository.PromotionRepository;import org.springframework.stereotype.Service;import org.springframework.transaction.annotation.Transactional;import java.util.*;
 @Service public class PromotionService{
  private final PromotionRepository r;private final PromotionCarRepository promotionCars;private final CarRepository cars;
  public PromotionService(PromotionRepository r,PromotionCarRepository promotionCars,CarRepository cars){this.r=r;this.promotionCars=promotionCars;this.cars=cars;}
@@ -18,7 +18,7 @@ import com.example.carstore.entity.Promotion;import com.example.carstore.entity.
   if(p.getStartDate()!=null&&p.getEndDate()!=null&&p.getEndDate().before(p.getStartDate()))throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu.");
   if(p.getStatus()==null)p.setStatus(true);if(p.getId()==null)p.setCreatedAt(new Date());return r.save(p);
  }
- @Transactional public void applyToCar(Integer promotionId,Integer carId){if(!r.existsById(promotionId))throw new IllegalArgumentException("Không tìm thấy khuyến mãi.");if(!cars.existsById(carId))throw new IllegalArgumentException("Không tìm thấy xe.");PromotionCarId key=new PromotionCarId(promotionId,carId);if(!promotionCars.existsById(key))promotionCars.save(new PromotionCar(promotionId,carId));}
+ @Transactional public void applyToCar(Integer promotionId,Integer carId){assignToCar(promotionId,carId);}
  @Transactional public void assignToCar(Integer promotionId,Integer carId){if(!r.existsById(promotionId))throw new IllegalArgumentException("Không tìm thấy khuyến mãi.");if(!cars.existsById(carId))throw new IllegalArgumentException("Không tìm thấy xe.");List<PromotionCar> current=promotionCars.findByPromotionId(promotionId);if(current.size()==1&&Objects.equals(current.get(0).getCarId(),carId))return;promotionCars.deleteByPromotionId(promotionId);promotionCars.flush();promotionCars.save(new PromotionCar(promotionId,carId));}
  public List<PromotionCar> assignments(Integer promotionId){return promotionCars.findByPromotionId(promotionId);}
  @Transactional public void stopApplying(Integer promotionId){if(!r.existsById(promotionId))throw new IllegalArgumentException("Không tìm thấy khuyến mãi.");promotionCars.deleteByPromotionId(promotionId);}

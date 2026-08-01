@@ -60,6 +60,10 @@ public class ContractService {
         return contractRepo.findAll();
     }
 
+    public boolean existsByQuotationId(Integer quotationId) {
+        return contractRepo.existsByQuotationId(quotationId);
+    }
+
     @Transactional
     public Contract update(Integer id, Contract payload) {
         Contract contract = contractRepo.findById(id)

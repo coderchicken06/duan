@@ -75,7 +75,7 @@ public class MailService {
                     ? String.format("%,.0f", order.getDepositAmount()) + " VNĐ"
                     : "0 VNĐ";
             String contractCode = order != null && order.getId() != null ? "VELOR" + order.getId() : "N/A";
-            String phone = order != null && order.getAddress() != null && !order.getAddress().isBlank()
+            String deliveryAddress = order != null && order.getAddress() != null && !order.getAddress().isBlank()
                     ? order.getAddress()
                     : "Chưa cung cấp";
 
@@ -87,13 +87,13 @@ public class MailService {
                     + "<table style='width: 100%; border-collapse: collapse; margin-top: 16px;'>"
                     + "<tr><td style='padding: 8px 0; font-weight: 700; width: 220px;'>Mã đơn hàng</td><td style='padding: 8px 0;'>#" + order.getId() + "</td></tr>"
                     + "<tr><td style='padding: 8px 0; font-weight: 700;'>Mã hợp đồng</td><td style='padding: 8px 0;'>" + contractCode + "</td></tr>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Tên xe</td><td style='padding: 8px 0;'>" + (order.getUsername() != null ? order.getUsername() : "Xe đặt cọc") + "</td></tr>"
+                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Tài khoản đặt xe</td><td style='padding: 8px 0;'>" + (order.getUsername() != null ? order.getUsername() : "Chưa cung cấp") + "</td></tr>"
                     + "<tr><td style='padding: 8px 0; font-weight: 700;'>Giá trị cọc / thanh toán</td><td style='padding: 8px 0;'>" + depositAmount + "</td></tr>"
                     + "<tr><td style='padding: 8px 0; font-weight: 700;'>Mã giao dịch SePay</td><td style='padding: 8px 0;'>" + transactionNo + "</td></tr>"
                     + "<tr><td style='padding: 8px 0; font-weight: 700;'>Ngày giờ giao dịch</td><td style='padding: 8px 0;'>" + paidAt + "</td></tr>"
                     + "<tr><td style='padding: 8px 0; font-weight: 700;'>Người nhận</td><td style='padding: 8px 0;'>" + recipientName + "</td></tr>"
                     + "<tr><td style='padding: 8px 0; font-weight: 700;'>Email</td><td style='padding: 8px 0;'>" + account.getEmail() + "</td></tr>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Số điện thoại</td><td style='padding: 8px 0;'>" + phone + "</td></tr>"
+                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Địa chỉ nhận xe</td><td style='padding: 8px 0;'>" + deliveryAddress + "</td></tr>"
                     + "</table>"
                     + "<p style='margin-top: 18px;'>Cảm ơn bạn đã tin tưởng CarStore.</p>"
                     + "</div></body></html>";

@@ -30,7 +30,7 @@
             <span v-if="hasData(car.bodyType)">{{ car.bodyType }}</span>
           </div>
 
-          <div class="price">{{ formatPrice(car.price) }} <small>VNĐ</small></div>
+          <div class="price">{{ formatPrice(displayPrice) }} <small>VNĐ</small></div>
 
           <div v-if="quickSpecs.length" class="quick-specs">
             <div v-for="item in quickSpecs" :key="item.label">
@@ -172,7 +172,7 @@
 <script setup>
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { carApi, cartApi, carImageUrl, formatPrice, quotationApi, useDefaultCarImage } from '../api'
+import { carApi, cartApi, carImageUrl, formatPrice, promotionApi, quotationApi, useDefaultCarImage } from '../api'
 import CarCard from '../components/CarCard.vue'
 import { useCompare } from '../composables/useCompare'
 import { useAuthStore } from '../stores/auth'
@@ -190,16 +190,25 @@ const reviewSubmitting = ref(false)
 const reviewMessage = ref('')
 const reviewOk = ref(false)
 const editingReviewId = ref(null)
-const cars = ref([])
 const similarCars = ref([])
 const message = ref('')
 const success = ref(false)
 const selectedImage = ref('')
 const serverImages = ref([])
 const loadError = ref('')
+const promotion = ref(null)
+let loadVersion = 0
 
 const { has, toggle, count } = useCompare()
 const myReview = computed(() => reviews.value.find(isOwnReview))
+const displayPrice = computed(() => {
+  const price = Number(car.value?.price || 0)
+  if (!promotion.value) return price
+  const discount = promotion.value.type === 'PERCENT'
+    ? price * Number(promotion.value.value || 0) / 100
+    : Number(promotion.value.value || 0)
+  return Math.max(0, price - discount)
+})
 
 const hasData = (value) => value !== null && value !== undefined
   && (typeof value !== 'string' || value.trim() !== '')
@@ -261,33 +270,32 @@ const detailRows = computed(() => [
   .map((item) => ({ label: item.label, value: item.format ? item.format(item.raw) : item.raw })))
 
 async function loadData() {
+  const currentVersion = ++loadVersion
+  const carId = String(route.params.id)
   car.value = null
+  reviews.value = []
+  reviewAverage.value = 0
   serverImages.value = []
   selectedImage.value = ''
   message.value = ''
   loadError.value = ''
+  promotion.value = null
 
   try {
-    const carId = String(route.params.id)
     const detailResponse = await carApi.getById(carId)
+    if (currentVersion !== loadVersion) return
     if (!detailResponse.data?.success || !detailResponse.data?.data) {
       throw new Error(detailResponse.data?.message || 'Không tìm thấy xe')
     }
     car.value = detailResponse.data.data
 
-    const [listResult, similarResult, imagesResult] = await Promise.allSettled([
-      carApi.getAll(),
+    const [similarResult, imagesResult, reviewsResult, promotionResult] = await Promise.allSettled([
       carApi.getSimilar(carId),
       carApi.getImages(carId),
+      reviewApi.getByCar(carId),
+      promotionApi.getForCar(carId),
     ])
-
-    if (listResult.status === 'fulfilled') {
-      const data = listResult.value.data
-      cars.value = Array.isArray(data) ? data : (data.data || [])
-    } else {
-      cars.value = []
-      console.error('Không thể tải danh sách xe:', listResult.reason)
-    }
+    if (currentVersion !== loadVersion) return
 
     if (similarResult.status === 'fulfilled') {
       const data = similarResult.value.data
@@ -305,8 +313,26 @@ async function loadData() {
       console.error('Không thể tải thư viện ảnh, dùng ảnh chính của xe:', imagesResult.reason)
     }
 
+    if (reviewsResult.status === 'fulfilled') {
+      const data = reviewsResult.value.data
+      reviews.value = data.data || []
+      reviewAverage.value = Number(data.average || 0)
+    } else {
+      reviews.value = []
+      reviewAverage.value = 0
+    }
+
+    if (promotionResult.status === 'fulfilled') {
+      const data = promotionResult.value.data
+      promotion.value = data.data?.[0] || null
+    } else {
+      promotion.value = null
+      console.error('Không thể tải khuyến mãi cho xe:', promotionResult.reason)
+    }
+
     selectedImage.value = galleryImages.value[0] || carImageUrl(car.value?.image)
   } catch (error) {
+    if (currentVersion !== loadVersion) return
     car.value = null
     loadError.value = error.response?.data?.message || error.message || 'Không thể tải thông tin xe'
     success.value = false
@@ -339,7 +365,7 @@ async function addById(id) {
     success.value = Boolean(data.success)
     if (data.success) {
       showCartToast('Thêm vào giỏ hàng thành công!')
-      message.value = 'Đã thêm xe vào giỏ hàng'
+      message.value = ''
     } else {
       message.value = data.message || 'Không thể thêm vào giỏ hàng'
     }
@@ -361,8 +387,10 @@ async function requestQuotation() {
   }
 }
 
-async function loadReviews() {
-  const { data } = await reviewApi.getByCar(route.params.id)
+async function loadReviews(carId = route.params.id) {
+  const requestedCarId = String(carId)
+  const { data } = await reviewApi.getByCar(requestedCarId)
+  if (String(route.params.id) !== requestedCarId) return
   reviews.value = data.data || []
   reviewAverage.value = Number(data.average || 0)
 }
@@ -414,7 +442,6 @@ async function deleteReview(review) {
   }
 }
 
-loadReviews().catch(() => { })
 </script>
 
 <style scoped>
@@ -815,10 +842,6 @@ loadReviews().catch(() => { })
   flex: 0 0 320px;
   min-width: 0;
   scroll-snap-align: start;
-}
-
-.similar-car-item :deep(.car-card) {
-  height: 100%;
 }
 
 @media (max-width: 1200px) {

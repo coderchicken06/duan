@@ -46,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
@@ -58,8 +58,6 @@ const loading = ref(true)
 const loadError = ref('')
 const alert = ref('')
 const q = ref(route.query.q || '')
-const videoSrc = '/videos/ford-intro.mp4'
-let alertTimeout = null
 
 onMounted(loadCars)
 
@@ -83,17 +81,11 @@ async function addToCart(id) {
   const { data } = await cartApi.add(id)
   if (data.success) {
     showCartToast('Thêm vào giỏ hàng thành công!')
-    alert.value = 'Thêm giỏ hàng thành công'
-    if (alertTimeout) clearTimeout(alertTimeout)
-    alertTimeout = setTimeout(() => (alert.value = ''), 2500)
+    alert.value = ''
   } else {
     alert.value = data.message || 'Không thể thêm vào giỏ'
   }
 }
-
-onUnmounted(() => {
-  if (alertTimeout) clearTimeout(alertTimeout)
-})
 </script>
 <style
   scoped>
