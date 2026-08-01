@@ -4,6 +4,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import com.example.carstore.entity.Orders;
 import javax.persistence.LockModeType;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,4 +14,7 @@ public interface OrderRepository extends JpaRepository<Orders, Integer> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Orders> findForUpdateById(Integer id);
+
+    List<Orders> findByDepositStatusAndStatusAndCreateDateBefore(
+            String depositStatus, String status, Date createDateBefore);
 }

@@ -57,20 +57,17 @@ class PaymentTransactionServiceTest {
 
         Map<String, Object> result = service.createQr(order);
 
-        @SuppressWarnings("unchecked")
-        Map<String, String> fields = (Map<String, String>) result.get("fields");
-        assertEquals("SP-TEST", fields.get("merchant"));
-        assertEquals("VELOR9", fields.get("order_invoice_number"));
-        assertEquals("100", fields.get("order_amount"));
-        assertNotNull(fields.get("signature"));
-        assertFalse(fields.get("signature").isBlank());
+        assertEquals("VELOR9", result.get("orderCode"));
+        assertEquals(100L, result.get("amount"));
+        assertTrue(result.get("qrUrl") instanceof String);
+        assertFalse(((String) result.get("qrUrl")).isBlank());
     }
 
     @Test
     void flatWebhookUpdatesPaymentOrderAndContract() {
         Orders order = unpaidOrder();
         Contract contract = unpaidContract();
-        when(transactionRepo.existsByTransactionNo("SEPAY-TX-001")).thenReturn(false);
+        when(transactionRepo.existsByReferenceNumber("TX-001")).thenReturn(false);
         when(orderRepo.findForUpdateById(9)).thenReturn(Optional.of(order));
         when(contractRepo.findByOrderId(9)).thenReturn(Optional.of(contract));
         when(accountRepo.findByUsername("user1")).thenReturn(Optional.empty());
@@ -88,7 +85,7 @@ class PaymentTransactionServiceTest {
         ArgumentCaptor<PaymentTransaction> captor =
                 ArgumentCaptor.forClass(PaymentTransaction.class);
         verify(transactionRepo).save(captor.capture());
-        assertEquals("SEPAY-TX-001", captor.getValue().getTransactionNo());
+        assertEquals("TX-001", captor.getValue().getTransactionNo());
         assertEquals("SUCCESS", captor.getValue().getStatus());
         assertEquals(100D, captor.getValue().getAmount());
         verifyNoInteractions(mailService);
@@ -96,7 +93,7 @@ class PaymentTransactionServiceTest {
 
     @Test
     void duplicateWebhookDoesNotUpdateOrSendEmail() {
-        when(transactionRepo.existsByTransactionNo("SEPAY-TX-001")).thenReturn(true);
+        when(transactionRepo.existsByReferenceNumber("TX-001")).thenReturn(true);
 
         service.processSePayWebhook(Map.of(
                 "referenceCode", "TX-001",
@@ -112,7 +109,7 @@ class PaymentTransactionServiceTest {
     void wrongAmountDoesNotUpdatePaymentState() {
         Orders order = unpaidOrder();
         Contract contract = unpaidContract();
-        when(transactionRepo.existsByTransactionNo("SEPAY-TX-002")).thenReturn(false);
+        when(transactionRepo.existsByReferenceNumber("TX-002")).thenReturn(false);
         when(orderRepo.findForUpdateById(9)).thenReturn(Optional.of(order));
         when(contractRepo.findByOrderId(9)).thenReturn(Optional.of(contract));
 

@@ -6,8 +6,10 @@ import com.example.carstore.repository.AccountRepository;
 import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.ContractService;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
@@ -33,9 +35,12 @@ public class RestContractController {
         Orders order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
         boolean admin = auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        if (auth == null || (!admin && !order.getUsername().equals(auth.getName()))) {
-            throw new IllegalArgumentException("Bạn không có quyền xem hợp đồng này.");
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ROLE_STAFF".equals(a.getAuthority()));
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
+        if (!admin && !order.getUsername().equals(auth.getName())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem hợp đồng này.");
         }
         Contract contract;
         try {
@@ -59,9 +64,12 @@ public class RestContractController {
         Orders order = orderRepo.findById(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
         boolean admin = auth != null && auth.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        if (auth == null || (!admin && !order.getUsername().equals(auth.getName()))) {
-            throw new IllegalArgumentException("Bạn không có quyền xem thanh toán này.");
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()) || "ROLE_STAFF".equals(a.getAuthority()));
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
+        if (!admin && !order.getUsername().equals(auth.getName())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem thanh toán này.");
         }
         return Map.of("success", true, "data", contractService.getPayments(orderId));
     }

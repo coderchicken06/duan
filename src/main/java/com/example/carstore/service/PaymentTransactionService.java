@@ -12,6 +12,8 @@ import com.example.carstore.repository.PaymentTransactionRepository;
 import com.example.carstore.util.OrderStatus;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +33,8 @@ import java.util.regex.Pattern;
 
 @Service
 public class PaymentTransactionService {
+    private static final Logger logger = LoggerFactory.getLogger(PaymentTransactionService.class);
+
     // Hỗ trợ linh hoạt các biến thể như: VELOR5, VELORA-5, VELOR-5, velora3,...
     private static final Pattern ORDER_CODE_PATTERN = Pattern.compile("(?i)VELOR[A-Z-]*(\\d+)");
 
@@ -171,7 +175,8 @@ public class PaymentTransactionService {
         // 2. Lấy nội dung chuyển khoản (content hoặc description) để bóc tách mã đơn hàng
         String content = firstNonBlank(
                 text(payload.get("content")),
-                text(payload.get("description")));
+                text(payload.get("description")),
+                text(payload.get("transactionContent")));
 
         Integer orderId = extractOrderIdFromContent(content);
         if (orderId == null) {
@@ -180,10 +185,12 @@ public class PaymentTransactionService {
 
         // 3. Lấy mã giao dịch (transactionNo hoặc id)
         String transactionNo = firstNonBlank(
+                text(payload.get("reference_number")),
+                text(payload.get("referenceNumber")),
                 text(payload.get("referenceCode")),
                 text(payload.get("id")),
                 String.valueOf(payload.get("id")));
-        if (repo.existsByTransactionNo(transactionNo)) {
+        if (repo.existsByReferenceNumber(transactionNo)) {
             return; 
         }
 
@@ -236,9 +243,17 @@ public class PaymentTransactionService {
         transaction.setResponseCode("00");
         transaction.setPaidAt(paidAt);
         transaction.setRawResponse(rawPayload(payload));
-        repo.save(transaction);
+        PaymentTransaction savedTransaction = repo.save(transaction);
 
-        // 10. Gửi email thông báo
+        // 10. Gửi email hóa đơn xác nhận cho khách hàng, không làm rollback thanh toán nếu SMTP lỗi
+        try {
+            accountRepo.findByUsername(order.getUsername())
+                    .ifPresent(account -> mailService.sendInvoiceEmail(account, order, savedTransaction));
+        } catch (Exception exception) {
+            logger.warn("Không thể gửi email hóa đơn cho đơn hàng {}: {}", orderId, exception.getMessage(), exception);
+        }
+
+        // 11. Gửi email thông báo
         try {
             sendPaymentEmails(order, amount);
         } catch (Exception e) {

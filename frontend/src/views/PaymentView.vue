@@ -84,10 +84,10 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref, computed } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { useRoute } from 'vue-router'
 import { contractApi, paymentTransactionApi, formatPrice } from '../api'
 
-const route = useRoute(), router = useRouter()
+const route = useRoute()
 const loading = ref(true), submitting = ref(false), error = ref(''), contract = ref({}), payments = ref([])
 // Thêm biến lưu URL ảnh QR
 const qrUrl = ref('')

@@ -98,12 +98,6 @@ async function verify() {
 
   } catch (e) {
 
-    console.log(e)
-
-    console.log(e.response)
-
-    console.log(e.response?.data)
-
     error.value =
       e.response?.data?.message ||
       "Có lỗi xảy ra"

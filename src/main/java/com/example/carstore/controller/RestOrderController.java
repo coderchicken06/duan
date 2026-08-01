@@ -6,6 +6,7 @@ import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.CartService;
 import com.example.carstore.service.OrderService;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,6 +16,7 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.server.ResponseStatusException;
 
 import javax.servlet.http.HttpSession;
 import java.util.ArrayList;
@@ -55,6 +57,15 @@ public class RestOrderController {
                 && (isAdmin(auth) || auth.getName().equals(order.getUsername()));
     }
 
+    private void ensureCanViewOrder(Orders order, Authentication auth) {
+        if (!canViewOrder(order, auth)) {
+            if (order == null || auth == null) {
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+            }
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem đơn hàng này.");
+        }
+    }
+
     @GetMapping
     public Map<String, Object> getAllOrders(Authentication auth) {
         if (auth == null) {
@@ -73,9 +84,7 @@ public class RestOrderController {
         Optional<Orders> orderOpt = orderRepo.findById(id);
         if (orderOpt.isEmpty()) return fail("Order not found");
         Orders order = orderOpt.get();
-        if (!canViewOrder(order, auth)) {
-            return fail(auth == null ? "Not authenticated" : "Unauthorized");
-        }
+        ensureCanViewOrder(order, auth);
         return Map.of("success", true, "data", order);
     }
 
@@ -161,9 +170,7 @@ public class RestOrderController {
         Optional<Orders> orderOpt = orderRepo.findById(id);
         if (orderOpt.isEmpty()) return fail("Order not found");
         Orders order = orderOpt.get();
-        if (!canViewOrder(order, auth)) {
-            return fail(auth == null ? "Not authenticated" : "Unauthorized");
-        }
+        ensureCanViewOrder(order, auth);
 
         List<OrderDetail> details = detailRepo.findByOrderId(id);
         return Map.of(
@@ -198,9 +205,7 @@ public class RestOrderController {
         Optional<Orders> orderOpt = orderRepo.findById(id);
         if (orderOpt.isEmpty()) return fail("Order not found");
         Orders order = orderOpt.get();
-        if (!canViewOrder(order, auth)) {
-            return fail(auth == null ? "Not authenticated" : "Unauthorized");
-        }
+        ensureCanViewOrder(order, auth);
 
         List<OrderDetail> details = detailRepo.findByOrderId(id);
         double totalAmount = 0;

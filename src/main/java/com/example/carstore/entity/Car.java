@@ -26,6 +26,9 @@ public class Car {
     @Column(nullable = false)
     private Integer stock = 0;
 
+    @Column(name = "status", nullable = false)
+    private String status = "AVAILABLE";
+
     @Column(name = "first_registration")
     private String firstRegistration;
 
@@ -119,6 +122,8 @@ public class Car {
     public void setColor(String color) { this.color = color; }
     public Integer getStock() { return stock == null ? 0 : stock; }
     public void setStock(Integer stock) { this.stock = stock == null ? 0 : stock; }
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
     public String getFirstRegistration() { return firstRegistration; }
     public void setFirstRegistration(String firstRegistration) { this.firstRegistration = firstRegistration; }
     public Integer getMileage() { return mileage; }

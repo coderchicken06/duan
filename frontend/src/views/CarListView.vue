@@ -80,6 +80,7 @@ import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { brandApi, carApi, cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
+import { showCartToast } from '../composables/useCartToast'
 
 const route = useRoute()
 const allCars = ref([])
@@ -171,7 +172,12 @@ async function addToCart(id) {
   }
   try {
     const { data } = await cartApi.add(id)
-    message.value = data.success ? 'Đã thêm vào giỏ hàng' : (data.message || 'Lỗi')
+    if (data.success) {
+      showCartToast('Thêm vào giỏ hàng thành công!')
+      message.value = 'Đã thêm vào giỏ hàng'
+    } else {
+      message.value = data.message || 'Lỗi'
+    }
   } catch {
     message.value = 'Không thể kết nối máy chủ để thêm xe vào giỏ'
   }

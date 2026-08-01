@@ -96,11 +96,7 @@ async function submit() {
 
   } catch (e) {
 
-    console.error(e)
-
     if (e.response) {
-      console.log("Status:", e.response.status)
-      console.log("Data:", e.response.data)
       error.value = e.response.data?.message || "Có lỗi xảy ra"
     } else {
       error.value = e.message
@@ -132,7 +128,6 @@ async function resendOtp() {
 
   } catch (e) {
 
-    console.error(e)
     error.value = "Không thể gửi lại mã OTP."
 
   }

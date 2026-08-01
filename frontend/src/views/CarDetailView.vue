@@ -177,6 +177,7 @@ import CarCard from '../components/CarCard.vue'
 import { useCompare } from '../composables/useCompare'
 import { useAuthStore } from '../stores/auth'
 import { reviewApi } from '../api'
+import { showCartToast } from '../composables/useCartToast'
 
 const route = useRoute()
 const router = useRouter()
@@ -336,7 +337,12 @@ async function addById(id) {
   try {
     const { data } = await cartApi.add(id)
     success.value = Boolean(data.success)
-    message.value = data.success ? 'Đã thêm xe vào giỏ hàng' : (data.message || 'Không thể thêm vào giỏ hàng')
+    if (data.success) {
+      showCartToast('Thêm vào giỏ hàng thành công!')
+      message.value = 'Đã thêm xe vào giỏ hàng'
+    } else {
+      message.value = data.message || 'Không thể thêm vào giỏ hàng'
+    }
   } catch (error) {
     message.value = error.response?.data?.message || 'Không thể thêm vào giỏ hàng'
     success.value = false

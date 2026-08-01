@@ -50,6 +50,7 @@ import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
+import { showCartToast } from '../composables/useCartToast'
 
 const route = useRoute()
 const cars = ref([])
@@ -79,6 +80,7 @@ async function loadCars() {
 async function addToCart(id) {
   const { data } = await cartApi.add(id)
   if (data.success) {
+    showCartToast('Thêm vào giỏ hàng thành công!')
     alert.value = 'Thêm giỏ hàng thành công'
     setTimeout(() => (alert.value = ''), 2500)
   } else {

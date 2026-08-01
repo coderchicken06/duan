@@ -8,6 +8,7 @@ import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.repository.CarRepository;
 import com.example.carstore.util.OrderStatus;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -98,6 +99,9 @@ public class OrderService {
             if (item.getQuantity() <= 0) {
                 throw new IllegalArgumentException("Invalid quantity for car: " + item.getId());
             }
+            if (!"AVAILABLE".equalsIgnoreCase(car.getStatus())) {
+                throw new IllegalArgumentException("Xe " + car.getName() + " hiện không khả dụng để đặt cọc.");
+            }
 
             if (car.getStock() == null || car.getStock() < item.getQuantity()) {
                 throw new IllegalArgumentException(
@@ -105,6 +109,7 @@ public class OrderService {
             }
 
             car.setStock(car.getStock() - item.getQuantity());
+            car.setStatus("DEPOSITED");
             carRepo.save(car);
 
             OrderDetail detail = new OrderDetail();
@@ -165,6 +170,21 @@ public class OrderService {
         return orderRepo.save(order);
     }
 
+    @Scheduled(fixedDelay = 300000)
+    @Transactional
+    public void autoCancelExpiredDeposits() {
+        Date threshold = new Date(System.currentTimeMillis() - 30 * 60 * 1000L);
+        List<Orders> expiredOrders = orderRepo.findByDepositStatusAndStatusAndCreateDateBefore(
+                OrderStatus.DEPOSIT_UNPAID, OrderStatus.PENDING, threshold);
+
+        for (Orders order : expiredOrders) {
+            order.setStatus(OrderStatus.CANCELLED);
+            order.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
+            orderRepo.save(order);
+            restoreStock(detailRepo.findByOrderId(order.getId()));
+        }
+    }
+
     private void restoreStock(List<OrderDetail> details) {
         for (OrderDetail detail : details) {
             if (detail.getCar() == null) continue;
@@ -172,6 +192,7 @@ public class OrderService {
                     .orElseThrow(() -> new IllegalArgumentException("Xe trong đơn hàng không còn tồn tại."));
             int quantity = detail.getQuantity() == null ? 0 : detail.getQuantity();
             car.setStock(car.getStock() + quantity);
+            car.setStatus("AVAILABLE");
             carRepo.save(car);
         }
     }

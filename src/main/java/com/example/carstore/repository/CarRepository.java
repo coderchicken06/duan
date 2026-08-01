@@ -21,4 +21,6 @@ public interface CarRepository extends JpaRepository<Car, Integer> {
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Car> findForUpdateById(Integer id);
+
+    Optional<Car> findByIdAndStatus(Integer id, String status);
 }
