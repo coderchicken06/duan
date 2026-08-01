@@ -18,6 +18,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Date;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -51,6 +52,7 @@ class OrderServiceTest {
 
         assertEquals(10, result.getId());
         assertEquals(2, car.getStock());
+        assertEquals("AVAILABLE", car.getStatus());
         ArgumentCaptor<Orders> orderCaptor = ArgumentCaptor.forClass(Orders.class);
         verify(orderRepo).save(orderCaptor.capture());
         assertEquals("SePay", orderCaptor.getValue().getPaymentMethod());
@@ -82,11 +84,75 @@ class OrderServiceTest {
         when(orderRepo.save(any(Orders.class))).thenReturn(savedOrder);
         when(carRepo.findForUpdateById(1)).thenReturn(Optional.of(car));
 
-        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+        RuntimeException error = assertThrows(RuntimeException.class,
                 () -> orderService.checkout("user1", "Hà Nội", Map.of(1, item)));
 
         assertTrue(error.getMessage().contains("không đủ tồn kho"));
         verify(detailRepo, never()).save(any());
+    }
+
+    @Test
+    void checkoutRejectsCarWithZeroStock() {
+        Car car = car(1, 500_000_000D, 0);
+        CartItem item = new CartItem(1, "Xe", 1D, 1);
+        Orders savedOrder = new Orders();
+        savedOrder.setId(12);
+
+        when(orderRepo.save(any(Orders.class))).thenReturn(savedOrder);
+        when(carRepo.findForUpdateById(1)).thenReturn(Optional.of(car));
+
+        RuntimeException error = assertThrows(RuntimeException.class,
+                () -> orderService.checkout("user1", "Hà Nội", Map.of(1, item)));
+
+        assertTrue(error.getMessage().contains("hết hàng"));
+        verify(detailRepo, never()).save(any());
+        verify(carRepo, never()).save(any());
+    }
+
+    @Test
+    void checkoutRejectsUnavailableCar() {
+        Car car = car(1, 500_000_000D, 2);
+        car.setStatus("INACTIVE");
+        CartItem item = new CartItem(1, "Xe", 1D, 1);
+        Orders savedOrder = new Orders();
+        savedOrder.setId(13);
+
+        when(orderRepo.save(any(Orders.class))).thenReturn(savedOrder);
+        when(carRepo.findForUpdateById(1)).thenReturn(Optional.of(car));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> orderService.checkout("user1", "Hà Nội", Map.of(1, item)));
+
+        assertTrue(error.getMessage().contains("không khả dụng"));
+        verify(detailRepo, never()).save(any());
+        verify(carRepo, never()).save(any());
+    }
+
+    @Test
+    void cancelExpiredOrdersSkipsOrderPaidBeforeLock() {
+        Orders staleOrder = new Orders();
+        staleOrder.setId(30);
+        staleOrder.setStatus(OrderStatus.PENDING);
+        staleOrder.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
+        staleOrder.setCreateDate(new Date(System.currentTimeMillis() - 20 * 60 * 1000L));
+
+        Orders paidOrder = new Orders();
+        paidOrder.setId(30);
+        paidOrder.setStatus(OrderStatus.PENDING);
+        paidOrder.setDepositStatus(OrderStatus.DEPOSIT_PAID);
+        paidOrder.setCreateDate(staleOrder.getCreateDate());
+
+        when(orderRepo.findByDepositStatusAndStatusAndCreateDateBefore(
+                eq(OrderStatus.DEPOSIT_UNPAID), eq(OrderStatus.PENDING), any(Date.class)))
+                .thenReturn(List.of(staleOrder));
+        when(orderRepo.findForUpdateById(30)).thenReturn(Optional.of(paidOrder));
+
+        orderService.cancelExpiredOrders();
+
+        assertEquals(OrderStatus.PENDING, paidOrder.getStatus());
+        verify(orderRepo, never()).save(paidOrder);
+        verify(detailRepo, never()).findByOrderId(anyInt());
+        verifyNoInteractions(carRepo);
     }
 
     @Test

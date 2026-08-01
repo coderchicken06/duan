@@ -38,6 +38,7 @@ CREATE TABLE dbo.Car (
     [year] INT NULL,
     color NVARCHAR(50) NULL,
     stock INT NOT NULL CONSTRAINT DF_Car_Stock DEFAULT 0,
+    status NVARCHAR(20) NOT NULL CONSTRAINT DF_Car_Status DEFAULT 'AVAILABLE',
 
     first_registration NVARCHAR(50) NULL,
     mileage INT NULL,
@@ -64,6 +65,7 @@ CREATE TABLE dbo.Car (
     CONSTRAINT FK_Car_Brand FOREIGN KEY (brand_id) REFERENCES dbo.Brand(id),
     CONSTRAINT CK_Car_Price CHECK (price >= 0),
     CONSTRAINT CK_Car_Stock CHECK (stock >= 0),
+    CONSTRAINT CK_Car_Status CHECK (status IN ('AVAILABLE', 'DEPOSITED', 'SOLD', 'INACTIVE')),
     CONSTRAINT CK_Car_Mileage CHECK (mileage IS NULL OR mileage >= 0),
     CONSTRAINT CK_Car_Seats CHECK (seats IS NULL OR seats > 0)
 );

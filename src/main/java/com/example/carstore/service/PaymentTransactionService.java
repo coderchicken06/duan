@@ -55,9 +55,6 @@ public class PaymentTransactionService {
     @Value("${sepay.api-key:}")
     private String apiKey;
 
-    @Value("${sepay.secret-key:${SEPAY_SECRET_KEY:}}")
-    private String sepaySecretKey;
-
     @Value("${sepay.checkout-url:https://pay-sandbox.sepay.vn/v1/checkout/init}")
     private String checkoutUrl;
 
@@ -136,14 +133,11 @@ public class PaymentTransactionService {
     }
 
     public boolean isValidWebhookSecret(String secret, String authorization) {
-        System.out.println("===== VERIFY =====");
-        System.out.println("Config Secret : " + secretKey);
-        System.out.println("Header Secret : " + secret);
-        System.out.println("Authorization : " + authorization);
-
+        if (secretKey == null || secretKey.isBlank()) {
+            return false;
+        }
         if (authorization != null) {
             String expected = "Apikey " + secretKey;
-            System.out.println("Expected      : " + expected);
             return expected.equalsIgnoreCase(authorization.trim());
         }
 
@@ -256,8 +250,9 @@ public class PaymentTransactionService {
         // 11. Gửi email thông báo
         try {
             sendPaymentEmails(order, amount);
-        } catch (Exception e) {
-            e.printStackTrace();
+        } catch (Exception exception) {
+            logger.warn("Không thể gửi email thông báo thanh toán cho đơn hàng {}: {}",
+                    orderId, exception.getMessage(), exception);
         }
     }
 

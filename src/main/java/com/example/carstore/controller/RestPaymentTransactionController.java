@@ -8,7 +8,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Enumeration;
 import java.util.Map;
 
 import javax.servlet.http.HttpServletRequest;
@@ -70,25 +69,14 @@ public class RestPaymentTransactionController {
 
         try {
 
-            System.out.println("===== WEBHOOK =====");
-
-            System.out.println("Method = " + request.getMethod());
-            System.out.println("Content-Type = " + request.getContentType());
-            Enumeration<String> names = request.getHeaderNames();
-
-            while (names.hasMoreElements()) {
-                String h = names.nextElement();
-                System.out.println(h + " = " + request.getHeader(h));
+            if (!service.isValidWebhookSecret(secret, authorization)) {
+                return ResponseEntity.status(401).body(Map.of(
+                        "success", false,
+                        "error", "Webhook authentication failed"));
             }
-
-            System.out.println("Payload = " + payload);
-
-            System.out.println("Authorization = " + authorization);
-            System.out.println("Secret = " + secret);
 
             // Nếu SePay chỉ gửi request kiểm tra mà không có body
             if (payload == null) {
-                System.out.println("Webhook verify (no payload)");
                 return ResponseEntity.ok(Map.of(
                         "success", true));
             }
@@ -99,9 +87,6 @@ public class RestPaymentTransactionController {
                     "success", true));
 
         } catch (Exception e) {
-
-            e.printStackTrace();
-
             return ResponseEntity.badRequest().body(Map.of(
                     "success", false,
                     "error", e.getMessage()));

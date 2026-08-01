@@ -8,7 +8,6 @@ import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.repository.CarRepository;
 import com.example.carstore.util.OrderStatus;
-import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.annotation.Transactional;
@@ -103,13 +102,17 @@ public class OrderService {
                 throw new IllegalArgumentException("Xe " + car.getName() + " hiện không khả dụng để đặt cọc.");
             }
 
-            if (car.getStock() == null || car.getStock() < item.getQuantity()) {
-                throw new IllegalArgumentException(
-                        "Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock());
+            if (car.getStock() <= 0) {
+                throw new RuntimeException("Xe " + car.getName() + " đã hết hàng.");
+            }
+            if (car.getStock() < item.getQuantity()) {
+                throw new RuntimeException(
+                        "Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock()
+                                + ", yêu cầu: " + item.getQuantity());
             }
 
             car.setStock(car.getStock() - item.getQuantity());
-            car.setStatus("DEPOSITED");
+            car.setStatus(car.getStock() == 0 ? "DEPOSITED" : "AVAILABLE");
             carRepo.save(car);
 
             OrderDetail detail = new OrderDetail();
@@ -170,18 +173,25 @@ public class OrderService {
         return orderRepo.save(order);
     }
 
-    @Scheduled(fixedDelay = 300000)
     @Transactional
-    public void autoCancelExpiredDeposits() {
-        Date threshold = new Date(System.currentTimeMillis() - 30 * 60 * 1000L);
+    public void cancelExpiredOrders() {
+        Date threshold = new Date(System.currentTimeMillis() - 15 * 60 * 1000L);
         List<Orders> expiredOrders = orderRepo.findByDepositStatusAndStatusAndCreateDateBefore(
                 OrderStatus.DEPOSIT_UNPAID, OrderStatus.PENDING, threshold);
 
         for (Orders order : expiredOrders) {
-            order.setStatus(OrderStatus.CANCELLED);
-            order.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
-            orderRepo.save(order);
-            restoreStock(detailRepo.findByOrderId(order.getId()));
+            Orders lockedOrder = orderRepo.findForUpdateById(order.getId()).orElse(null);
+            if (lockedOrder == null
+                    || !OrderStatus.PENDING.equals(lockedOrder.getStatus())
+                    || !OrderStatus.DEPOSIT_UNPAID.equals(lockedOrder.getDepositStatus())
+                    || lockedOrder.getCreateDate() == null
+                    || !lockedOrder.getCreateDate().before(threshold)) {
+                continue;
+            }
+            lockedOrder.setStatus(OrderStatus.CANCELLED);
+            lockedOrder.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
+            orderRepo.save(lockedOrder);
+            restoreStock(detailRepo.findByOrderId(lockedOrder.getId()));
         }
     }
 
@@ -192,7 +202,9 @@ public class OrderService {
                     .orElseThrow(() -> new IllegalArgumentException("Xe trong đơn hàng không còn tồn tại."));
             int quantity = detail.getQuantity() == null ? 0 : detail.getQuantity();
             car.setStock(car.getStock() + quantity);
-            car.setStatus("AVAILABLE");
+            if (car.getStock() > 0) {
+                car.setStatus("AVAILABLE");
+            }
             carRepo.save(car);
         }
     }

@@ -1,5 +1,6 @@
 package com.example.carstore.service;
 
+import com.example.carstore.controller.RestPaymentTransactionController;
 import com.example.carstore.entity.Contract;
 import com.example.carstore.entity.Orders;
 import com.example.carstore.entity.PaymentTransaction;
@@ -17,6 +18,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.http.ResponseEntity;
+
+import javax.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -61,6 +65,38 @@ class PaymentTransactionServiceTest {
         assertEquals(100L, result.get("amount"));
         assertTrue(result.get("qrUrl") instanceof String);
         assertFalse(((String) result.get("qrUrl")).isBlank());
+    }
+
+    @Test
+    void webhookAuthenticationRejectsWrongSecretAndAuthorization() {
+        assertFalse(service.isValidWebhookSecret("wrong-secret", null));
+        assertFalse(service.isValidWebhookSecret(null, "Apikey wrong-secret"));
+        assertFalse(service.isValidWebhookSecret(null, null));
+        assertTrue(service.isValidWebhookSecret("checkout-secret", null));
+        assertTrue(service.isValidWebhookSecret(null, "Apikey checkout-secret"));
+    }
+
+    @Test
+    void webhookAuthenticationRejectsRequestsWhenSecretIsNotConfigured() {
+        ReflectionTestUtils.setField(service, "secretKey", "");
+
+        assertFalse(service.isValidWebhookSecret("", null));
+        assertFalse(service.isValidWebhookSecret(null, "Apikey "));
+    }
+
+    @Test
+    void webhookControllerReturnsUnauthorizedBeforeProcessingPayload() {
+        PaymentTransactionService paymentService = mock(PaymentTransactionService.class);
+        RestPaymentTransactionController controller =
+                new RestPaymentTransactionController(paymentService, orderRepo);
+        Map<String, Object> payload = Map.of("referenceCode", "TX-UNAUTHORIZED");
+        when(paymentService.isValidWebhookSecret("wrong-secret", null)).thenReturn(false);
+
+        ResponseEntity<?> response = controller.sePayWebhook(
+                payload, null, "wrong-secret", mock(HttpServletRequest.class));
+
+        assertEquals(401, response.getStatusCodeValue());
+        verify(paymentService, never()).processSePayWebhook(anyMap());
     }
 
     @Test

@@ -166,10 +166,14 @@ public class QuotationService {
             Car car = carRepo.findForUpdateById(item.getCarId())
                     .orElseThrow(() -> new IllegalArgumentException("Xe trong báo giá không còn tồn tại."));
             int quantity = item.getQuantity() == null ? 0 : item.getQuantity();
+            if (!"AVAILABLE".equalsIgnoreCase(car.getStatus())) {
+                throw new IllegalArgumentException("Xe " + car.getName() + " hiện không khả dụng để đặt cọc.");
+            }
             if (quantity < 1 || car.getStock() == null || car.getStock() < quantity) {
                 throw new IllegalArgumentException("Xe " + car.getName() + " không đủ tồn kho.");
             }
             car.setStock(car.getStock() - quantity);
+            car.setStatus(car.getStock() == 0 ? "DEPOSITED" : "AVAILABLE");
             carRepo.save(car);
             OrderDetail detail = new OrderDetail();
             detail.setOrderId(savedOrder.getId());

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.HttpRequestMethodNotSupportedException;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.stream.Collectors;
 
@@ -50,6 +51,13 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Object> handleMethodNotSupported(HttpRequestMethodNotSupportedException ex) {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
                 .body(ResponseUtils.fail("Phương thức HTTP không được hỗ trợ cho API này."));
+    }
+
+    @ExceptionHandler(ResponseStatusException.class)
+    @ResponseBody
+    public ResponseEntity<Object> handleResponseStatus(ResponseStatusException ex) {
+        return ResponseEntity.status(ex.getStatus())
+                .body(ResponseUtils.fail(ex.getReason()));
     }
 
     @ExceptionHandler(Exception.class)

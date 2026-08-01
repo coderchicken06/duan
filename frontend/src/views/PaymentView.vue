@@ -94,8 +94,8 @@ const qrUrl = ref('')
 let pollInterval = null
 let countdownInterval = null
 
-// Giới hạn thời gian 3 phút = 180 giây
-const timeLeft = ref(180)
+// Đồng bộ thời hạn thanh toán 15 phút với Backend Scheduler
+const timeLeft = ref(15 * 60)
 const isTimeout = ref(false)
 
 const formatDate = value => value ? new Date(value).toLocaleString('vi-VN') : ''
@@ -151,14 +151,14 @@ function startPolling() {
   }
 
   if (!countdownInterval) {
-    timeLeft.value = 180; // Reset lại đúng 3 phút
+    timeLeft.value = 15 * 60;
     isTimeout.value = false;
 
     countdownInterval = setInterval(() => {
       if (timeLeft.value > 0) {
         timeLeft.value--;
       } else {
-        // Hết 3 phút -> Báo hết hạn / chuyển khoản thất bại
+        // Hết 15 phút -> đơn có thể được Backend Scheduler tự động hủy
         isTimeout.value = true;
         stopAllTimers();
       }
