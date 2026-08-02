@@ -1,6 +1,6 @@
 <template>
   <div class="page-home">
-    <div v-if="alert" class="home-cart-alert show">{{ alert }}</div>
+    <div v-if="alert" class="home-cart-alert show error">{{ alert }}</div>
 
     <section class="ford-hero-panel">
       <div class="ford-hero-panel-content">

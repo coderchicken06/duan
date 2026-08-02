@@ -84,7 +84,7 @@
         </aside>
       </div>
 
-      <div v-if="message" class="alert alert-danger mt-3" role="alert">{{ message }}</div>
+      <div v-if="message" class="alert alert-danger cart-alert show error" role="alert">{{ message }}</div>
     </div>
   </main>
 </template>

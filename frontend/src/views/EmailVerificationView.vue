@@ -10,7 +10,8 @@
       </p>
 
       <form class="vstack gap-3 mt-4" @submit.prevent="verify">
-        <div v-if="message" class="alert" :class="success ? 'alert-success' : 'alert-danger'">
+        <div v-if="message" class="alert cart-alert show"
+          :class="[success ? 'alert-success' : 'alert-danger', { error: !success }]">
           {{ message }}
         </div>
         <div>

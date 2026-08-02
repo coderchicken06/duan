@@ -38,7 +38,8 @@
             </div>
           </div>
 
-          <div v-if="message" :class="['alert', success ? 'alert-success' : 'alert-danger']">
+          <div v-if="message"
+            :class="['alert', 'cart-alert', 'show', success ? 'alert-success' : 'alert-danger', { error: !success }]">
             {{ message }}
           </div>
 
@@ -142,7 +143,8 @@
               v-if="editingReviewId" class="btn btn-outline-secondary" type="button"
               @click="cancelReviewEdit">Hủy</button></div>
         </form>
-        <div v-if="reviewMessage" class="alert mt-3" :class="reviewOk ? 'alert-success' : 'alert-danger'">{{
+        <div v-if="reviewMessage" class="alert cart-alert show"
+          :class="[reviewOk ? 'alert-success' : 'alert-danger', { error: !reviewOk }]">{{
           reviewMessage }}</div>
         <div v-if="reviews.length" class="review-list">
           <article v-for="review in reviews" :key="review.id" class="review-item">

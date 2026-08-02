@@ -43,6 +43,7 @@
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
 import { adminApi } from '../../api'
+import { showCartToast } from '../../composables/useCartToast'
 
 const orders = ref([])
 let pollInterval = null
@@ -104,9 +105,9 @@ async function loadSilent() {
 async function updateStatus(o) {
   try {
     const { data } = await adminApi.updateOrderStatus(o.id, o.status)
-    if (!data.success) alert(data.message || 'Không thể cập nhật trạng thái')
+    if (!data.success) showCartToast(data.message || 'Không thể cập nhật trạng thái', 'error')
   } catch (error) {
-    alert(error.response?.data?.message || 'Không thể cập nhật trạng thái')
+    showCartToast(error.response?.data?.message || 'Không thể cập nhật trạng thái', 'error')
   } finally {
     await load()
   }
@@ -116,9 +117,9 @@ async function cancel(order) {
   if (!confirm('Hủy đơn hàng này? Tồn kho sẽ được hoàn lại nếu đơn chưa thanh toán cọc.')) return
   try {
     const { data } = await adminApi.updateOrderStatus(order.id, 'CANCELLED')
-    if (!data.success) alert(data.message || 'Không thể hủy đơn hàng')
+    if (!data.success) showCartToast(data.message || 'Không thể hủy đơn hàng', 'error')
   } catch (error) {
-    alert(error.response?.data?.message || 'Không thể hủy đơn hàng')
+    showCartToast(error.response?.data?.message || 'Không thể hủy đơn hàng', 'error')
   } finally {
     await load()
   }

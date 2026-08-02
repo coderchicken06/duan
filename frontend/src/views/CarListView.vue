@@ -47,13 +47,6 @@
           </label>
 
           <label>
-            <span>Trạng thái</span>
-            <select v-model="filters.status">
-              <option value="AVAILABLE">Đang bán</option>
-            </select>
-          </label>
-
-          <label>
             <span>Năm</span>
             <select v-model="filters.year">
               <option value="">Tất cả</option>
@@ -79,7 +72,7 @@
         </div>
       </div>
       <p v-if="!loading && filteredCars.length === 0" class="ford-empty-state">Không có xe nào phù hợp với bộ lọc.</p>
-      <div v-if="message" class="alert alert-danger mt-3">{{ message }}</div>
+      <div v-if="message" class="alert alert-danger cart-alert show error">{{ message }}</div>
     </div>
   </div>
 </template>
@@ -101,7 +94,6 @@ const q = ref(route.query.q || '')
 const filters = ref({
   brandId: '',
   priceRange: '',
-  status: 'AVAILABLE',
   year: '',
   color: '',
 })
@@ -132,7 +124,7 @@ const filteredCars = computed(() => {
       if (filters.value.priceRange === '2b-plus') return price > 2000000000
       return true
     })()
-    const matchesStatus = String(car.status || '').toUpperCase() === filters.value.status
+    const matchesStatus = String(car.status || '').toUpperCase() === 'AVAILABLE'
     const matchesYear = !filters.value.year || String(car.year) === filters.value.year
     const matchesColor = !filters.value.color || color.includes(filters.value.color.trim().toLowerCase())
 
@@ -172,7 +164,6 @@ function resetFilters() {
   filters.value = {
     brandId: '',
     priceRange: '',
-    status: 'AVAILABLE',
     year: '',
     color: '',
   }

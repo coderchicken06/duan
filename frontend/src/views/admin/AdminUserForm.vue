@@ -13,7 +13,6 @@
             <option value="ROLE_ADMIN">ADMIN</option>
           </select>
         </div>
-        <div v-if="error" class="alert alert-danger">{{ error }}</div>
         <div class="d-flex gap-2"><router-link class="btn cs-btn cs-btn-ghost flex-grow-1" to="/admin/users">Hủy</router-link><button class="btn cs-btn cs-btn-primary flex-grow-1" type="submit">Lưu thông tin</button></div>
       </form>
     </div></div>
@@ -24,11 +23,11 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { adminApi } from '../../api'
+import { showCartToast } from '../../composables/useCartToast'
 
 const route = useRoute()
 const router = useRouter()
 const isEdit = computed(() => !!route.params.username)
-const error = ref('')
 const form = ref({ username: '', fullname: '', email: '', password: '', role: 'ROLE_USER' })
 
 onMounted(async () => {
@@ -41,15 +40,19 @@ onMounted(async () => {
 })
 
 async function submit() {
-  error.value = ''
-  const res = isEdit.value
-    ? await adminApi.updateUser(String(route.params.username), form.value)
-    : await adminApi.createUser(form.value)
-  if (res.data.success === false) {
-    error.value = res.data.message
-    return
+  try {
+    const res = isEdit.value
+      ? await adminApi.updateUser(String(route.params.username), form.value)
+      : await adminApi.createUser(form.value)
+    if (res.data.success === false) {
+      showCartToast(res.data.message || 'Không thể lưu người dùng', 'error')
+      return
+    }
+    showCartToast(isEdit.value ? 'Đã cập nhật người dùng' : 'Đã thêm người dùng')
+    await router.push('/admin/users')
+  } catch (error) {
+    showCartToast(error.response?.data?.message || 'Không thể lưu người dùng', 'error')
   }
-  router.push('/admin/users')
 }
 </script>
 <style scoped>.user-form-card{max-width:760px;margin:auto}.form-header{background:#fffafa;border-bottom:1px solid #fee2e2}.admin-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:#dc2626}.form-label{font-weight:600;color:#374151}.form-control,.form-select{min-height:46px;background:#fff;color:#111827;border-color:#d1d5db}.form-control:disabled{background:#f3f4f6;color:#6b7280}.cs-btn{min-height:44px;font-weight:600}</style>

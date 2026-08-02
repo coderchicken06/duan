@@ -7,7 +7,7 @@
           <h2 class="cs-page-title mb-2">Đặt lại mật khẩu</h2>
           <p class="text-secondary mb-4">Tạo mật khẩu mới để bảo vệ tài khoản.</p>
           <form class="vstack gap-3" @submit.prevent="submit">
-            <div v-if="error" class="alert alert-danger">{{ error }}</div>
+            <div v-if="error" class="alert alert-danger cart-alert show error">{{ error }}</div>
             <div><label class="form-label">Mật khẩu mới</label>
               <div class="input-group"><input v-model="password" :type="showPassword ? 'text' : 'password'"
                   class="form-control" required placeholder="Nhập mật khẩu mới" autocomplete="new-password" /><button

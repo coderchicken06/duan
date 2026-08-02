@@ -7,7 +7,7 @@
           <h2 class="cs-page-title mb-2">Xác nhận OTP</h2>
           <p class="text-secondary mb-4">Nhập mã xác thực đã được gửi đến email của bạn.</p>
           <form class="vstack gap-3" @submit.prevent="submit">
-            <div v-if="error" class="alert alert-danger">{{ error }}</div>
+            <div v-if="error" class="alert alert-danger cart-alert show error">{{ error }}</div>
             <div><label class="form-label">Mã OTP</label><input v-model="otp" class="form-control otp-input" required
                 placeholder="Nhập mã OTP" inputmode="numeric" autocomplete="one-time-code" /></div>
             <button class="btn cs-btn cs-btn-primary w-100" type="submit">Xác nhận mã</button>

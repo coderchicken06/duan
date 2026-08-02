@@ -1,5 +1,7 @@
 package com.example.carstore.service;
 
+import com.example.carstore.entity.Car;
+import com.example.carstore.entity.Promotion;
 import com.example.carstore.entity.PromotionCar;
 import com.example.carstore.repository.CarRepository;
 import com.example.carstore.repository.PromotionCarRepository;
@@ -11,9 +13,13 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
@@ -27,6 +33,73 @@ class PromotionServiceTest {
     @BeforeEach
     void setUp() {
         service = new PromotionService(promotionRepository, promotionCarRepository, carRepository);
+    }
+
+    @Test
+    void activeForCarOrdersImmutableRepositoryResultByActualDiscount() {
+        Car car = new Car();
+        car.setPrice(1_000_000_000D);
+        Promotion fixed = promotion(1, "FIXED", 150_000_000D);
+        Promotion percent = promotion(2, "PERCENT", 20D);
+        when(promotionRepository.findActiveByCarId(eq(7), any(java.util.Date.class)))
+                .thenReturn(List.of(fixed, percent));
+        when(carRepository.findById(7)).thenReturn(Optional.of(car));
+
+        List<Promotion> result = service.activeForCar(7);
+
+        assertSame(percent, result.get(0));
+        assertSame(fixed, result.get(1));
+    }
+
+    @Test
+    void priceAfterPromotionUsesLargestActualDiscountWithoutLoadingCarAgain() {
+        Promotion fixed = promotion(1, "FIXED", 150_000_000D);
+        Promotion percent = promotion(2, "PERCENT", 20D);
+        when(promotionRepository.findActiveByCarId(eq(7), any(java.util.Date.class)))
+                .thenReturn(List.of(fixed, percent));
+
+        double result = service.priceAfterPromotion(7, 1_000_000_000D);
+
+        assertEquals(800_000_000D, result, 0.001D);
+        verify(carRepository, never()).findById(anyInt());
+    }
+
+    @Test
+    void saveRejectsPastStartDate() {
+        Promotion promotion = validPromotion();
+        promotion.setStartDate(java.sql.Date.valueOf(LocalDate.now().minusDays(1)));
+        promotion.setEndDate(java.sql.Date.valueOf(LocalDate.now().plusDays(1)));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> service.save(promotion));
+
+        assertEquals("Ngày bắt đầu không được trước ngày hiện tại.", error.getMessage());
+        verify(promotionRepository, never()).save(any());
+    }
+
+    @Test
+    void saveRejectsPastEndDate() {
+        Promotion promotion = validPromotion();
+        promotion.setEndDate(java.sql.Date.valueOf(LocalDate.now().minusDays(1)));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> service.save(promotion));
+
+        assertEquals("Ngày kết thúc không được trước ngày hiện tại.", error.getMessage());
+        verify(promotionRepository, never()).save(any());
+    }
+
+    @Test
+    void saveAcceptsToday() {
+        Promotion promotion = validPromotion();
+        promotion.setStartDate(java.sql.Date.valueOf(LocalDate.now()));
+        promotion.setEndDate(java.sql.Date.valueOf(LocalDate.now()));
+        when(promotionRepository.save(promotion)).thenReturn(promotion);
+
+        Promotion result = service.save(promotion);
+
+        assertSame(promotion, result);
+        verify(promotionRepository).save(promotion);
     }
 
     @Test
@@ -78,5 +151,19 @@ class PromotionServiceTest {
         service.stopApplying(3);
 
         verify(promotionCarRepository).deleteByPromotionId(3);
+    }
+
+    private Promotion promotion(Integer id, String type, double value) {
+        Promotion promotion = new Promotion();
+        promotion.setId(id);
+        promotion.setType(type);
+        promotion.setValue(value);
+        return promotion;
+    }
+
+    private Promotion validPromotion() {
+        Promotion promotion = promotion(null, "PERCENT", 10D);
+        promotion.setName("Khuyến mãi hợp lệ");
+        return promotion;
     }
 }

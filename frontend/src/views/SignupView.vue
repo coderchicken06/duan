@@ -9,7 +9,7 @@
           </div>
           <div class="p-4 pt-3">
             <form class="vstack gap-3" @submit.prevent="submit">
-              <div v-if="error" class="alert alert-danger">{{ error }}</div>
+              <div v-if="error" class="alert alert-danger cart-alert show error">{{ error }}</div>
               <div><label class="form-label">Tên đăng nhập</label><input v-model="form.username" class="form-control"
                   required placeholder="Nhập tên đăng nhập" autocomplete="username" /></div>
               <div><label class="form-label">Họ tên</label><input v-model="form.fullname" class="form-control"

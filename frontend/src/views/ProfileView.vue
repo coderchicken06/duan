@@ -15,7 +15,7 @@
                 disabled /></div>
             <div><label class="form-label">Họ tên</label><input v-model="profile.fullname" class="form-control" /></div>
             <div><label class="form-label">Email</label><input v-model="profile.email" class="form-control" /></div>
-            <div v-if="msg" class="alert alert-success">{{ msg }}</div>
+            <div v-if="msg" class="alert alert-success cart-alert show">{{ msg }}</div>
             <button class="btn cs-btn cs-btn-primary">Cập nhật</button>
           </form>
           <hr class="my-4" />
@@ -24,7 +24,8 @@
             <input v-model="pwd.oldPassword" type="password" class="form-control" placeholder="Mật khẩu cũ" />
             <input v-model="pwd.newPassword" type="password" class="form-control" placeholder="Mật khẩu mới" />
             <input v-model="pwd.confirmPassword" type="password" class="form-control" placeholder="Xác nhận mật khẩu" />
-            <div v-if="pwdMsg" class="alert" :class="pwdOk ? 'alert-success' : 'alert-danger'">{{ pwdMsg }}</div>
+            <div v-if="pwdMsg" class="alert cart-alert show"
+              :class="[pwdOk ? 'alert-success' : 'alert-danger', { error: !pwdOk }]">{{ pwdMsg }}</div>
             <button class="btn cs-btn cs-btn-warning">Đổi mật khẩu</button>
           </form>
         </div>

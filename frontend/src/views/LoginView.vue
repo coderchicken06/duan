@@ -11,10 +11,10 @@
             </div>
             <div class="p-4">
               <form class="vstack gap-3" @submit.prevent="submit">
-                <div v-if="error" class="alert alert-danger">{{ error }}</div>
-                <div v-if="registered" class="alert alert-success">Đăng ký thành công. Vui lòng đăng nhập.</div>
-                <div v-if="verified" class="alert alert-success">Xác thực email thành công. Bạn có thể đăng nhập.</div>
-                <div v-if="resetSuccess" class="alert alert-success">Đổi mật khẩu thành công. Vui lòng đăng nhập.</div>
+                <div v-if="error" class="alert alert-danger cart-alert show error">{{ error }}</div>
+                <div v-if="registered" class="alert alert-success cart-alert show">Đăng ký thành công. Vui lòng đăng nhập.</div>
+                <div v-if="verified" class="alert alert-success cart-alert show">Xác thực email thành công. Bạn có thể đăng nhập.</div>
+                <div v-if="resetSuccess" class="alert alert-success cart-alert show">Đổi mật khẩu thành công. Vui lòng đăng nhập.</div>
                 <div>
                   <label class="form-label cs-muted">Username</label>
                   <input v-model="username" class="form-control" required placeholder="Nhập tên đăng nhập"

@@ -18,8 +18,8 @@
           </div>
           <div class="order-total"><span>Tổng giá trị xe</span><strong>{{ formatPrice(total) }} VNĐ</strong>
           </div>
-          <div v-if="error" class="alert alert-danger">{{ error }}</div>
-          <div v-if="success" class="alert alert-success">Gửi yêu cầu đặt xe thành công! Mã đơn: #{{ orderId
+          <div v-if="error" class="alert alert-danger cart-alert show error">{{ error }}</div>
+          <div v-if="success" class="alert alert-success cart-alert show">Gửi yêu cầu đặt xe thành công! Mã đơn: #{{ orderId
           }}</div>
           <button type="submit" class="btn cs-btn cs-btn-primary w-100" :disabled="submitting"><span v-if="submitting"
               class="spinner-border spinner-border-sm me-2"></span>{{ submitting ? 'Đang gửi yêu cầu...' : 'Xác nhận gửi yêu cầu' }}</button>

@@ -61,7 +61,8 @@
           </div>
           <div class="field">
             <label for="service-date">Ngày hẹn *</label>
-            <input id="service-date" v-model="form.appointmentDate" :min="today" type="date" class="form-control" />
+            <DatePickerInput id="service-date" v-model="form.appointmentDate" :min="today"
+              aria-label="Ngày hẹn" title="Ngày hẹn (dd/mm/yyyy)" />
           </div>
           <div class="field">
             <label for="service-time">Giờ hẹn *</label>
@@ -71,7 +72,7 @@
           </div>
 
           <div class="booking-actions">
-            <div v-if="msg" class="alert mb-0" :class="ok ? 'alert-success' : 'alert-danger'" role="alert">{{ msg }}
+            <div v-if="msg" class="alert cart-alert show" :class="[ok ? 'alert-success' : 'alert-danger', { error: !ok }]" role="alert">{{ msg }}
             </div>
             <button class="btn cs-btn cs-btn-primary" type="submit" :disabled="submitting">
               {{ submitting ? 'Đang gửi yêu cầu...' : 'Xác nhận đặt lịch' }}
@@ -87,6 +88,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, supportApi } from '../api'
+import DatePickerInput from '../components/DatePickerInput.vue'
 
 const route = useRoute()
 const toLocalDate = (value) => {
@@ -96,6 +98,7 @@ const toLocalDate = (value) => {
   return `${year}-${month}-${day}`
 }
 const today = toLocalDate(new Date())
+const toApiDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? String(value) : ''
 const services = [
   { icon: '🔧', title: 'Bảo dưỡng định kỳ', desc: 'Kiểm tra và bảo dưỡng xe theo tiêu chuẩn hãng.' },
   { icon: '🛞', title: 'Lốp và phụ tùng', desc: 'Kiểm tra lốp, dầu nhớt và phụ tùng cần thay thế.' },
@@ -158,7 +161,8 @@ async function submit() {
 
   submitting.value = true
   try {
-    const { data } = await supportApi.create(form.value)
+    const payload = { ...form.value, appointmentDate: toApiDate(form.value.appointmentDate) }
+    const { data } = await supportApi.create(payload)
     ok.value = data.success
     msg.value = data.message || 'Không thể đặt lịch'
     if (data.success) {

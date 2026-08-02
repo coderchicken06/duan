@@ -78,6 +78,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { adminApi, quotationApi, formatPrice } from '../../api'
+import { showCartToast } from '../../composables/useCartToast'
 
 const stats = ref({
   totalCars: 0,
@@ -136,7 +137,7 @@ async function setQuotationStatus(quote, status) {
     const { data } = await quotationApi.update(quote.id, { discount: quote.discount || 0, status })
     Object.assign(quote, data.data)
   } catch (error) {
-    errorMessage.value = error.response?.data?.message || 'Không thể cập nhật báo giá.'
+    showCartToast(error.response?.data?.message || 'Không thể cập nhật báo giá.', 'error')
   }
 }
 </script>

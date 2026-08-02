@@ -78,7 +78,8 @@
                 placeholder="Mô tả yêu cầu bạn cần CarStore hỗ trợ"></textarea>
             </div>
 
-            <div v-if="msg" class="alert field-full mb-0" :class="ok ? 'alert-success' : 'alert-danger'" role="alert">{{
+            <div v-if="msg" class="alert cart-alert show"
+              :class="[ok ? 'alert-success' : 'alert-danger', { error: !ok }]" role="alert">{{
               msg }}</div>
 
             <div class="form-actions field-full">

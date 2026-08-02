@@ -92,7 +92,7 @@
           <div class="col-12"><label class="form-label">Mô tả</label><textarea v-model="form.description"
               class="form-control" rows="4"></textarea></div>
         </div>
-        <div v-if="error" class="alert alert-danger">{{ error }}</div>
+        <div v-if="error" class="alert alert-danger cart-alert show error">{{ error }}</div>
         <div class="d-flex gap-2">
           <button type="submit" class="btn cs-btn cs-btn-primary">Lưu</button>
           <router-link class="btn cs-btn cs-btn-ghost" to="/admin/inventory">Hủy</router-link>

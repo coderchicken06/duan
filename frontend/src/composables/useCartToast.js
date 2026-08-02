@@ -1,5 +1,5 @@
-export function showCartToast(message) {
+export function showCartToast(message, type = 'success') {
   if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent('carstore-toast', { detail: message }))
+    window.dispatchEvent(new CustomEvent('carstore-toast', { detail: { message, type } }))
   }
 }

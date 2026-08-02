@@ -1,7 +1,6 @@
 <template>
     <main class="container py-5">
         <h1>Khuyến mãi & Tin tức</h1>
-        <div v-if="message" class="alert" :class="ok ? 'alert-success' : 'alert-danger'">{{ message }}</div>
         <div class="marketing-grid">
             <section class="cs-card p-4">
                 <h2>Khuyến mãi</h2>
@@ -13,14 +12,17 @@
                         <option value="PERCENT">Phần trăm</option>
                         <option value="FIXED">Số tiền</option>
                     </select><input v-model.number="promotion.value" class="form-control" type="number" min="1"
-                        placeholder="Giá trị" required><input v-model="promotion.startDate" class="form-control"
-                        type="date"><input v-model="promotion.endDate" class="form-control" type="date"><label><input
+                        placeholder="Giá trị" required><DatePickerInput v-model="promotion.startDate" :min="today"
+                        aria-label="Ngày bắt đầu" title="Ngày bắt đầu (dd/mm/yyyy)" /><DatePickerInput
+                        v-model="promotion.endDate" :min="today" aria-label="Ngày kết thúc"
+                        title="Ngày kết thúc (dd/mm/yyyy)" /><label><input
                             v-model="promotion.status" type="checkbox"> Đang hoạt động</label><button
                         class="btn btn-danger">{{ promotion.id ? 'Cập nhật' : 'Thêm' }}</button></form>
                 <div v-for="item in promotions" :key="item.id" class="admin-row"><span><strong>{{ item.name
                             }}</strong><small>{{ assignedCarName(item.id) }} giảm {{ item.value }}{{ item.type === 'PERCENT' ? '%' :
                                 ' VNĐ'
-                            }}</small></span><span><button v-if="!item.status"
+                            }}</small><small>Thời gian: {{ formatDateDisplay(item.startDate) || '—' }} - {{
+                                formatDateDisplay(item.endDate) || '—' }}</small></span><span><button v-if="!item.status"
                                 class="btn btn-sm btn-outline-success" @click="setPromotionStatus(item, true)">Áp dụng</button><button
                                 v-else class="btn btn-sm btn-outline-warning" @click="setPromotionStatus(item, false)">Ngừng áp dụng</button><button
                             class="btn btn-sm btn-outline-primary"
@@ -54,14 +56,27 @@
 <script setup>
 import { onMounted, ref } from 'vue'
 import { adminApi, promotionApi, newsApi, uploadApi } from '../../api'
+import { showCartToast } from '../../composables/useCartToast'
+import DatePickerInput from '../../components/DatePickerInput.vue'
 
 const promotions = ref([]), articles = ref([]), cars = ref([])
-const assignments = ref({}), message = ref(''), ok = ref(true)
+const assignments = ref({})
 const selectedCarId = ref(null)
 const emptyPromotion = () => ({ name: '', type: 'PERCENT', value: null, startDate: '', endDate: '', status: true })
 const emptyNews = () => ({ title: '', thumbnail: '', summary: '', content: '', status: 'DRAFT' })
 const promotion = ref(emptyPromotion()), article = ref(emptyNews())
 const dateInput = v => v ? String(v).slice(0, 10) : ''
+const today = (() => {
+    const value = new Date()
+    const year = value.getFullYear()
+    const month = String(value.getMonth() + 1).padStart(2, '0')
+    const day = String(value.getDate()).padStart(2, '0')
+    return `${year}-${month}-${day}`
+})()
+const formatDateDisplay = v => {
+    const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dateInput(v))
+    return match ? `${match[3]}/${match[2]}/${match[1]}` : ''
+}
 
 async function load() {
     const [p, n, c] = await Promise.all([promotionApi.getAll(), newsApi.getAll(), adminApi.getCars()])
@@ -81,23 +96,29 @@ function assignedCarName(promotionId) {
 }
 
 async function action(fn, success) {
-    try { await fn(); ok.value = true; message.value = success; await load(); return true }
-    catch (e) { ok.value = false; message.value = e.response?.data?.message || 'Không thể thực hiện'; return false }
+    try { await fn(); await load(); showCartToast(success); return true }
+    catch (e) { showCartToast(e.response?.data?.message || 'Không thể thực hiện', 'error'); return false }
 }
 
 async function savePromotion() {
-    if (!selectedCarId.value) { ok.value = false; message.value = 'Vui lòng chọn xe áp dụng.'; return }
+    if (!selectedCarId.value) { showCartToast('Vui lòng chọn xe áp dụng.', 'warning'); return }
+    const successMessage = promotion.value.id ? 'Đã cập nhật khuyến mãi' : 'Đã thêm khuyến mãi'
+    const payload = {
+        ...promotion.value,
+        startDate: dateInput(promotion.value.startDate),
+        endDate: dateInput(promotion.value.endDate),
+    }
     const saved = await action(async () => {
         const response = promotion.value.id
-            ? await promotionApi.update(promotion.value.id, promotion.value)
-            : await promotionApi.create(promotion.value)
+            ? await promotionApi.update(promotion.value.id, payload)
+            : await promotionApi.create(payload)
         promotion.value = {
             ...response.data.data,
             startDate: dateInput(response.data.data.startDate),
             endDate: dateInput(response.data.data.endDate),
         }
         await promotionApi.assignToCar(response.data.data.id, selectedCarId.value)
-    }, 'Đã lưu và áp dụng khuyến mãi cho xe')
+    }, successMessage)
     if (saved) {
         promotion.value = emptyPromotion()
         selectedCarId.value = null
@@ -114,15 +135,16 @@ async function setPromotionStatus(item, status) {
 }
 
 async function removePromotion(id) { if (confirm('Xóa khuyến mãi này?')) await action(() => promotionApi.delete(id), 'Đã xóa khuyến mãi') }
-async function onNewsFileChange(e) { const file = e.target.files?.[0]; if (!file) return; try { const { data } = await uploadApi.upload(file); article.value.thumbnail = data; ok.value = true; message.value = 'Đã tải ảnh lên' } catch (error) { ok.value = false; message.value = error.response?.data?.message || 'Không thể tải ảnh lên' } finally { e.target.value = '' } }
+async function onNewsFileChange(e) { const file = e.target.files?.[0]; if (!file) return; try { const { data } = await uploadApi.upload(file); article.value.thumbnail = data; showCartToast('Đã tải ảnh lên') } catch (error) { showCartToast(error.response?.data?.message || 'Không thể tải ảnh lên', 'error') } finally { e.target.value = '' } }
 async function saveNews() {
+    const successMessage = article.value.id ? 'Đã cập nhật tin tức' : 'Đã thêm tin tức'
     const payload = { ...article.value, slug: '' }
     const saved = await action(async () => {
         const response = article.value.id
             ? await newsApi.update(article.value.id, payload)
             : await newsApi.create(payload)
         article.value = { ...response.data.data }
-    }, 'Đã lưu tin tức')
+    }, successMessage)
     if (saved) article.value = emptyNews()
 }
 async function removeNews(id) { if (confirm('Xóa tin tức này?')) await action(() => newsApi.delete(id), 'Đã xóa tin tức') }

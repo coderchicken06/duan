@@ -7,7 +7,7 @@
           <h2 class="cs-page-title mb-2">Quên mật khẩu</h2>
           <p class="text-secondary mb-4">Nhập email đã đăng ký, chúng tôi sẽ gửi mã OTP xác thực.</p>
           <form class="vstack gap-3" @submit.prevent="submit">
-            <div v-if="error" class="alert alert-danger">{{ error }}</div>
+            <div v-if="error" class="alert alert-danger cart-alert show error">{{ error }}</div>
             <div><label class="form-label">Email đăng ký</label><input v-model="email" type="email" class="form-control"
                 required placeholder="vidu@email.com" autocomplete="email" /></div>
             <button class="btn cs-btn cs-btn-primary w-100" type="submit">Gửi mã OTP</button>
