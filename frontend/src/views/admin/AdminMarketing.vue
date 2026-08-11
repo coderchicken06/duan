@@ -96,8 +96,15 @@ function assignedCarName(promotionId) {
 }
 
 async function action(fn, success) {
-    try { await fn(); await load(); showCartToast(success); return true }
-    catch (e) { showCartToast(e.response?.data?.message || 'Không thể thực hiện', 'error'); return false }
+    try {
+        const response = await fn()
+        if (response?.data?.success === false) {
+            showCartToast(response.data.message || 'Không thể thực hiện', 'error')
+            return false
+        }
+        await load(); showCartToast(success); return true
+    }
+    catch (e) { showCartToast(e.response?.data?.message || e.message || 'Không thể thực hiện', 'error'); return false }
 }
 
 async function savePromotion() {
@@ -112,12 +119,13 @@ async function savePromotion() {
         const response = promotion.value.id
             ? await promotionApi.update(promotion.value.id, payload)
             : await promotionApi.create(payload)
+        if (response.data.success === false) return response
         promotion.value = {
             ...response.data.data,
             startDate: dateInput(response.data.data.startDate),
             endDate: dateInput(response.data.data.endDate),
         }
-        await promotionApi.assignToCar(response.data.data.id, selectedCarId.value)
+        return promotionApi.assignToCar(response.data.data.id, selectedCarId.value)
     }, successMessage)
     if (saved) {
         promotion.value = emptyPromotion()
@@ -143,7 +151,9 @@ async function saveNews() {
         const response = article.value.id
             ? await newsApi.update(article.value.id, payload)
             : await newsApi.create(payload)
+        if (response.data.success === false) return response
         article.value = { ...response.data.data }
+        return response
     }, successMessage)
     if (saved) article.value = emptyNews()
 }

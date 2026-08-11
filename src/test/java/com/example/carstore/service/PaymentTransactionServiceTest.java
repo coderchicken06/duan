@@ -1,10 +1,13 @@
 package com.example.carstore.service;
 
 import com.example.carstore.controller.RestPaymentTransactionController;
+import com.example.carstore.entity.Car;
 import com.example.carstore.entity.Contract;
+import com.example.carstore.entity.OrderDetail;
 import com.example.carstore.entity.Orders;
 import com.example.carstore.entity.PaymentTransaction;
 import com.example.carstore.repository.AccountRepository;
+import com.example.carstore.repository.CarRepository;
 import com.example.carstore.repository.ContractRepository;
 import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
@@ -20,11 +23,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.http.ResponseEntity;
 
-import javax.servlet.http.HttpServletRequest;
 
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.text.SimpleDateFormat;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -32,9 +35,12 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class PaymentTransactionServiceTest {
 
+    private static final String CARSTORE_ACCOUNT_NUMBER = "102880629915";
+
     @Mock private PaymentTransactionRepository transactionRepo;
     @Mock private OrderRepository orderRepo;
     @Mock private OrderDetailRepository detailRepo;
+    @Mock private CarRepository carRepo;
     @Mock private ContractRepository contractRepo;
     @Mock private AccountRepository accountRepo;
     @Mock private MailService mailService;
@@ -44,7 +50,7 @@ class PaymentTransactionServiceTest {
     @BeforeEach
     void setUp() {
         service = new PaymentTransactionService(
-                transactionRepo, orderRepo, detailRepo, contractRepo,
+                transactionRepo, orderRepo, detailRepo, carRepo, contractRepo,
                 accountRepo, mailService, new ObjectMapper());
         ReflectionTestUtils.setField(service, "merchantId", "SP-TEST");
         ReflectionTestUtils.setField(service, "secretKey", "checkout-secret");
@@ -92,32 +98,43 @@ class PaymentTransactionServiceTest {
     }
 
     @Test
-    void webhookControllerReturnsUnauthorizedBeforeProcessingPayload() {
+    void webhookControllerIgnoresInvalidAuthenticationHeaders() {
         PaymentTransactionService paymentService = mock(PaymentTransactionService.class);
         RestPaymentTransactionController controller =
                 new RestPaymentTransactionController(paymentService, orderRepo);
         Map<String, Object> payload = Map.of("referenceCode", "TX-UNAUTHORIZED");
-        when(paymentService.isValidWebhookSecret("wrong-secret", null)).thenReturn(false);
-
         ResponseEntity<?> response = controller.sePayWebhook(
-                payload, null, "wrong-secret", mock(HttpServletRequest.class));
-
-        assertEquals(401, response.getStatusCodeValue());
-        verify(paymentService, never()).processSePayWebhook(anyMap());
-    }
-
-    @Test
-    void webhookControllerAcceptsLegacySePayRequestWithoutAuthenticationHeaders() {
-        PaymentTransactionService paymentService = mock(PaymentTransactionService.class);
-        RestPaymentTransactionController controller =
-                new RestPaymentTransactionController(paymentService, orderRepo);
-        Map<String, Object> payload = Map.of("referenceCode", "TX-LEGACY");
-
-        ResponseEntity<?> response = controller.sePayWebhook(
-                payload, null, null, mock(HttpServletRequest.class));
+                payload, null, "wrong-secret");
 
         assertEquals(200, response.getStatusCodeValue());
         verify(paymentService).processSePayWebhook(payload);
+        verify(paymentService, never()).isValidWebhookSecret(any(), any());
+    }
+
+    @Test
+    void webhookControllerAcceptsPayloadWithoutAuthenticationHeaders() {
+        PaymentTransactionService paymentService = mock(PaymentTransactionService.class);
+        RestPaymentTransactionController controller =
+                new RestPaymentTransactionController(paymentService, orderRepo);
+        Map<String, Object> payload = Map.of("referenceCode", "TX-MISSING-AUTH");
+        ResponseEntity<?> response = controller.sePayWebhook(
+                payload, null, null);
+
+        assertEquals(200, response.getStatusCodeValue());
+        verify(paymentService).processSePayWebhook(payload);
+        verify(paymentService, never()).isValidWebhookSecret(any(), any());
+    }
+
+    @Test
+    void webhookControllerAcceptsEmptySePayProbeWithoutAuthentication() {
+        PaymentTransactionService paymentService = mock(PaymentTransactionService.class);
+        RestPaymentTransactionController controller =
+                new RestPaymentTransactionController(paymentService, orderRepo);
+        ResponseEntity<?> response = controller.sePayWebhook(
+                null, null, null);
+
+        assertEquals(200, response.getStatusCodeValue());
+        verify(paymentService, never()).processSePayWebhook(anyMap());
         verify(paymentService, never()).isValidWebhookSecret(any(), any());
     }
 
@@ -133,6 +150,7 @@ class PaymentTransactionServiceTest {
 
         service.processSePayWebhook(Map.of(
                 "referenceCode", "TX-001",
+                "accountNumber", CARSTORE_ACCOUNT_NUMBER,
                 "transferAmount", 100,
                 "transactionContent", "Thanh toan VELOR9"));
 
@@ -144,10 +162,35 @@ class PaymentTransactionServiceTest {
         ArgumentCaptor<PaymentTransaction> captor =
                 ArgumentCaptor.forClass(PaymentTransaction.class);
         verify(transactionRepo).save(captor.capture());
+        assertEquals(9, captor.getValue().getOrderId());
         assertEquals("TX-001", captor.getValue().getTransactionNo());
         assertEquals("SUCCESS", captor.getValue().getStatus());
         assertEquals(100D, captor.getValue().getAmount());
         verifyNoInteractions(mailService);
+    }
+
+    @Test
+    void roundedWebhookAmountMatchesRoundedQrAmount() {
+        Orders order = unpaidOrder();
+        order.setDepositAmount(99.6D);
+        when(transactionRepo.existsByReferenceNumber("TX-ROUND")).thenReturn(false);
+        when(orderRepo.findForUpdateById(9)).thenReturn(Optional.of(order));
+        when(contractRepo.findByOrderId(9)).thenReturn(Optional.empty());
+        when(accountRepo.findByUsername("user1")).thenReturn(Optional.empty());
+        when(accountRepo.findAll()).thenReturn(List.of());
+
+        service.processSePayWebhook(Map.of(
+                "referenceCode", "TX-ROUND",
+                "accountNumber", CARSTORE_ACCOUNT_NUMBER,
+                "transferAmount", 100,
+                "content", "VELOR9"));
+
+        assertEquals(OrderStatus.DEPOSIT_PAID, order.getDepositStatus());
+        ArgumentCaptor<PaymentTransaction> captor =
+                ArgumentCaptor.forClass(PaymentTransaction.class);
+        verify(transactionRepo).save(captor.capture());
+        assertEquals(9, captor.getValue().getOrderId());
+        assertEquals(100D, captor.getValue().getAmount());
     }
 
     @Test
@@ -156,6 +199,7 @@ class PaymentTransactionServiceTest {
 
         service.processSePayWebhook(Map.of(
                 "referenceCode", "TX-001",
+                "accountNumber", CARSTORE_ACCOUNT_NUMBER,
                 "transferAmount", 100,
                 "content", "VELOR9"));
 
@@ -175,6 +219,7 @@ class PaymentTransactionServiceTest {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> service.processSePayWebhook(Map.of(
                         "referenceCode", "TX-002",
+                        "accountNumber", CARSTORE_ACCOUNT_NUMBER,
                         "transferAmount", 99,
                         "description", "VELOR9")));
 
@@ -185,12 +230,138 @@ class PaymentTransactionServiceTest {
         verifyNoInteractions(mailService);
     }
 
+    @Test
+    void pendingWebhookAcceptsBankTransferAtTwoMinutesFiftyNineSeconds() throws Exception {
+        Orders order = unpaidOrder();
+        order.setDepositAmount(100D);
+        order.setCreateDate(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                .parse("2026-08-10 03:38:29"));
+        when(transactionRepo.existsByReferenceNumber("TX-IN-TIME")).thenReturn(false);
+        when(orderRepo.findForUpdateById(9)).thenReturn(Optional.of(order));
+        when(contractRepo.findByOrderId(9)).thenReturn(Optional.empty());
+        when(accountRepo.findByUsername("user1")).thenReturn(Optional.empty());
+        when(accountRepo.findAll()).thenReturn(List.of());
+
+        service.processSePayWebhook(Map.of(
+                "referenceCode", "TX-IN-TIME",
+                "accountNumber", CARSTORE_ACCOUNT_NUMBER,
+                "transferAmount", 100,
+                "transactionDate", "2026-08-10 03:41:28",
+                "content", "VELOR9"));
+
+        assertEquals(OrderStatus.PROCESSING, order.getStatus());
+        assertEquals(OrderStatus.DEPOSIT_PAID, order.getDepositStatus());
+        verify(transactionRepo).save(any(PaymentTransaction.class));
+    }
+
+    @Test
+    void pendingWebhookRejectsBankTransferAtThreeMinutesOneSecond() throws Exception {
+        Orders order = unpaidOrder();
+        order.setDepositAmount(100D);
+        order.setCreateDate(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                .parse("2026-08-10 03:38:29"));
+        when(transactionRepo.existsByReferenceNumber("TX-EXPIRED")).thenReturn(false);
+        when(orderRepo.findForUpdateById(9)).thenReturn(Optional.of(order));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> service.processSePayWebhook(Map.of(
+                        "referenceCode", "TX-EXPIRED",
+                        "accountNumber", CARSTORE_ACCOUNT_NUMBER,
+                        "transferAmount", 100,
+                        "transactionDate", "2026-08-10 03:41:30",
+                        "content", "VELOR9")));
+
+        assertTrue(error.getMessage().contains("hết hạn"));
+        assertEquals(OrderStatus.PENDING, order.getStatus());
+        assertEquals(OrderStatus.DEPOSIT_UNPAID, order.getDepositStatus());
+        verify(transactionRepo, never()).save(any());
+    }
+
+    @Test
+    void webhookRejectsDifferentReceivingAccount() {
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> service.processSePayWebhook(Map.of(
+                        "referenceCode", "TX-WRONG-ACCOUNT",
+                        "accountNumber", "000000000000",
+                        "transferAmount", 100,
+                        "content", "VELOR9")));
+
+        assertTrue(error.getMessage().contains("Tài khoản nhận tiền"));
+        verifyNoInteractions(orderRepo, contractRepo, carRepo, mailService);
+        verify(transactionRepo, never()).save(any());
+    }
+
+    @Test
+    void delayedWebhookReopensCancelledOrderWhenBankTransferWasWithinTimeout() throws Exception {
+        Orders order = unpaidOrder();
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setDepositAmount(100D);
+        order.setCreateDate(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                .parse("2026-08-10 03:38:29"));
+        Car car = new Car();
+        car.setId(1);
+        car.setName("Toyota Camry");
+        car.setStock(8);
+        car.setStatus("AVAILABLE");
+        OrderDetail detail = new OrderDetail();
+        detail.setCar(car);
+        detail.setQuantity(1);
+        when(transactionRepo.existsByReferenceNumber("TX-DELAYED")).thenReturn(false);
+        when(orderRepo.findForUpdateById(9)).thenReturn(Optional.of(order));
+        when(detailRepo.findByOrderId(9)).thenReturn(List.of(detail));
+        when(carRepo.findForUpdateById(1)).thenReturn(Optional.of(car));
+        when(contractRepo.findByOrderId(9)).thenReturn(Optional.empty());
+        when(accountRepo.findByUsername("user1")).thenReturn(Optional.empty());
+        when(accountRepo.findAll()).thenReturn(List.of());
+
+        service.processSePayWebhook(Map.of(
+                "referenceCode", "TX-DELAYED",
+                "accountNumber", CARSTORE_ACCOUNT_NUMBER,
+                "transferAmount", 100,
+                "transactionDate", "2026-08-10 03:41:28",
+                "content", "VELOR9"));
+
+        assertAll(
+                () -> assertEquals(OrderStatus.PROCESSING, order.getStatus()),
+                () -> assertEquals(OrderStatus.DEPOSIT_PAID, order.getDepositStatus()),
+                () -> assertEquals(7, car.getStock()),
+                () -> assertEquals("AVAILABLE", car.getStatus()));
+        verify(carRepo).save(car);
+        verify(transactionRepo).save(any(PaymentTransaction.class));
+    }
+
+    @Test
+    void delayedWebhookKeepsCancelledOrderWhenBankTransferWasAfterTimeout() throws Exception {
+        Orders order = unpaidOrder();
+        order.setStatus(OrderStatus.CANCELLED);
+        order.setDepositAmount(100D);
+        order.setCreateDate(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss")
+                .parse("2026-08-10 03:38:29"));
+        when(transactionRepo.existsByReferenceNumber("TX-LATE")).thenReturn(false);
+        when(orderRepo.findForUpdateById(9)).thenReturn(Optional.of(order));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> service.processSePayWebhook(Map.of(
+                        "referenceCode", "TX-LATE",
+                        "accountNumber", CARSTORE_ACCOUNT_NUMBER,
+                        "transferAmount", 100,
+                        "transactionDate", "2026-08-10 03:41:30",
+                        "content", "VELOR9")));
+
+        assertTrue(error.getMessage().contains("hết hạn"));
+        assertEquals(OrderStatus.CANCELLED, order.getStatus());
+        assertEquals(OrderStatus.DEPOSIT_UNPAID, order.getDepositStatus());
+        verifyNoInteractions(carRepo);
+        verify(transactionRepo, never()).save(any());
+    }
+
     private Orders unpaidOrder() {
         Orders order = new Orders();
         order.setId(9);
         order.setUsername("user1");
         order.setStatus(OrderStatus.PENDING);
         order.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
+        order.setCreateDate(new java.util.Date(System.currentTimeMillis() - 60_000L));
         return order;
     }
 

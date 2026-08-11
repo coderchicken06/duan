@@ -33,8 +33,10 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { cartApi, orderApi, formatPrice } from '../api'
+import { useCartStore } from '../stores/cart'
 
 const router = useRouter()
+const cart = useCartStore()
 const address = ref('')
 const paymentMethod = 'SePay'
 const total = ref(0)
@@ -55,6 +57,7 @@ async function submit() {
   try {
     const { data } = await orderApi.checkout(address.value, paymentMethod)
     if (data.success) {
+      cart.reset()
       success.value = true
       orderId.value = data.orderId
       router.push({ path: `/orders/${data.orderId}/payment`, query: { method: 'sepay' } })

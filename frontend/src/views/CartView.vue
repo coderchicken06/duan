@@ -92,7 +92,9 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { carImageUrl, cartApi, formatPrice, useDefaultCarImage } from '../api'
+import { useCartStore } from '../stores/cart'
 
+const cart = useCartStore()
 const items = ref([])
 const total = ref(0)
 const loading = ref(true)
@@ -111,6 +113,7 @@ async function loadCart() {
   try {
     const { data } = await cartApi.get()
     items.value = data.items || []
+    cart.setItems(items.value)
     total.value = Number(data.total || 0)
   } catch {
     loadError.value = 'Không thể tải giỏ hàng. Vui lòng kiểm tra kết nối máy chủ.'

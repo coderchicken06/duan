@@ -1,6 +1,12 @@
 package com.example.carstore.controller;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.carstore.entity.Account;
@@ -16,8 +22,10 @@ import com.example.carstore.service.OrderService;
 import com.example.carstore.service.CarImageService;
 import com.example.carstore.util.ImagePathUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -100,7 +108,8 @@ public class RestAdminController {
     @PutMapping("/users/{username}")
     public Map<String, Object> updateUser(
             @PathVariable String username,
-            @RequestBody Account account) {
+            @RequestBody Account account,
+            Authentication authentication) {
 
         try {
             java.util.Optional<Account> existingOpt = accountRepo.findById(username);
@@ -108,6 +117,7 @@ public class RestAdminController {
                 return Map.of("success", false, "message", "User not found");
             }
             Account existing = existingOpt.get();
+            String previousRole = existing.getRole();
 
             if (account.getFullname() != null) {
                 existing.setFullname(account.getFullname());
@@ -121,6 +131,11 @@ public class RestAdminController {
                 if (!List.of("ROLE_USER", "ROLE_ADMIN").contains(account.getRole())) {
                     return Map.of("success", false, "message", "Role must be ROLE_USER or ROLE_ADMIN");
                 }
+                if ("ROLE_ADMIN".equals(existing.getRole())
+                        && !"ROLE_ADMIN".equals(account.getRole())
+                        && accountRepo.countByRole("ROLE_ADMIN") <= 1) {
+                    return Map.of("success", false, "message", "Cannot demote the last administrator.");
+                }
                 existing.setRole(account.getRole());
             }
 
@@ -130,17 +145,43 @@ public class RestAdminController {
 
             accountRepo.save(existing);
 
-            return Map.of("success", true, "message", "User updated successfully");
+            boolean roleChanged = !Objects.equals(previousRole, existing.getRole());
+            boolean currentUser = authentication != null && username.equals(authentication.getName());
+            boolean sessionUpdated = roleChanged && currentUser;
+            boolean requiresRelogin = roleChanged && !currentUser;
+
+            if (sessionUpdated) {
+                refreshAuthentication(authentication, existing.getRole());
+            }
+
+            String message = requiresRelogin
+                    ? "Đã cập nhật quyền. Người dùng này cần đăng nhập lại để nhận quyền mới."
+                    : "User updated successfully";
+
+            return Map.of(
+                    "success", true,
+                    "message", message,
+                    "roleChanged", roleChanged,
+                    "sessionUpdated", sessionUpdated,
+                    "requiresRelogin", requiresRelogin);
         } catch (Exception e) {
             return Map.of("success", false, "message", "Error updating user: " + e.getMessage());
         }
     }
 
     @DeleteMapping("/users/{username}")
-    public Map<String, Object> deleteUser(@PathVariable String username) {
+    public Map<String, Object> deleteUser(@PathVariable String username, Authentication authentication) {
         try {
-            if (!accountRepo.existsById(username)) {
+            java.util.Optional<Account> accountOpt = accountRepo.findById(username);
+            if (accountOpt.isEmpty()) {
                 return Map.of("success", false, "message", "User not found");
+            }
+            if (authentication != null && username.equals(authentication.getName())) {
+                return Map.of("success", false, "message", "You cannot delete your own account.");
+            }
+            if ("ROLE_ADMIN".equals(accountOpt.get().getRole())
+                    && accountRepo.countByRole("ROLE_ADMIN") <= 1) {
+                return Map.of("success", false, "message", "Cannot delete the last administrator.");
             }
 
             if (orderRepo.existsByUsername(username)) {
@@ -470,6 +511,28 @@ public class RestAdminController {
             return "Stock cannot be negative";
         }
         return null;
+    }
+
+    private void refreshAuthentication(Authentication authentication, String role) {
+        List<GrantedAuthority> authorities = new ArrayList<>();
+        authentication.getAuthorities().stream()
+                .filter(authority -> !authority.getAuthority().startsWith("ROLE_"))
+                .forEach(authorities::add);
+        authorities.add(new SimpleGrantedAuthority(role));
+
+        Authentication updatedAuthentication;
+        if (authentication instanceof OAuth2AuthenticationToken) {
+            OAuth2AuthenticationToken oauth = (OAuth2AuthenticationToken) authentication;
+            updatedAuthentication = new OAuth2AuthenticationToken(
+                    oauth.getPrincipal(), authorities, oauth.getAuthorizedClientRegistrationId());
+        } else {
+            UsernamePasswordAuthenticationToken usernamePassword =
+                    new UsernamePasswordAuthenticationToken(
+                            authentication.getPrincipal(), authentication.getCredentials(), authorities);
+            usernamePassword.setDetails(authentication.getDetails());
+            updatedAuthentication = usernamePassword;
+        }
+        SecurityContextHolder.getContext().setAuthentication(updatedAuthentication);
     }
 
     /**

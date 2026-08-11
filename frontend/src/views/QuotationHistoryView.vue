@@ -39,6 +39,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { quotationApi, formatPrice } from '../api'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 
 const quotationList = ref([])
 const loading = ref(true)
@@ -46,7 +47,7 @@ const error = ref('')
 
 const formatDate = (value) => value ? new Date(value).toLocaleDateString('vi-VN') : '-'
 
-onMounted(async () => {
+async function loadQuotations() {
     try {
         const { data } = await quotationApi.getMine()
         quotationList.value = data.data || []
@@ -55,5 +56,8 @@ onMounted(async () => {
     } finally {
         loading.value = false
     }
-})
+}
+
+onMounted(loadQuotations)
+useAutoRefresh(loadQuotations)
 </script>

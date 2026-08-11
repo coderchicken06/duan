@@ -1,6 +1,9 @@
 ﻿USE master;
 GO
 
+-- LOCAL RESET/SEED SCRIPT: xóa và tạo lại toàn bộ database CarStore.
+-- Không chạy trên production hoặc database cần giữ dữ liệu.
+
 IF DB_ID(N'CarStore') IS NOT NULL
 BEGIN
     ALTER DATABASE CarStore SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
@@ -420,10 +423,10 @@ GO
 -- 15. DỮ LIỆU MẪU TÀI KHOẢN
 -- =============================================================
 INSERT INTO dbo.Account(username, password, fullname, email, role) VALUES
-('admin', '{noop}123', N'Quản trị viên', 'admin@carstore.com', 'ROLE_ADMIN'),
-('user1', '{noop}123', N'Nguyễn Văn A', 'user1@carstore.com', 'ROLE_USER'),
-('user2', '{noop}123', N'Trần Thị B', 'user2@carstore.com', 'ROLE_USER'),
-('user3', '{noop}123', N'Lê Văn C', 'user3@carstore.com', 'ROLE_USER');
+('admin', '{bcrypt}$2a$10$e3n7G1RIh4W7GRTDotAvou6TScLvhWtt5K6V6.kAg2/Be9TNftR66', N'Quản trị viên', 'admin@carstore.com', 'ROLE_ADMIN'),
+('user1', '{bcrypt}$2a$10$e3n7G1RIh4W7GRTDotAvou6TScLvhWtt5K6V6.kAg2/Be9TNftR66', N'Nguyễn Văn A', 'user1@carstore.com', 'ROLE_USER'),
+('user2', '{bcrypt}$2a$10$e3n7G1RIh4W7GRTDotAvou6TScLvhWtt5K6V6.kAg2/Be9TNftR66', N'Trần Thị B', 'user2@carstore.com', 'ROLE_USER'),
+('user3', '{bcrypt}$2a$10$e3n7G1RIh4W7GRTDotAvou6TScLvhWtt5K6V6.kAg2/Be9TNftR66', N'Lê Văn C', 'user3@carstore.com', 'ROLE_USER');
 
 UPDATE dbo.Account SET enabled = 1;
 GO
@@ -554,21 +557,21 @@ GO
 IF NOT EXISTS (SELECT 1 FROM dbo.Account WHERE username = 'admin' OR email = 'admin@carstore.com')
 BEGIN
     INSERT INTO dbo.Account(username, password, fullname, email, role, enabled)
-    VALUES ('admin', '$2a$10$E2UPv7arXym3L7Ln5Z54eu9M4m5Q1U1W0n2R7b/H5gH1aI2zKx6Sy', N'Admin CarStore', 'admin@carstore.com', 'ROLE_ADMIN', 1);
+    VALUES ('admin', '{bcrypt}$2a$10$e3n7G1RIh4W7GRTDotAvou6TScLvhWtt5K6V6.kAg2/Be9TNftR66', N'Admin CarStore', 'admin@carstore.com', 'ROLE_ADMIN', 1);
 END;
 GO
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Account WHERE username = 'staff' OR email = 'staff@carstore.com')
 BEGIN
     INSERT INTO dbo.Account(username, password, fullname, email, role, enabled)
-    VALUES ('staff', '$2a$10$E2UPv7arXym3L7Ln5Z54eu9M4m5Q1U1W0n2R7b/H5gH1aI2zKx6Sy', N'Staff CarStore', 'staff@carstore.com', 'ROLE_USER', 1);
+    VALUES ('staff', '{bcrypt}$2a$10$e3n7G1RIh4W7GRTDotAvou6TScLvhWtt5K6V6.kAg2/Be9TNftR66', N'Staff CarStore', 'staff@carstore.com', 'ROLE_USER', 1);
 END;
 GO
 
 IF NOT EXISTS (SELECT 1 FROM dbo.Account WHERE username = 'tu_nguyen' OR email = 'tu.nguyen@gmail.com')
 BEGIN
     INSERT INTO dbo.Account(username, password, fullname, email, role, enabled)
-    VALUES ('tu_nguyen', '$2a$10$E2UPv7arXym3L7Ln5Z54eu9M4m5Q1U1W0n2R7b/H5gH1aI2zKx6Sy', N'Nguyễn Tường Tu', 'tu.nguyen@gmail.com', 'ROLE_USER', 1);
+    VALUES ('tu_nguyen', '{bcrypt}$2a$10$e3n7G1RIh4W7GRTDotAvou6TScLvhWtt5K6V6.kAg2/Be9TNftR66', N'Nguyễn Tường Tu', 'tu.nguyen@gmail.com', 'ROLE_USER', 1);
 END;
 GO
 

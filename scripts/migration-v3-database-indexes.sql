@@ -15,14 +15,8 @@ IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='UX_Review_UserCar' AND obje
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Quotation_CustomerStatus' AND object_id=OBJECT_ID('dbo.Quotation'))
     CREATE INDEX IX_Quotation_CustomerStatus ON dbo.Quotation(customer_username, status);
 
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Payment_OrderTransaction' AND object_id=OBJECT_ID('dbo.Payment'))
-    CREATE INDEX IX_Payment_OrderTransaction ON dbo.Payment(order_id, transaction_code);
-
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_PaymentTransaction_OrderNo' AND object_id=OBJECT_ID('dbo.PaymentTransaction'))
     CREATE INDEX IX_PaymentTransaction_OrderNo ON dbo.PaymentTransaction(order_id, transaction_no);
-
-IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Promotion_CodeStatus' AND object_id=OBJECT_ID('dbo.Promotion'))
-    CREATE INDEX IX_Promotion_CodeStatus ON dbo.Promotion(code, status);
 
 IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='UX_News_Slug' AND object_id=OBJECT_ID('dbo.News'))
     CREATE UNIQUE INDEX UX_News_Slug ON dbo.News(slug) WHERE slug IS NOT NULL;

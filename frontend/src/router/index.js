@@ -32,6 +32,7 @@ const router = createRouter({
     { path: '/news/:slug', name: 'news-detail', component: () => import('../views/NewsDetailView.vue') },
     { path: '/news', name: 'news-list', component: () => import('../views/NewsListView.vue') },
     { path: '/admin/dashboard', name: 'admin-dashboard', meta: { admin: true }, component: () => import('../views/admin/AdminDashboard.vue') },
+    { path: '/admin/products', name: 'admin-products', meta: { admin: true }, component: () => import('../views/admin/AdminProducts.vue') },
     { path: '/admin/inventory', name: 'admin-inventory', meta: { admin: true }, component: () => import('../views/admin/AdminInventory.vue') },
     { path: '/admin/orders', name: 'admin-orders', meta: { admin: true }, component: () => import('../views/admin/AdminOrders.vue') },
     { path: '/admin/support', name: 'admin-support', meta: { admin: true }, component: () => import('../views/admin/AdminSupport.vue') },

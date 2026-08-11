@@ -46,6 +46,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supportApi } from '../api'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 
 const requests = ref([])
 const loading = ref(true)
@@ -57,7 +58,7 @@ const formatAppointment = (request) => {
   return `${date}${request.appointmentTime ? ` ${String(request.appointmentTime).slice(0, 5)}` : ''}`
 }
 
-onMounted(async () => {
+async function loadRequests() {
   try {
     const supportResult = await supportApi.getMy()
     requests.value = supportResult.data.data || []
@@ -66,5 +67,8 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
-})
+}
+
+onMounted(loadRequests)
+useAutoRefresh(loadRequests)
 </script>

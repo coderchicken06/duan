@@ -27,6 +27,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { carImageUrl, formatPrice, promotionApi, useDefaultCarImage } from '../api'
 import { useCompare } from '../composables/useCompare'
+import { showCartToast } from '../composables/useCartToast'
 const props = defineProps({ car: { type: Object, required: true } })
 defineEmits(['add-cart'])
 const stock = computed(() => Number(props.car.stock || 0))
@@ -41,7 +42,7 @@ const displayPrice = computed(() => {
 })
 const promotionLabel = computed(() => promotion.value?.type === 'PERCENT' ? `Giảm ${promotion.value.value}%` : `Giảm ${formatPrice(promotion.value?.value)} VNĐ`)
 const { has, toggle, count } = useCompare()
-function onCompare(event) { if (!has(props.car.id) && count.value >= 3) { event.target.checked = false; alert('Chỉ được so sánh tối đa 3 xe.'); return } toggle(props.car.id) }
+function onCompare(event) { if (!has(props.car.id) && count.value >= 3) { event.target.checked = false; showCartToast('Chỉ được so sánh tối đa 3 xe.', 'warning'); return } toggle(props.car.id) }
 onMounted(async () => { try { const { data } = await promotionApi.getForCar(props.car.id); promotion.value = data.data?.[0] || null } catch { promotion.value = null } })
 </script>
 <style

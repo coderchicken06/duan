@@ -160,7 +160,17 @@ public class SupportRequestService {
     }
 
     private String normalizePhone(String phone) {
-        return phone.trim().replaceAll("\\s+", "");
+        String normalized = phone.trim().replaceAll("\\s+", "");
+        if (normalized.matches("^0[0-9]{9}$")) {
+            return "+84" + normalized.substring(1);
+        }
+        if (normalized.matches("^[1-9][0-9]{8}$")) {
+            return "+84" + normalized;
+        }
+        if (normalized.matches("^84[0-9]{9}$")) {
+            return "+" + normalized;
+        }
+        return normalized;
     }
 
     private void validateCommonSupportInput(String name, String phone, String content) {
@@ -172,7 +182,8 @@ public class SupportRequestService {
         }
         String normalizedPhone = normalizePhone(phone);
         if (!normalizedPhone.matches("^\\+84[0-9]{9}$")) {
-            throw new IllegalArgumentException("Số điện thoại phải có định dạng +84xxxxxxxxx.");
+            throw new IllegalArgumentException(
+                    "Số điện thoại phải có 9 chữ số, 10 chữ số bắt đầu bằng 0, hoặc bắt đầu bằng +84/84.");
         }
         if (!StringUtils.hasText(content)) {
             throw new IllegalArgumentException("Nội dung không được để trống.");

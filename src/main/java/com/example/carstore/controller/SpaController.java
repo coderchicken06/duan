@@ -11,13 +11,13 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class SpaController {
 
     @GetMapping({
-            "/login", "/signup", "/verify-email", "/forgot-password", "/verify-otp", "/reset-password",
+            "/login", "/login/form", "/signup", "/verify-email", "/forgot-password", "/verify-otp", "/reset-password",
             "/profile", "/history", "/service", "/support", "/checkout", "/compare",
             "/car/list", "/car/create", "/car/detail/{id}", "/car/edit/{id}",
             "/cart/view", "/order/my-orders", "/order/detail/{id}",
-            "/orders/{id}/contract", "/orders/{id}/payment", "/quotations/{id}",
+            "/orders/{id}/contract", "/orders/{id}/payment", "/quotations/{id}", "/quotation-history",
             "/news", "/news/{slug}",
-            "/admin/dashboard", "/admin/inventory", "/admin/orders", "/admin/support",
+            "/admin/dashboard", "/admin/products", "/admin/inventory", "/admin/orders", "/admin/support",
             "/admin/users", "/admin/users/create", "/admin/users/edit/{username}",
             "/admin/marketing", "/admin/contracts"
     })

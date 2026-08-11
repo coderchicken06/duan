@@ -11,13 +11,15 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Intege
 
     boolean existsByCar_Id(Integer carId);
 
-    // Tính tổng doanh thu
-    @Query("SELECT SUM(o.depositAmount) FROM Orders o WHERE o.depositStatus = 'PAID'")
+    // Doanh thu chỉ lấy đơn đã cọc; loại đơn chờ và đơn hủy để số liệu không bị cộng sai.
+    @Query("SELECT SUM(o.depositAmount) FROM Orders o " +
+           "WHERE o.depositStatus = 'PAID' AND o.status NOT IN ('CANCELLED', 'PENDING')")
     Double getRevenue();
 
-    // Chỉ tính xe trong các đơn đã thanh toán cọc.
+    // Xe bán chạy cũng chỉ đếm từ đơn đã cọc và đã qua trạng thái chờ xử lý.
     @Query("SELECT d.car.name, SUM(d.quantity) FROM OrderDetail d, Orders o " +
            "WHERE d.orderId = o.id AND o.depositStatus = 'PAID' " +
+           "AND o.status NOT IN ('CANCELLED', 'PENDING') " +
            "GROUP BY d.car.name " +
            "ORDER BY SUM(d.quantity) DESC")
     List<Object[]> topCars();

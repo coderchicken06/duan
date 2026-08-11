@@ -19,6 +19,7 @@ public interface CarRepository extends JpaRepository<Car, Integer> {
 
     List<Car> findTop6ByBrandIdAndIdNotOrderByPriceAsc(Integer brandId, Integer id);
 
+    // Khóa bản ghi xe đến hết transaction để hai checkout không cùng trừ một lượng tồn.
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Car> findForUpdateById(Integer id);
 

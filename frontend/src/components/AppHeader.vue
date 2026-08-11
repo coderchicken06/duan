@@ -4,7 +4,12 @@
       <nav class="ford-nav-left" aria-label="Điều hướng chính">
         <router-link to="/news">Tin tức</router-link>
         <router-link to="/car/list">Sản phẩm</router-link>
-        <router-link to="/cart/view">Giỏ hàng</router-link>
+        <router-link class="cart-nav-link" to="/cart/view">
+          Giỏ hàng
+          <span v-if="cart.itemCount > 0" class="cart-nav-count" aria-label="Số lượng xe trong giỏ">
+            {{ cart.itemCount }}
+          </span>
+        </router-link>
         <router-link to="/service">Dịch vụ</router-link>
         <router-link to="/support">Hỗ trợ</router-link>
       </nav>
@@ -52,13 +57,13 @@
           </summary>
           <div class="role-menu-panel">
             <router-link to="/admin/dashboard" @click="closeAdminMenu">📊 Thống kê</router-link>
-            <router-link to="/admin/inventory" @click="closeAdminMenu">🚗 Quản lý tồn kho</router-link>
+            <router-link to="/admin/inventory" @click="closeAdminMenu">📦 Quản lý tồn kho</router-link>
+            <router-link to="/admin/products" @click="closeAdminMenu">🚗 Quản lý sản phẩm</router-link>
             <router-link to="/admin/orders" @click="closeAdminMenu">📦 Quản lý đơn hàng</router-link>
             <router-link to="/admin/support" @click="closeAdminMenu">📋 Quản lý yêu cầu</router-link>
             <router-link to="/admin/users" @click="closeAdminMenu">👥 Quản lý khách hàng</router-link>
             <router-link to="/admin/marketing" @click="closeAdminMenu">📣 Khuyến mãi & tin tức</router-link>
             <router-link to="/admin/contracts" @click="closeAdminMenu">📄 Quản lý hợp đồng</router-link>
-            <router-link to="/car/create" @click="closeAdminMenu">➕ Thêm xe mới</router-link>
           </div>
         </details>
 
@@ -95,8 +100,10 @@
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../stores/auth'
+import { useCartStore } from '../stores/cart'
 
 const auth = useAuthStore()
+const cart = useCartStore()
 const route = useRoute()
 const router = useRouter()
 const searchOpen = ref(false)
@@ -131,6 +138,7 @@ function handleClickOutside(event) {
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
+  cart.refresh()
 })
 
 onUnmounted(() => {
@@ -146,6 +154,7 @@ watch(
 
 async function handleLogout() {
   await auth.logout()
+  cart.reset()
   router.push('/')
 }
 
@@ -186,6 +195,26 @@ function doSearch() {
 .ford-nav-left a {
   position: relative;
   padding-block: 0.45rem;
+}
+
+.cart-nav-link {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.cart-nav-count {
+  align-items: center;
+  background: #b91c1c;
+  border-radius: 999px;
+  color: #fff;
+  display: inline-flex;
+  font-size: .72rem;
+  font-weight: 800;
+  justify-content: center;
+  min-height: 20px;
+  min-width: 20px;
+  padding: 1px 6px;
 }
 
 .ford-nav-left a::after {

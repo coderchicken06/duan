@@ -30,15 +30,28 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref } from 'vue'
 import { orderApi } from '../api'
 
 const orders = ref([])
 
-onMounted(async () => {
-  const { data } = await orderApi.getMyOrders()
-  orders.value = data.data || []
+let pollTimer = null
+
+async function loadOrders() {
+  try {
+    const { data } = await orderApi.getMyOrders()
+    orders.value = data.data || []
+  } catch {
+    // Giữ dữ liệu gần nhất nếu một lượt polling tạm thời mất kết nối.
+  }
+}
+
+onMounted(() => {
+  loadOrders()
+  pollTimer = window.setInterval(loadOrders, 2000)
 })
+
+onBeforeUnmount(() => window.clearInterval(pollTimer))
 
 function formatDate(d) {
   return d ? new Date(d).toLocaleDateString('vi-VN') : ''

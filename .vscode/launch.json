@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "java",
+      "name": "CarStore Backend + SePay ngrok",
+      "request": "launch",
+      "mainClass": "com.example.carstore.CarStoreApplication",
+      "projectName": "carstore",
+      "cwd": "${workspaceFolder}",
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal",
+      "preLaunchTask": "prepare-backend-env"
+    }
+  ]
+}

@@ -103,6 +103,20 @@ class PromotionServiceTest {
     }
 
     @Test
+    void updateAcceptsOriginalPastStartDateForActivePromotion() {
+        Promotion promotion = validPromotion();
+        promotion.setId(3);
+        promotion.setStartDate(java.sql.Date.valueOf(LocalDate.now().minusDays(1)));
+        promotion.setEndDate(java.sql.Date.valueOf(LocalDate.now().plusDays(1)));
+        when(promotionRepository.save(promotion)).thenReturn(promotion);
+
+        Promotion result = service.save(promotion);
+
+        assertSame(promotion, result);
+        verify(promotionRepository).save(promotion);
+    }
+
+    @Test
     void assignToCarReplacesPreviousCar() {
         when(promotionRepository.existsById(3)).thenReturn(true);
         when(carRepository.existsById(2)).thenReturn(true);

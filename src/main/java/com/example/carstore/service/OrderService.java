@@ -28,39 +28,25 @@ public class OrderService {
     private final OrderDetailRepository detailRepo;
     private final CarRepository carRepo;
     private final ContractService contractService;
-    @SuppressWarnings("unused")
-    private final PaymentTransactionService paymentTransactionService;
     private final PromotionService promotionService;
 
     @Autowired
     public OrderService(OrderRepository orderRepo,
             OrderDetailRepository detailRepo,
-            CarService carService,
             CarRepository carRepo,
             ContractService contractService,
-            PaymentTransactionService paymentTransactionService,
             PromotionService promotionService) {
         this.orderRepo = orderRepo;
         this.detailRepo = detailRepo;
         this.carRepo = carRepo;
         this.contractService = contractService;
-        this.paymentTransactionService = paymentTransactionService;
         this.promotionService = promotionService;
     }
 
     public OrderService(OrderRepository orderRepo,
             OrderDetailRepository detailRepo,
-            CarService carService,
-            CarRepository carRepo,
-            ContractService contractService) {
-        this(orderRepo, detailRepo, carService, carRepo, contractService, null, null);
-    }
-
-    public OrderService(OrderRepository orderRepo,
-            OrderDetailRepository detailRepo,
-            CarService carService,
             CarRepository carRepo) {
-        this(orderRepo, detailRepo, carService, carRepo, null, null, null);
+        this(orderRepo, detailRepo, carRepo, null, null);
     }
 
     @Transactional
@@ -115,6 +101,7 @@ public class OrderService {
                                 + ", yêu cầu: " + item.getQuantity());
             }
 
+            // Xe đã được khóa ghi; trừ đúng số lượng đặt để ngăn hai khách mua cùng tồn kho.
             car.setStock(car.getStock() - item.getQuantity());
             car.setStatus(car.getStock() == 0 ? "DEPOSITED" : "AVAILABLE");
             carRepo.save(car);
@@ -214,6 +201,7 @@ public class OrderService {
             Car car = carRepo.findForUpdateById(detail.getCar().getId())
                     .orElseThrow(() -> new IllegalArgumentException("Xe trong đơn hàng không còn tồn tại."));
             int quantity = detail.getQuantity() == null ? 0 : detail.getQuantity();
+            // Khi đơn chưa cọc bị hủy, hoàn lại đúng số lượng và mở bán xe trở lại.
             car.setStock(car.getStock() + quantity);
             if (car.getStock() > 0) {
                 car.setStatus("AVAILABLE");

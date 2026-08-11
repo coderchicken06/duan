@@ -8,8 +8,16 @@
               required /></div>
           <div class="col-md-6"><label class="form-label">Giá (VNĐ)</label><input v-model.number="form.price"
               type="number" class="form-control" required /></div>
-          <div class="col-md-4"><label class="form-label">Brand ID</label><input v-model.number="form.brandId"
-              type="number" class="form-control" required /></div>
+          <div class="col-md-4">
+            <label class="form-label">Thương hiệu</label>
+            <select v-model="brandSelection" class="form-select" required>
+              <option value="" disabled>Chọn thương hiệu</option>
+              <option v-for="brand in brands" :key="brand.id" :value="String(brand.id)">{{ brand.name }}</option>
+              <option value="__new__">+ Thêm thương hiệu mới</option>
+            </select>
+            <input v-if="brandSelection === '__new__'" v-model.trim="newBrandName" class="form-control mt-2"
+              maxlength="100" placeholder="Tên thương hiệu mới, ví dụ Lamborghini" required />
+          </div>
           <div class="col-md-4"><label class="form-label">Năm</label><input v-model.number="form.year" type="number"
               class="form-control" /></div>
           <div class="col-md-4"><label class="form-label">Màu</label><input v-model="form.color" class="form-control" />
@@ -95,7 +103,7 @@
         <div v-if="error" class="alert alert-danger cart-alert show error">{{ error }}</div>
         <div class="d-flex gap-2">
           <button type="submit" class="btn cs-btn cs-btn-primary">Lưu</button>
-          <router-link class="btn cs-btn cs-btn-ghost" to="/admin/inventory">Hủy</router-link>
+          <router-link class="btn cs-btn cs-btn-ghost" to="/admin/products">Hủy</router-link>
         </div>
       </form>
     </div>
@@ -112,6 +120,9 @@ const router = useRouter()
 const isEdit = computed(() => !!route.params.id)
 const error = ref('')
 const galleryImages = ref([])
+const brands = ref([])
+const brandSelection = ref('')
+const newBrandName = ref('')
 const form = ref({ name: '', price: null, brandId: null, year: null, color: '', stock: 0, image: '', description: '', firstRegistration: '', mileage: null, engineType: '', engineCapacity: '', interiorColor: '', bodyType: '', seats: null, drivetrain: '', transmission: '', horsepower: null, torque: '', fuelType: '', fuelConsumption: '', warranty: '', dealerName: '', dealerAddress: '', inspectionLevel: '', inspectionNote: '', safetyFeatures: '', comfortFeatures: '' })
 const carFields = [
   'name', 'price', 'brandId', 'year', 'color', 'stock', 'image', 'description',
@@ -122,15 +133,38 @@ const carFields = [
 ]
 
 onMounted(async () => {
+  const brandResponse = await adminApi.getBrands()
+  brands.value = Array.isArray(brandResponse.data) ? brandResponse.data : brandResponse.data.data || []
   if (isEdit.value) {
     const { data } = await carApi.getById(String(route.params.id))
     form.value = { ...(data.data || data) }
+    brandSelection.value = form.value.brandId == null ? '' : String(form.value.brandId)
     const images = await carApi.getImages(String(route.params.id))
     galleryImages.value = Array.isArray(images.data) ? images.data : (images.data.data || [])
     const primaryIndex = galleryImages.value.findIndex((item) => item.primaryImage)
     if (galleryImages.value.length) selectPrimary(primaryIndex >= 0 ? primaryIndex : 0)
   }
 })
+
+async function resolveBrandId() {
+  if (brandSelection.value !== '__new__') {
+    const brandId = Number(brandSelection.value)
+    if (!Number.isInteger(brandId) || brandId <= 0) throw new Error('Vui lòng chọn thương hiệu.')
+    return brandId
+  }
+
+  const name = newBrandName.value.trim()
+  if (!name) throw new Error('Vui lòng nhập tên thương hiệu mới.')
+  const existing = brands.value.find((brand) => brand.name?.trim().toLowerCase() === name.toLowerCase())
+  if (existing) return existing.id
+
+  const response = await adminApi.createBrand({ name })
+  if (response.data.success === false || !response.data.data?.id) {
+    throw new Error(response.data.message || 'Không thể thêm thương hiệu mới.')
+  }
+  brands.value.push(response.data.data)
+  return response.data.data.id
+}
 
 async function onFileChange(e) {
   const file = e.target.files?.[0]
@@ -178,6 +212,7 @@ async function saveGallery(carId) {
 async function submit() {
   error.value = ''
   try {
+    form.value.brandId = await resolveBrandId()
     const payload = Object.fromEntries(carFields.map((field) => [field, form.value[field]]))
     const res = isEdit.value
       ? await adminApi.updateCar(String(route.params.id), payload)
@@ -189,9 +224,9 @@ async function submit() {
     const savedCar = res.data.data || res.data
     const carId = route.params.id || savedCar.id
     if (carId) await saveGallery(carId)
-    router.push('/admin/inventory')
+    router.push('/admin/products')
   } catch (e) {
-    error.value = e.response?.data?.message || 'Lỗi lưu xe'
+    error.value = e.response?.data?.message || e.message || 'Lỗi lưu xe'
   }
 }
 </script>

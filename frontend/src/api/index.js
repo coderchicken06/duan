@@ -1,5 +1,9 @@
 import api from './client'
 
+export const chatApi = {
+  send: (message) => api.post('/api/chat', { message }),
+}
+
 export const authApi = {
   login: (username, password) => api.post('/api/auth/login', { username, password }),
   signup: (account) => api.post('/api/auth/signup', account),
@@ -46,14 +50,14 @@ export const orderApi = {
 }
 
 export const contractApi = {
-  getByOrder: (orderId) => api.get(`/api/contracts/${orderId}`),
+  getByOrder: (orderId, config) => api.get(`/api/contracts/${orderId}`, config),
   getPayments: (orderId) => api.get(`/api/contracts/${orderId}/payments`),
   getAll: () => api.get('/api/contracts'),
   update: (id, data) => api.put(`/api/contracts/manage/${id}`, data),
 }
 
 export const paymentTransactionApi = {
-  getByOrder: (orderId) => api.get(`/api/payment-transactions/orders/${orderId}`),
+  getByOrder: (orderId, config) => api.get(`/api/payment-transactions/orders/${orderId}`, config),
   createQr: (orderId) => api.post('/api/payment/create-qr', { orderId }),
 }
 
@@ -122,6 +126,7 @@ export const adminApi = {
   updateCar: (id, car) => api.put(`/api/admin/cars/${id}`, car),
   deleteCar: (id) => api.delete(`/api/admin/cars/${id}`),
   getBrands: () => api.get('/api/admin/brands'),
+  createBrand: (brand) => api.post('/api/admin/brands', brand),
   getDashboardInfo: () => api.get('/api/admin/dashboard-info'),
 }
 

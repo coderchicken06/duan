@@ -60,6 +60,9 @@ public class ChatbotController {
             if (!keyword.isEmpty()) {
                 // Gọi hàm có sẵn trong CarRepository của bạn
                 carResults = carRepository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(keyword, keyword);
+                carResults = carResults.stream()
+                        .filter(car -> car != null && "AVAILABLE".equalsIgnoreCase(car.getStatus()))
+                        .collect(java.util.stream.Collectors.toList());
                 
                 if (!carResults.isEmpty()) {
                     replyText = "Dưới đây là các mẫu xe phù hợp với từ khóa '" + keyword + "' tại CarStore:";

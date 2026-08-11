@@ -95,10 +95,13 @@ const qrUrl = ref('')
 const qrAmount = ref(null)
 let pollInterval = null
 let countdownInterval = null
+let reconciliationTimeout = null
+let wasDepositPaid = false
 
 // Đồng bộ thời hạn thanh toán 3 phút với Backend Scheduler
 const timeLeft = ref(3 * 60)
 const isTimeout = ref(false)
+const webhookReconciliationWindow = 30 * 60 * 1000
 
 const formatDate = value => value ? new Date(value).toLocaleString('vi-VN') : ''
 const paymentAmount = computed(() => qrAmount.value
@@ -130,22 +133,30 @@ async function load() {
 }
 
 async function checkPaymentStatus() {
-  if (isTimeout.value) return;
-
   try {
     // Trạng thái hợp đồng quyết định kết quả thanh toán, nên không để lỗi tải
     // lịch sử giao dịch chặn việc cập nhật PAID trên giao diện.
-    const contractResponse = await contractApi.getByOrder(route.params.id);
+    const freshRequest = {
+      params: { _ts: Date.now() },
+      headers: { 'Cache-Control': 'no-cache' },
+    };
+    const contractResponse = await contractApi.getByOrder(route.params.id, freshRequest);
     const updatedContract = contractResponse.data.data.contract;
     contract.value = updatedContract || contract.value;
 
     // Nếu trạng thái cọc đã chuyển thành PAID, tự động dừng mọi tiến trình và cập nhật
     if (updatedContract && updatedContract.depositStatus === 'PAID') {
+      if (!wasDepositPaid) {
+        window.dispatchEvent(new CustomEvent('carstore-toast', {
+          detail: { message: 'Tiền cọc đã được xác nhận thành công', type: 'success' },
+        }));
+      }
+      wasDepositPaid = true;
       stopAllTimers();
     }
 
     try {
-      const transactionResponse = await paymentTransactionApi.getByOrder(route.params.id);
+      const transactionResponse = await paymentTransactionApi.getByOrder(route.params.id, freshRequest);
       payments.value = transactionResponse.data.data || [];
     } catch (transactionError) {
       // Lịch sử giao dịch có thể tải lại ở lần polling sau; trạng thái PAID đã được giữ.
@@ -157,14 +168,14 @@ async function checkPaymentStatus() {
 
 function startPolling() {
   syncRemainingTime();
-  if (isTimeout.value) {
-    stopAllTimers();
-    return;
-  }
 
   if (!pollInterval) {
-    pollInterval = setInterval(checkPaymentStatus, 3000);
+    pollInterval = setInterval(checkPaymentStatus, 2000);
   }
+
+  scheduleReconciliationStop();
+
+  if (isTimeout.value) return;
 
   if (!countdownInterval) {
     countdownInterval = setInterval(() => {
@@ -173,10 +184,30 @@ function startPolling() {
       } else {
         // Hết 3 phút -> đơn được Backend Scheduler tự động hủy
         isTimeout.value = true;
-        stopAllTimers();
+        clearInterval(countdownInterval);
+        countdownInterval = null;
       }
     }, 1000);
   }
+}
+
+function scheduleReconciliationStop() {
+  if (reconciliationTimeout) return;
+
+  const createdAt = new Date(order.value?.createDate).getTime();
+  const remaining = Number.isFinite(createdAt)
+    ? createdAt + webhookReconciliationWindow - Date.now()
+    : webhookReconciliationWindow;
+
+  if (remaining <= 0) {
+    stopAllTimers();
+    return;
+  }
+
+  reconciliationTimeout = setTimeout(() => {
+    reconciliationTimeout = null;
+    if (contract.value?.depositStatus !== 'PAID') stopAllTimers();
+  }, remaining);
 }
 
 function syncRemainingTime() {
@@ -198,6 +229,10 @@ function stopAllTimers() {
   if (countdownInterval) {
     clearInterval(countdownInterval);
     countdownInterval = null;
+  }
+  if (reconciliationTimeout) {
+    clearTimeout(reconciliationTimeout);
+    reconciliationTimeout = null;
   }
 }
 
@@ -224,14 +259,23 @@ async function payDeposit() {
 
 onMounted(async () => {
   await load();
-  if (route.query.method === 'sepay' && contract.value.depositStatus !== 'PAID') {
+  wasDepositPaid = contract.value.depositStatus === 'PAID';
+  if (route.query.method === 'sepay' && contract.value.depositStatus !== 'PAID' && !isTimeout.value) {
     await payDeposit();
-  } else if (contract.value.depositStatus !== 'PAID' && qrUrl.value) {
+  } else if (contract.value.depositStatus !== 'PAID') {
     startPolling();
   }
+  document.addEventListener('visibilitychange', refreshWhenVisible);
 })
 
+function refreshWhenVisible() {
+  if (!document.hidden && contract.value.depositStatus !== 'PAID') {
+    checkPaymentStatus();
+  }
+}
+
 onUnmounted(() => {
+  document.removeEventListener('visibilitychange', refreshWhenVisible);
   stopAllTimers();
 })
 </script>

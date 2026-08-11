@@ -11,8 +11,30 @@
         <div v-else class="text-center">Đang tải...</div>
     </main>
 </template>
-<script
-    setup>    import { ref, onMounted } from 'vue'; import { useRoute } from 'vue-router'; import { newsApi, carImageUrl } from '../api'; const route = useRoute(), news = ref(null), error = ref(''); const formatDate = v => v ? new Date(v).toLocaleDateString('vi-VN') : ''; onMounted(async () => { try { const { data } = await newsApi.getBySlug(route.params.slug); news.value = data.data } catch (e) { error.value = e.response?.data?.message || 'Không thể tải tin tức' } })</script>
+<script setup>
+import { ref, onMounted } from 'vue'
+import { useRoute } from 'vue-router'
+import { newsApi, carImageUrl } from '../api'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
+
+const route = useRoute()
+const news = ref(null)
+const error = ref('')
+const formatDate = value => value ? new Date(value).toLocaleDateString('vi-VN') : ''
+
+async function loadNews() {
+  try {
+    const { data } = await newsApi.getBySlug(route.params.slug)
+    news.value = data.data
+    error.value = ''
+  } catch (e) {
+    error.value = e.response?.data?.message || 'Không thể tải tin tức'
+  }
+}
+
+onMounted(loadNews)
+useAutoRefresh(loadNews)
+</script>
 <style
     scoped>
     .news-detail {

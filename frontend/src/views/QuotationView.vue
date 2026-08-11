@@ -55,6 +55,7 @@
 import { onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { carApi, carImageUrl, formatPrice, quotationApi, useDefaultCarImage } from '../api'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 const route = useRoute(), router = useRouter(), quote = ref({}), car = ref(null), loading = ref(true), submitting = ref(false), error = ref('')
 const orderForm = ref({ address: '', registrationAddress: '', paymentMethod: 'SePay' })
 const formatDate = v => v ? new Date(v).toLocaleDateString('vi-VN') : ''
@@ -63,6 +64,7 @@ async function load() { try { const { data } = await quotationApi.getById(route.
 async function confirmQuote() { submitting.value = true; try { const { data } = await quotationApi.confirm(quote.value.id); quote.value = data.data } catch (e) { error.value = e.response?.data?.message || 'Không thể xác nhận báo giá' } finally { submitting.value = false } }
 async function convertToOrder() { submitting.value = true; error.value = ''; try { const { data } = await quotationApi.convertToOrder(quote.value.id, orderForm.value); router.push(`/order/detail/${data.data.id}`) } catch (e) { error.value = e.response?.data?.message || 'Không thể tạo đơn hàng' } finally { submitting.value = false } }
 onMounted(load)
+useAutoRefresh(load)
 </script>
 <style scoped>
 .quotation-page {

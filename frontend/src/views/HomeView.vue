@@ -51,8 +51,11 @@ import { useRoute } from 'vue-router'
 import { carApi, cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
 import { showCartToast } from '../composables/useCartToast'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
+import { useCartStore } from '../stores/cart'
 
 const route = useRoute()
+const cart = useCartStore()
 const cars = ref([])
 const loading = ref(true)
 const loadError = ref('')
@@ -60,26 +63,32 @@ const alert = ref('')
 const q = ref(route.query.q || '')
 
 onMounted(loadCars)
+useAutoRefresh(() => loadCars(true))
 
-async function loadCars() {
-  loading.value = true
-  loadError.value = ''
+async function loadCars(silent = false) {
+  if (!silent) {
+    loading.value = true
+    loadError.value = ''
+  }
   try {
     const { data } = await carApi.getAll(String(q.value || '') || undefined)
     const result = Array.isArray(data) ? data : data.data || []
     cars.value = result.filter((car) => String(car.status || '').toUpperCase() === 'AVAILABLE')
   } catch (error) {
-    cars.value = []
-    loadError.value = error.response?.data?.message
-      || 'Không thể kết nối cơ sở dữ liệu sản phẩm. Vui lòng kiểm tra backend rồi thử lại.'
+    if (!silent) {
+      cars.value = []
+      loadError.value = error.response?.data?.message
+        || 'Không thể kết nối cơ sở dữ liệu sản phẩm. Vui lòng kiểm tra backend rồi thử lại.'
+    }
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
 
 async function addToCart(id) {
   const { data } = await cartApi.add(id)
   if (data.success) {
+    await cart.refresh()
     showCartToast('Thêm vào giỏ hàng thành công!')
     alert.value = ''
   } else {

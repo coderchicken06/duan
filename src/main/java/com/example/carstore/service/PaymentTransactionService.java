@@ -1,10 +1,13 @@
 package com.example.carstore.service;
 
 import com.example.carstore.entity.Account;
+import com.example.carstore.entity.Car;
 import com.example.carstore.entity.Contract;
+import com.example.carstore.entity.OrderDetail;
 import com.example.carstore.entity.Orders;
 import com.example.carstore.entity.PaymentTransaction;
 import com.example.carstore.repository.AccountRepository;
+import com.example.carstore.repository.CarRepository;
 import com.example.carstore.repository.ContractRepository;
 import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
@@ -34,6 +37,8 @@ import java.util.regex.Pattern;
 @Service
 public class PaymentTransactionService {
     private static final Logger logger = LoggerFactory.getLogger(PaymentTransactionService.class);
+    private static final long PAYMENT_TIMEOUT_MILLIS = 3 * 60 * 1000L;
+    private static final String CARSTORE_ACCOUNT_NUMBER = "102880629915";
 
     // Hỗ trợ linh hoạt các biến thể như: VELOR5, VELORA-5, VELOR-5, velora3,...
     private static final Pattern ORDER_CODE_PATTERN = Pattern.compile("(?i)VELOR[A-Z-]*(\\d+)");
@@ -41,6 +46,7 @@ public class PaymentTransactionService {
     private final PaymentTransactionRepository repo;
     private final OrderRepository orderRepo;
     private final OrderDetailRepository detailRepo;
+    private final CarRepository carRepo;
     private final ContractRepository contractRepo;
     private final AccountRepository accountRepo;
     private final MailService mailService;
@@ -61,6 +67,7 @@ public class PaymentTransactionService {
     public PaymentTransactionService(PaymentTransactionRepository repo,
             OrderRepository orderRepo,
             OrderDetailRepository detailRepo,
+            CarRepository carRepo,
             ContractRepository contractRepo,
             AccountRepository accountRepo,
             MailService mailService,
@@ -68,6 +75,7 @@ public class PaymentTransactionService {
         this.repo = repo;
         this.orderRepo = orderRepo;
         this.detailRepo = detailRepo;
+        this.carRepo = carRepo;
         this.contractRepo = contractRepo;
         this.accountRepo = accountRepo;
         this.mailService = mailService;
@@ -115,7 +123,7 @@ public class PaymentTransactionService {
 
             String qrUrl = "https://vietqr.app/img?"
                     + "bank=" + java.net.URLEncoder.encode("VietinBank", StandardCharsets.UTF_8)
-                    + "&acc=" + java.net.URLEncoder.encode("102880629915", StandardCharsets.UTF_8)
+                    + "&acc=" + java.net.URLEncoder.encode(CARSTORE_ACCOUNT_NUMBER, StandardCharsets.UTF_8)
                     + "&amount=" + finalAmount
                     + "&des=" + java.net.URLEncoder.encode(des, StandardCharsets.UTF_8)
                     + "&template=" + java.net.URLEncoder.encode("compact", StandardCharsets.UTF_8);
@@ -133,22 +141,28 @@ public class PaymentTransactionService {
     }
 
     public boolean isValidWebhookSecret(String secret, String authorization) {
-        if (authorization != null) {
+        boolean validAuthorization = false;
+        if (authorization != null && !authorization.isBlank()) {
             String value = authorization.trim();
             String prefix = "Apikey ";
-            return value.regionMatches(true, 0, prefix, 0, prefix.length())
+            validAuthorization = value.regionMatches(true, 0, prefix, 0, prefix.length())
                     && apiKey != null
                     && !apiKey.isBlank()
                     && apiKey.equals(value.substring(prefix.length()).trim());
         }
 
-        if (secret != null) {
-            return secretKey != null
-                    && !secretKey.isBlank()
-                    && secretKey.equals(secret.trim());
-        }
+        boolean validSecret = secret != null
+                && !secret.isBlank()
+                && secretKey != null
+                && !secretKey.isBlank()
+                && secretKey.equals(secret.trim());
 
-        return false;
+        return validAuthorization || validSecret;
+    }
+
+    public boolean isWebhookAuthenticationConfigured() {
+        return (secretKey != null && !secretKey.isBlank())
+                || (apiKey != null && !apiKey.isBlank());
     }
 
     public boolean isSePayConfigured() {
@@ -157,6 +171,7 @@ public class PaymentTransactionService {
                 && checkoutUrl != null && !checkoutUrl.isBlank();
     }
 
+    // Nhận webhook SePay, chống xử lý trùng và cập nhật thanh toán trong cùng giao dịch DB.
     @Transactional
     public void processSePayWebhook(Map<String, Object> payload) {
         if (payload == null) {
@@ -167,6 +182,11 @@ public class PaymentTransactionService {
         String transferType = text(payload.get("transferType"));
         if (!transferType.isBlank() && !"in".equalsIgnoreCase(transferType)) {
             throw new IllegalArgumentException("Webhook không phải giao dịch tiền vào.");
+        }
+
+        String accountNumber = text(payload.get("accountNumber"));
+        if (!CARSTORE_ACCOUNT_NUMBER.equals(accountNumber)) {
+            throw new IllegalArgumentException("Tài khoản nhận tiền không khớp tài khoản CarStore.");
         }
 
         // 2. Lấy nội dung chuyển khoản (content hoặc description) để bóc tách mã đơn hàng
@@ -200,15 +220,14 @@ public class PaymentTransactionService {
         if (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
             return;
         }
-        if (OrderStatus.CANCELLED.equals(order.getStatus())
-                || OrderStatus.DELIVERED.equals(order.getStatus())) {
+        if (OrderStatus.DELIVERED.equals(order.getStatus())) {
             throw new IllegalArgumentException("Không thể thanh toán đơn hàng đã kết thúc.");
         }
 
-        // 5. Kiểm tra số tiền chuyển khoản
+        // Làm tròn đến đơn vị đồng để sai số số thực không từ chối giao dịch hợp lệ.
         double amount = parseAmount(payload.get("transferAmount"));
         double requiredAmount = paymentAmount(order);
-        if (Double.compare(amount, requiredAmount) != 0) {
+        if (Math.round(amount) != Math.round(requiredAmount)) {
             throw new IllegalArgumentException(
                     "Số tiền thanh toán (" + amount + ") không khớp số tiền cần thanh toán (" + requiredAmount + ").");
         }
@@ -218,7 +237,18 @@ public class PaymentTransactionService {
                 text(payload.get("transactionDate")),
                 text(payload.get("transaction_date"))));
 
-        // 7. Cập nhật trạng thái đơn hàng thành đã cọc/đã thanh toán
+        if (!wasPaidWithinTimeout(order, paidAt)) {
+            throw new IllegalArgumentException("Đơn hàng đã hết hạn trước thời điểm thanh toán.");
+        }
+
+        // Webhook có thể đến sau khi scheduler đã hủy đơn dù khách thực tế chuyển
+        // tiền trong hạn. Chỉ khôi phục trường hợp này và phải tái giữ kho atomically.
+        if (OrderStatus.CANCELLED.equals(order.getStatus())) {
+            reserveStockForDelayedPayment(orderId);
+            order.setStatus(OrderStatus.PROCESSING);
+        }
+
+        // Ghi nhận đã cọc và chuyển đơn sang xử lý ngay sau khi tiền hợp lệ.
         order.setDepositStatus(OrderStatus.DEPOSIT_PAID);
         order.setDepositAmount(amount);
         order.setDepositMethod("SePay");
@@ -240,7 +270,7 @@ public class PaymentTransactionService {
                 text(payload.get("gateway")),
                 "SePay"));
         transaction.setTransactionNo(transactionNo);
-        transaction.setBankCode(text(payload.get("accountNumber")));
+        transaction.setBankCode(accountNumber);
         transaction.setAmount(amount);
         transaction.setStatus("SUCCESS");
         transaction.setResponseCode("00");
@@ -289,6 +319,40 @@ public class PaymentTransactionService {
             return Double.parseDouble(amountObj.toString());
         } catch (NumberFormatException e) {
             return 0.0;
+        }
+    }
+
+    private boolean wasPaidWithinTimeout(Orders order, Date paidAt) {
+        if (order.getCreateDate() == null || paidAt == null) {
+            return false;
+        }
+        long expiresAt = order.getCreateDate().getTime() + PAYMENT_TIMEOUT_MILLIS;
+        return paidAt.getTime() <= expiresAt;
+    }
+
+    private void reserveStockForDelayedPayment(Integer orderId) {
+        List<OrderDetail> details = detailRepo.findByOrderId(orderId);
+        if (details.isEmpty()) {
+            throw new IllegalArgumentException("Đơn hàng không có sản phẩm để khôi phục thanh toán.");
+        }
+        for (OrderDetail detail : details) {
+            if (detail.getCar() == null || detail.getCar().getId() == null) {
+                throw new IllegalArgumentException("Xe trong đơn hàng không còn tồn tại.");
+            }
+            int quantity = detail.getQuantity() == null ? 0 : detail.getQuantity();
+            if (quantity <= 0) {
+                throw new IllegalArgumentException("Số lượng xe trong đơn hàng không hợp lệ.");
+            }
+            Car car = carRepo.findForUpdateById(detail.getCar().getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Xe trong đơn hàng không còn tồn tại."));
+            if (!"AVAILABLE".equalsIgnoreCase(car.getStatus())
+                    || car.getStock() == null || car.getStock() < quantity) {
+                throw new IllegalArgumentException(
+                        "Giao dịch đã nhận nhưng xe không còn đủ tồn kho; cần đối soát thủ công.");
+            }
+            car.setStock(car.getStock() - quantity);
+            car.setStatus(car.getStock() == 0 ? "DEPOSITED" : "AVAILABLE");
+            carRepo.save(car);
         }
     }
 

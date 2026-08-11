@@ -6,6 +6,17 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+// Dữ liệu quản trị thay đổi thường xuyên; luôn lấy bản mới thay vì response GET
+// đã cache để các màn hình polling có thể cập nhật mà không cần F5.
+api.interceptors.request.use((config) => {
+  if (String(config.method || 'get').toLowerCase() === 'get') {
+    config.params = { ...(config.params || {}), _ts: Date.now() }
+    config.headers['Cache-Control'] = 'no-cache'
+    config.headers.Pragma = 'no-cache'
+  }
+  return config
+})
+
 api.interceptors.response.use(
   (res) => res,
   (err) => {

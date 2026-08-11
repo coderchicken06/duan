@@ -25,7 +25,7 @@ import com.example.carstore.entity.Promotion;import com.example.carstore.entity.
   if(!List.of("PERCENT","FIXED").contains(p.getType()))throw new IllegalArgumentException("Loại khuyến mãi phải là PERCENT hoặc FIXED.");
   if(p.getValue()==null||p.getValue()<=0||("PERCENT".equals(p.getType())&&p.getValue()>100))throw new IllegalArgumentException("Giá trị khuyến mãi không hợp lệ.");
   Date currentDate=today();
-  if(p.getStartDate()!=null&&p.getStartDate().before(currentDate))throw new IllegalArgumentException("Ngày bắt đầu không được trước ngày hiện tại.");
+  if(p.getId()==null&&p.getStartDate()!=null&&p.getStartDate().before(currentDate))throw new IllegalArgumentException("Ngày bắt đầu không được trước ngày hiện tại.");
   if(p.getEndDate()!=null&&p.getEndDate().before(currentDate))throw new IllegalArgumentException("Ngày kết thúc không được trước ngày hiện tại.");
   if(p.getStartDate()!=null&&p.getEndDate()!=null&&p.getEndDate().before(p.getStartDate()))throw new IllegalArgumentException("Ngày kết thúc phải sau ngày bắt đầu.");
   if(p.getStatus()==null)p.setStatus(true);if(p.getId()==null)p.setCreatedAt(new Date());return r.save(p);

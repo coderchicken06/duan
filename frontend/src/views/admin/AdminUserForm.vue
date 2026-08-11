@@ -24,9 +24,11 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { adminApi } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
+import { useAuthStore } from '../../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
+const auth = useAuthStore()
 const isEdit = computed(() => !!route.params.username)
 const form = ref({ username: '', fullname: '', email: '', password: '', role: 'ROLE_USER' })
 
@@ -48,7 +50,13 @@ async function submit() {
       showCartToast(res.data.message || 'Không thể lưu người dùng', 'error')
       return
     }
-    showCartToast(isEdit.value ? 'Đã cập nhật người dùng' : 'Đã thêm người dùng')
+    auth.updateCurrentUser({
+      username: isEdit.value ? String(route.params.username) : form.value.username,
+      fullname: form.value.fullname,
+      email: form.value.email,
+      role: form.value.role,
+    })
+    showCartToast(res.data.message || (isEdit.value ? 'Đã cập nhật người dùng' : 'Đã thêm người dùng'))
     await router.push('/admin/users')
   } catch (error) {
     showCartToast(error.response?.data?.message || 'Không thể lưu người dùng', 'error')

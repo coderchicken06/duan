@@ -16,8 +16,27 @@
         <p v-if="!loading && !articles.length" class="text-center py-5">Chưa có tin tức.</p>
     </main>
 </template>
-<script
-    setup>    import { onMounted, ref } from 'vue'; import { newsApi, carImageUrl } from '../api'; const articles = ref([]), loading = ref(true), formatDate = v => v ? new Date(v).toLocaleDateString('vi-VN') : ''; onMounted(async () => { try { const { data } = await newsApi.getPublished(); articles.value = data.data || [] } finally { loading.value = false } })</script>
+<script setup>
+import { onMounted, ref } from 'vue'
+import { newsApi, carImageUrl } from '../api'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
+
+const articles = ref([])
+const loading = ref(true)
+const formatDate = value => value ? new Date(value).toLocaleDateString('vi-VN') : ''
+
+async function loadNews() {
+  try {
+    const { data } = await newsApi.getPublished()
+    articles.value = data.data || []
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadNews)
+useAutoRefresh(loadNews)
+</script>
 <style
     scoped>
     .eyebrow {

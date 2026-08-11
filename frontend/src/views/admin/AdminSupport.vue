@@ -37,6 +37,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { supportApi } from '../../api'
+import { showCartToast } from '../../composables/useCartToast'
 
 const requests = ref([])
 const formatAppointment = (request) => {
@@ -52,13 +53,25 @@ async function load() {
 }
 
 async function updateStatus(r) {
-  await supportApi.updateStatus(r.id, r.status)
+  try {
+    await supportApi.updateStatus(r.id, r.status)
+    await load()
+    showCartToast('Đã cập nhật trạng thái yêu cầu')
+  } catch (error) {
+    await load()
+    showCartToast(error.response?.data?.message || 'Không thể cập nhật trạng thái yêu cầu', 'error')
+  }
 }
 
 async function remove(id) {
   if (!confirm('Xóa yêu cầu?')) return
-  await supportApi.delete(id)
-  await load()
+  try {
+    await supportApi.delete(id)
+    await load()
+    showCartToast('Đã xóa yêu cầu hỗ trợ')
+  } catch (error) {
+    showCartToast(error.response?.data?.message || 'Không thể xóa yêu cầu hỗ trợ', 'error')
+  }
 }
 </script>
 <style scoped>.admin-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:#dc2626}.cs-card{box-shadow:0 10px 30px rgba(31,41,55,.08)}.cs-table{color:#374151}.cs-table thead th{color:#6b7280;background:#f9fafb}.cs-table tbody tr:hover{background:#fffafa}.cs-table td small{display:block;color:#6b7280;margin-top:3px}.form-select{min-width:145px;background-color:#fff;color:#374151;border-color:#d1d5db}.empty-cell{text-align:center;color:#6b7280;padding:2.5rem!important}</style>

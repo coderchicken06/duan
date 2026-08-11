@@ -98,6 +98,7 @@
 <script setup>
 import { ref } from 'vue'
 import { supportApi } from '../api'
+import { isValidVietnamesePhone, normalizeVietnamesePhone } from '../utils/phone'
 
 const form = ref({ name: '', phone: '', type: 'consulting', carInfo: '', content: '' })
 const msg = ref('')
@@ -108,8 +109,8 @@ function validateForm() {
   if (!form.value.name || !form.value.phone || !form.value.type || !form.value.content) {
     return 'Vui lòng điền đầy đủ các trường bắt buộc.'
   }
-  if (!/^\+84[0-9]{9}$/.test(form.value.phone.replace(/\s+/g, ''))) {
-    return 'Số điện thoại phải có định dạng +84xxxxxxxxx.'
+  if (!isValidVietnamesePhone(form.value.phone)) {
+    return 'Số điện thoại phải có 9 chữ số, 10 chữ số bắt đầu bằng 0, hoặc bắt đầu bằng +84/84.'
   }
   return ''
 }
@@ -121,7 +122,10 @@ async function submit() {
 
   submitting.value = true
   try {
-    const { data } = await supportApi.create(form.value)
+    const { data } = await supportApi.create({
+      ...form.value,
+      phone: normalizeVietnamesePhone(form.value.phone),
+    })
     ok.value = data.success
     msg.value = data.message || (data.success ? 'Gửi yêu cầu thành công' : 'Không thể gửi yêu cầu')
     if (data.success) {

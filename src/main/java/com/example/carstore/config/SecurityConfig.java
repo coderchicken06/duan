@@ -35,7 +35,9 @@ public class SecurityConfig {
                         .antMatchers(HttpMethod.GET, "/api/quotations/**").authenticated()
                         .antMatchers(HttpMethod.POST, "/api/quotations/**").authenticated()
                         .antMatchers("/api/auth/**", "/api/chat").permitAll()
-                        .antMatchers(HttpMethod.POST, "/api/payment/sepay/webhook").permitAll()
+                        .antMatchers(HttpMethod.POST,
+                                "/api/payment/sepay/webhook",
+                                "/api/payment-transactions/sepay/webhook").permitAll()
                         .antMatchers(
                                 "/", "/login", "/signup", "/verify-email", "/forgot-password", "/verify-otp",
                                 "/reset-password", "/compare", "/cart/view", "/checkout",

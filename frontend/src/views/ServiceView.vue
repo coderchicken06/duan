@@ -89,6 +89,7 @@ import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, supportApi } from '../api'
 import DatePickerInput from '../components/DatePickerInput.vue'
+import { isValidVietnamesePhone, normalizeVietnamesePhone } from '../utils/phone'
 
 const route = useRoute()
 const toLocalDate = (value) => {
@@ -144,8 +145,8 @@ function validateForm() {
     || !form.value.appointmentDate || !form.value.appointmentTime) {
     return 'Vui lòng điền đầy đủ các trường bắt buộc.'
   }
-  if (!/^\+84[0-9]{9}$/.test(form.value.phone.replace(/\s+/g, ''))) {
-    return 'Số điện thoại phải có định dạng +84xxxxxxxxx.'
+  if (!isValidVietnamesePhone(form.value.phone)) {
+    return 'Số điện thoại phải có 9 chữ số, 10 chữ số bắt đầu bằng 0, hoặc bắt đầu bằng +84/84.'
   }
   const appointment = new Date(`${form.value.appointmentDate}T${form.value.appointmentTime}`)
   if (Number.isNaN(appointment.getTime()) || appointment.getTime() <= Date.now()) {
@@ -161,7 +162,11 @@ async function submit() {
 
   submitting.value = true
   try {
-    const payload = { ...form.value, appointmentDate: toApiDate(form.value.appointmentDate) }
+    const payload = {
+      ...form.value,
+      phone: normalizeVietnamesePhone(form.value.phone),
+      appointmentDate: toApiDate(form.value.appointmentDate),
+    }
     const { data } = await supportApi.create(payload)
     ok.value = data.success
     msg.value = data.message || 'Không thể đặt lịch'

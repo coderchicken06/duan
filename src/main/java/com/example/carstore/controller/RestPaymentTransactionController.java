@@ -10,8 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
-import javax.servlet.http.HttpServletRequest;
-
 @RestController
 @RequestMapping({ "/api/payment-transactions", "/api/payment" })
 public class RestPaymentTransactionController {
@@ -58,25 +56,10 @@ public class RestPaymentTransactionController {
 
     @PostMapping("/sepay/webhook")
     public ResponseEntity<?> sePayWebhook(
-
             @RequestBody(required = false) Map<String, Object> payload,
-
             @RequestHeader(value = "Authorization", required = false) String authorization,
-
-            @RequestHeader(value = "X-Secret-Key", required = false) String secret,
-
-            HttpServletRequest request) {
-
+            @RequestHeader(value = "X-Secret-Key", required = false) String secret) {
         try {
-
-            boolean authenticationProvided = (authorization != null && !authorization.isBlank())
-                    || (secret != null && !secret.isBlank());
-            if (authenticationProvided && !service.isValidWebhookSecret(secret, authorization)) {
-                return ResponseEntity.status(401).body(Map.of(
-                        "success", false,
-                        "error", "Webhook authentication failed"));
-            }
-
             // Nếu SePay chỉ gửi request kiểm tra mà không có body
             if (payload == null) {
                 return ResponseEntity.ok(Map.of(

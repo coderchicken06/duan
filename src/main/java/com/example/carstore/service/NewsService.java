@@ -3,7 +3,7 @@ import com.example.carstore.entity.News;import com.example.carstore.repository.N
 @Service public class NewsService{
  private final NewsRepository repo;public NewsService(NewsRepository r){repo=r;}
  public List<News> published(){return repo.findByStatusOrderByCreatedAtDesc("PUBLISHED");}public List<News> all(){return repo.findAll();}
- public News get(String slug){return repo.findBySlug(slug).orElseThrow(()->new IllegalArgumentException("Không tìm thấy tin tức."));}
+ public News get(String slug){News news=repo.findBySlug(slug).orElseThrow(()->new IllegalArgumentException("Không tìm thấy tin tức."));if(!"PUBLISHED".equals(news.getStatus()))throw new IllegalArgumentException("Không tìm thấy tin tức.");return news;}
  public News save(News n,String author){
   if(n.getTitle()==null||n.getTitle().isBlank())throw new IllegalArgumentException("Tiêu đề là bắt buộc.");
   if(n.getTitle().trim().length()>300)throw new IllegalArgumentException("Tiêu đề không được vượt quá 300 ký tự.");

@@ -94,6 +94,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import { carImageUrl, contractApi, formatPrice, useDefaultCarImage } from '../api'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 const route = useRoute(), loading = ref(true), error = ref(''), data = ref({})
 const contract = computed(() => data.value.contract || {}), order = computed(() => data.value.order || {})
 const customer = computed(() => data.value.customer || {}), details = computed(() => data.value.details || []), payments = computed(() => data.value.payments || [])
@@ -104,7 +105,20 @@ const paidAmount = computed(() => {
 const remaining = computed(() => Math.max(0, Number(contract.value.total || 0) - paidAmount.value))
 const formatDate = value => value ? new Date(value).toLocaleString('vi-VN') : 'Chưa cập nhật'
 const printContract = () => window.print()
-onMounted(async () => { try { const response = await contractApi.getByOrder(route.params.id); data.value = response.data.data } catch (e) { error.value = e.response?.data?.message || 'Không thể tải hợp đồng' } finally { loading.value = false } })
+async function loadContract() {
+  try {
+    const response = await contractApi.getByOrder(route.params.id, { params: { _ts: Date.now() } })
+    data.value = response.data.data
+    error.value = ''
+  } catch (e) {
+    if (loading.value) error.value = e.response?.data?.message || 'Không thể tải hợp đồng'
+  } finally {
+    loading.value = false
+  }
+}
+
+onMounted(loadContract)
+useAutoRefresh(loadContract)
 </script>
 
 <style scoped>

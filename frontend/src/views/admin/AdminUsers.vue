@@ -28,6 +28,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { adminApi } from '../../api'
+import { showCartToast } from '../../composables/useCartToast'
 
 const users = ref([])
 
@@ -40,8 +41,17 @@ async function load() {
 
 async function remove(username) {
   if (!confirm('Xóa user?')) return
-  await adminApi.deleteUser(username)
-  await load()
+  try {
+    const { data } = await adminApi.deleteUser(username)
+    if (data.success === false) {
+      showCartToast(data.message || 'Không thể xóa người dùng', 'error')
+      return
+    }
+    await load()
+    showCartToast(data.message || 'Đã xóa người dùng')
+  } catch (error) {
+    showCartToast(error.response?.data?.message || 'Không thể xóa người dùng', 'error')
+  }
 }
 </script>
 <style scoped>.admin-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:#dc2626}.cs-card{box-shadow:0 10px 30px rgba(31,41,55,.08)}.cs-table{color:#374151}.cs-table thead th{color:#6b7280;background:#f9fafb}.cs-table tbody tr:hover{background:#fffafa}.role-badge{display:inline-block;padding:.3rem .55rem;border-radius:999px;background:#e0f2fe;color:#075985;font-size:.72rem;font-weight:700}.role-badge.is-admin{background:#fee2e2;color:#991b1b}.empty-cell{text-align:center;color:#6b7280;padding:2.5rem!important}@media(max-width:575.98px){.container>div:first-child{align-items:flex-start!important;gap:1rem;flex-direction:column}.container>div:first-child .btn{width:100%}}</style>

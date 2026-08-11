@@ -42,18 +42,22 @@
 import { ref, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { orderApi, formatPrice } from '../api'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
 
 const route = useRoute()
 const order = ref(null)
 const details = ref([])
 
-onMounted(async () => {
+async function loadOrder() {
   const { data } = await orderApi.getDetails(String(route.params.id))
   if (data.success) {
     order.value = data.order
     details.value = data.details || []
   }
-})
+}
+
+onMounted(loadOrder)
+useAutoRefresh(loadOrder)
 
 function formatDate(d) {
   return d ? new Date(d).toLocaleDateString('vi-VN') : ''

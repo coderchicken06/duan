@@ -68,6 +68,27 @@ class NewsServiceTest {
         verify(repository, never()).save(any());
     }
 
+    @Test
+    void publicLookupReturnsPublishedNews() {
+        News published = news("Tin đã xuất bản");
+        published.setStatus("PUBLISHED");
+        when(repository.findBySlug("tin-da-xuat-ban")).thenReturn(Optional.of(published));
+
+        assertSame(published, service.get("tin-da-xuat-ban"));
+    }
+
+    @Test
+    void publicLookupDoesNotExposeDraftNews() {
+        News draft = news("Tin nháp");
+        when(repository.findBySlug("tin-nhap")).thenReturn(Optional.of(draft));
+
+        IllegalArgumentException error = assertThrows(
+                IllegalArgumentException.class,
+                () -> service.get("tin-nhap"));
+
+        assertEquals("Không tìm thấy tin tức.", error.getMessage());
+    }
+
     private News news(String title) {
         News news = new News();
         news.setTitle(title);

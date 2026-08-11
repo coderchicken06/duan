@@ -1,23 +1,27 @@
 package com.example.carstore.service;
 
 import com.example.carstore.repository.SupportRequestRepository;
+import com.example.carstore.entity.SupportRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.security.core.Authentication;
 
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.mockito.Mockito.mock;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 class SupportRequestServiceTest {
 
     private SupportRequestService service;
+    private SupportRequestRepository repository;
 
     @BeforeEach
     void setUp() {
-        service = new SupportRequestService(
-                mock(SupportRequestRepository.class));
+        repository = mock(SupportRequestRepository.class);
+        service = new SupportRequestService(repository);
     }
 
     @Test
@@ -25,16 +29,23 @@ class SupportRequestServiceTest {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> service.createSupport("Nguyễn Văn A", "123", "chat", "Cần hỗ trợ", null));
 
-        assertEquals("Số điện thoại phải có định dạng +84xxxxxxxxx.", error.getMessage());
+        assertEquals("Số điện thoại phải có 9 chữ số, 10 chữ số bắt đầu bằng 0, hoặc bắt đầu bằng +84/84.", error.getMessage());
     }
 
     @Test
-    void rejectsLocalPhoneFormatWithoutCountryCode() {
-        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
-                () -> service.createSupport(
-                        "Nguyễn Văn A", "0912345678", "chat", "Cần hỗ trợ", null));
+    void acceptsAndNormalizesSupportedVietnamesePhoneFormats() {
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getName()).thenReturn("user1");
+        when(repository.save(any(SupportRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertEquals("Số điện thoại phải có định dạng +84xxxxxxxxx.", error.getMessage());
+        for (String phone : new String[]{"0941895900", "941895900", "84941895900", "+84941895900"}) {
+            SupportRequest saved = service.createSupport(
+                    "Nguyễn Văn A", phone, "chat", "Cần hỗ trợ", auth);
+            assertEquals("+84941895900", saved.getPhone());
+        }
+
+        verify(repository, times(4)).save(any(SupportRequest.class));
     }
 
     @Test

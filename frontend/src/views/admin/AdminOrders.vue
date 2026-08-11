@@ -69,7 +69,7 @@ function availableStatuses(order) {
 onMounted(() => {
   load()
   // Tự động làm mới danh sách đơn hàng mỗi 5 giây để cập nhật trạng thái khi khách cọc thành công
-  pollInterval = setInterval(loadSilent, 5000)
+  pollInterval = setInterval(loadSilent, 2000)
 })
 
 onUnmounted(() => {
@@ -106,6 +106,7 @@ async function updateStatus(o) {
   try {
     const { data } = await adminApi.updateOrderStatus(o.id, o.status)
     if (!data.success) showCartToast(data.message || 'Không thể cập nhật trạng thái', 'error')
+    else showCartToast(data.message || 'Đã cập nhật trạng thái đơn hàng')
   } catch (error) {
     showCartToast(error.response?.data?.message || 'Không thể cập nhật trạng thái', 'error')
   } finally {
@@ -118,6 +119,7 @@ async function cancel(order) {
   try {
     const { data } = await adminApi.updateOrderStatus(order.id, 'CANCELLED')
     if (!data.success) showCartToast(data.message || 'Không thể hủy đơn hàng', 'error')
+    else showCartToast(data.message || 'Đã hủy đơn hàng')
   } catch (error) {
     showCartToast(error.response?.data?.message || 'Không thể hủy đơn hàng', 'error')
   } finally {

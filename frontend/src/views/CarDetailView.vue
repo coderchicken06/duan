@@ -180,10 +180,13 @@ import { useCompare } from '../composables/useCompare'
 import { useAuthStore } from '../stores/auth'
 import { reviewApi } from '../api'
 import { showCartToast } from '../composables/useCartToast'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
+import { useCartStore } from '../stores/cart'
 
 const route = useRoute()
 const router = useRouter()
 const auth = useAuthStore()
+const cart = useCartStore()
 const car = ref(null)
 const reviews = ref([])
 const reviewAverage = ref(0)
@@ -271,17 +274,19 @@ const detailRows = computed(() => [
 ].filter((item) => hasData(item.raw))
   .map((item) => ({ label: item.label, value: item.format ? item.format(item.raw) : item.raw })))
 
-async function loadData() {
+async function loadData(silent = false) {
   const currentVersion = ++loadVersion
   const carId = String(route.params.id)
-  car.value = null
-  reviews.value = []
-  reviewAverage.value = 0
-  serverImages.value = []
-  selectedImage.value = ''
-  message.value = ''
-  loadError.value = ''
-  promotion.value = null
+  if (!silent) {
+    car.value = null
+    reviews.value = []
+    reviewAverage.value = 0
+    serverImages.value = []
+    selectedImage.value = ''
+    message.value = ''
+    loadError.value = ''
+    promotion.value = null
+  }
 
   try {
     const detailResponse = await carApi.getById(carId)
@@ -332,22 +337,27 @@ async function loadData() {
       console.error('Không thể tải khuyến mãi cho xe:', promotionResult.reason)
     }
 
-    selectedImage.value = galleryImages.value[0] || carImageUrl(car.value?.image)
+    if (!silent || !selectedImage.value) {
+      selectedImage.value = galleryImages.value[0] || carImageUrl(car.value?.image)
+    }
   } catch (error) {
     if (currentVersion !== loadVersion) return
-    car.value = null
-    loadError.value = error.response?.data?.message || error.message || 'Không thể tải thông tin xe'
-    success.value = false
+    if (!silent) {
+      car.value = null
+      loadError.value = error.response?.data?.message || error.message || 'Không thể tải thông tin xe'
+      success.value = false
+    }
     console.error('Không thể tải thông tin xe:', error)
   }
 }
 
 onMounted(loadData)
-watch(() => route.params.id, loadData)
+watch(() => route.params.id, () => loadData())
+useAutoRefresh(() => loadData(true))
 
 function toggleCurrent() {
   if (!has(car.value.id) && count.value >= 3) {
-    alert('Chỉ được so sánh tối đa 3 xe.')
+    showCartToast('Chỉ được so sánh tối đa 3 xe.', 'warning')
     return
   }
   toggle(car.value.id)
@@ -366,6 +376,7 @@ async function addById(id) {
     const { data } = await cartApi.add(id)
     success.value = Boolean(data.success)
     if (data.success) {
+      await cart.refresh()
       showCartToast('Thêm vào giỏ hàng thành công!')
       message.value = ''
     } else {

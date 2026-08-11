@@ -108,14 +108,15 @@ public class RestProfileController {
         }
         if (emailChanged) {
             String code = String.valueOf(100000 + secureRandom.nextInt(900000));
+            Date expiresAt = new Date(System.currentTimeMillis() + 15 * 60 * 1000L);
+            mailService.sendEmailVerificationCode(existing.getEmail(), code);
             existing.setEnabled(false);
             existing.setVerificationCode(code);
-            existing.setVerificationExpired(new Date(System.currentTimeMillis() + 15 * 60 * 1000L));
+            existing.setVerificationExpired(expiresAt);
             accountRepo.save(existing);
             SecurityContextHolder.clearContext();
             HttpSession session = request.getSession(false);
             if (session != null) session.invalidate();
-            mailService.sendEmailVerificationCode(existing.getEmail(), code);
             return Map.of(
                     "success", true,
                     "message", "Email đã thay đổi. Vui lòng xác thực địa chỉ email mới.",

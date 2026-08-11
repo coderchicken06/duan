@@ -1,0 +1,160 @@
+package com.example.carstore.controller;
+
+import com.example.carstore.entity.Account;
+import com.example.carstore.repository.AccountRepository;
+import com.example.carstore.repository.BrandRepository;
+import com.example.carstore.repository.CarRepository;
+import com.example.carstore.repository.OrderDetailRepository;
+import com.example.carstore.repository.OrderRepository;
+import com.example.carstore.service.CarImageService;
+import com.example.carstore.service.OrderService;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+@ExtendWith(MockitoExtension.class)
+class RestAdminControllerTest {
+
+    @Mock private AccountRepository accountRepo;
+    @Mock private OrderRepository orderRepo;
+    @Mock private OrderDetailRepository detailRepo;
+    @Mock private CarRepository carRepo;
+    @Mock private BrandRepository brandRepo;
+    @Mock private PasswordEncoder passwordEncoder;
+    @Mock private OrderService orderService;
+    @Mock private CarImageService carImageService;
+
+    private RestAdminController controller;
+
+    @BeforeEach
+    void setUp() {
+        controller = new RestAdminController(
+                accountRepo, orderRepo, detailRepo, carRepo, brandRepo,
+                passwordEncoder, orderService, carImageService);
+    }
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void updatingOwnRoleRefreshesCurrentSessionAuthorities() {
+        Account existing = account("admin", "ROLE_ADMIN");
+        Account update = account("admin", "ROLE_USER");
+        when(accountRepo.findById("admin")).thenReturn(Optional.of(existing));
+        when(accountRepo.countByRole("ROLE_ADMIN")).thenReturn(2L);
+        Authentication authentication = authentication("admin", "ROLE_ADMIN");
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        Map<String, Object> result = controller.updateUser("admin", update, authentication);
+
+        assertEquals(true, result.get("success"));
+        assertEquals(true, result.get("roleChanged"));
+        assertEquals(true, result.get("sessionUpdated"));
+        assertEquals(false, result.get("requiresRelogin"));
+        assertTrue(hasAuthority(SecurityContextHolder.getContext().getAuthentication(), "ROLE_USER"));
+        assertFalse(hasAuthority(SecurityContextHolder.getContext().getAuthentication(), "ROLE_ADMIN"));
+        assertTrue(hasAuthority(SecurityContextHolder.getContext().getAuthentication(), "SCOPE_profile"));
+        verify(accountRepo).save(existing);
+    }
+
+    @Test
+    void cannotDemoteLastAdministrator() {
+        Account existing = account("admin", "ROLE_ADMIN");
+        Account update = account("admin", "ROLE_USER");
+        when(accountRepo.findById("admin")).thenReturn(Optional.of(existing));
+        when(accountRepo.countByRole("ROLE_ADMIN")).thenReturn(1L);
+        Authentication authentication = authentication("admin", "ROLE_ADMIN");
+
+        Map<String, Object> result = controller.updateUser("admin", update, authentication);
+
+        assertEquals(false, result.get("success"));
+        assertEquals("ROLE_ADMIN", existing.getRole());
+        verify(accountRepo, never()).save(any());
+    }
+
+    @Test
+    void cannotDeleteOwnAccount() {
+        Account existing = account("admin", "ROLE_ADMIN");
+        when(accountRepo.findById("admin")).thenReturn(Optional.of(existing));
+        Authentication authentication = authentication("admin", "ROLE_ADMIN");
+
+        Map<String, Object> result = controller.deleteUser("admin", authentication);
+
+        assertEquals(false, result.get("success"));
+        verify(accountRepo, never()).deleteById(anyString());
+    }
+
+    @Test
+    void cannotDeleteLastAdministrator() {
+        Account existing = account("other-admin", "ROLE_ADMIN");
+        when(accountRepo.findById("other-admin")).thenReturn(Optional.of(existing));
+        when(accountRepo.countByRole("ROLE_ADMIN")).thenReturn(1L);
+        Authentication authentication = authentication("admin", "ROLE_ADMIN");
+
+        Map<String, Object> result = controller.deleteUser("other-admin", authentication);
+
+        assertEquals(false, result.get("success"));
+        verify(accountRepo, never()).deleteById(anyString());
+    }
+
+    @Test
+    void updatingAnotherUsersRoleRequiresThatUserToLoginAgain() {
+        Account existing = account("customer", "ROLE_USER");
+        Account update = account("customer", "ROLE_ADMIN");
+        when(accountRepo.findById("customer")).thenReturn(Optional.of(existing));
+        Authentication authentication = authentication("admin", "ROLE_ADMIN");
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        Map<String, Object> result = controller.updateUser("customer", update, authentication);
+
+        assertEquals(true, result.get("success"));
+        assertEquals(true, result.get("roleChanged"));
+        assertEquals(false, result.get("sessionUpdated"));
+        assertEquals(true, result.get("requiresRelogin"));
+        assertTrue(String.valueOf(result.get("message")).contains("đăng nhập lại"));
+        assertTrue(hasAuthority(SecurityContextHolder.getContext().getAuthentication(), "ROLE_ADMIN"));
+        verify(accountRepo).save(existing);
+    }
+
+    private Account account(String username, String role) {
+        Account account = new Account();
+        account.setUsername(username);
+        account.setRole(role);
+        return account;
+    }
+
+    private Authentication authentication(String username, String role) {
+        return new UsernamePasswordAuthenticationToken(
+                username,
+                "N/A",
+                List.of(new SimpleGrantedAuthority(role), new SimpleGrantedAuthority("SCOPE_profile")));
+    }
+
+    private boolean hasAuthority(Authentication authentication, String authority) {
+        return authentication.getAuthorities().stream()
+                .anyMatch(granted -> authority.equals(granted.getAuthority()));
+    }
+}

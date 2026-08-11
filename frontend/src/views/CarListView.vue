@@ -83,8 +83,11 @@ import { useRoute } from 'vue-router'
 import { brandApi, carApi, cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
 import { showCartToast } from '../composables/useCartToast'
+import { useAutoRefresh } from '../composables/useAutoRefresh'
+import { useCartStore } from '../stores/cart'
 
 const route = useRoute()
+const cart = useCartStore()
 const allCars = ref([])
 const brands = ref([])
 const loading = ref(true)
@@ -138,10 +141,13 @@ watch(() => route.query.q, (val) => {
 })
 
 onMounted(loadCars)
+useAutoRefresh(() => loadCars(true))
 
-async function loadCars() {
-  loading.value = true
-  loadError.value = ''
+async function loadCars(silent = false) {
+  if (!silent) {
+    loading.value = true
+    loadError.value = ''
+  }
   try {
     const [carsResponse, brandsResponse] = await Promise.all([
       carApi.getAll(String(q.value || '') || undefined),
@@ -152,11 +158,13 @@ async function loadCars() {
     allCars.value = Array.isArray(carData) ? carData : carData.data || []
     brands.value = Array.isArray(brandData) ? brandData : brandData.data || []
   } catch {
-    allCars.value = []
-    brands.value = []
-    loadError.value = 'Không thể kết nối máy chủ. Vui lòng kiểm tra backend và thử lại.'
+    if (!silent) {
+      allCars.value = []
+      brands.value = []
+      loadError.value = 'Không thể kết nối máy chủ. Vui lòng kiểm tra backend và thử lại.'
+    }
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
 
@@ -178,6 +186,7 @@ async function addToCart(id) {
   try {
     const { data } = await cartApi.add(id)
     if (data.success) {
+      await cart.refresh()
       showCartToast('Thêm vào giỏ hàng thành công!')
       message.value = ''
     } else {

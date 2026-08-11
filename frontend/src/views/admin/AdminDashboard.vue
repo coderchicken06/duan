@@ -32,12 +32,12 @@
             <div class="card-heading">
               <div>
                 <span class="card-kicker">TÀI CHÍNH</span>
-                <h2>Doanh thu đơn hàng</h2>
+                <h2>Tổng tiền cọc đã thu</h2>
               </div>
               <span class="revenue-mark">VNĐ</span>
             </div>
             <strong class="revenue-value">{{ formatPrice(revenue) }}</strong>
-            <p>Tổng giá trị ghi nhận từ các đơn hàng trong hệ thống.</p>
+            <p>Tổng tiền cọc từ các đơn hàng đã xác nhận thanh toán.</p>
           </article>
 
           <article class="dashboard-card">
@@ -76,7 +76,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { adminApi, quotationApi, formatPrice } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
 
@@ -106,7 +106,11 @@ function salePercentage(quantity) {
   return Math.max(8, Math.round((quantity / highestSales.value) * 100))
 }
 
-onMounted(async () => {
+async function loadDashboard(silent = false) {
+  if (!silent) {
+    loading.value = true
+    errorMessage.value = ''
+  }
   try {
     const [{ data }, quotationResponse] = await Promise.all([adminApi.getDashboardInfo(), quotationApi.getAll()])
     if (!data?.success) throw new Error(data?.message || 'Không thể tải số liệu tổng quan')
@@ -126,16 +130,26 @@ onMounted(async () => {
     quotations.value = quotationResponse.data.data || []
   } catch (error) {
     console.error('Không thể tải dashboard:', error)
-    errorMessage.value = 'Không thể tải dữ liệu thống kê. Vui lòng thử lại.'
+    if (!silent) errorMessage.value = 'Không thể tải dữ liệu thống kê. Vui lòng thử lại.'
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
+}
+
+let pollTimer = null
+
+onMounted(() => {
+  loadDashboard()
+  pollTimer = window.setInterval(() => loadDashboard(true), 2000)
 })
+
+onBeforeUnmount(() => window.clearInterval(pollTimer))
 
 async function setQuotationStatus(quote, status) {
   try {
-    const { data } = await quotationApi.update(quote.id, { discount: quote.discount || 0, status })
-    Object.assign(quote, data.data)
+    await quotationApi.update(quote.id, { discount: quote.discount || 0, status })
+    await loadDashboard()
+    showCartToast(status === 'Đã duyệt' ? 'Đã duyệt báo giá' : 'Đã từ chối báo giá')
   } catch (error) {
     showCartToast(error.response?.data?.message || 'Không thể cập nhật báo giá.', 'error')
   }

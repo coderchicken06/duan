@@ -39,7 +39,7 @@
 </template>
 
 <script>
-import api from '../api/client';
+import { chatApi } from '../api';
 
 export default {
   name: 'ChatbotWidget',
@@ -64,9 +64,7 @@ export default {
       this.userMessage = '';
 
       try {
-        const response = await api.post('/api/chat', {
-          message: text
-        });
+        const response = await chatApi.send(text);
 
         this.messages.push({
           sender: 'bot',

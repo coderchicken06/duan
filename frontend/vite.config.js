@@ -16,12 +16,16 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      '/api': { target: 'http://localhost:8082', changeOrigin: true },
+      '/api': {
+        target: 'http://127.0.0.1:8082',
+        changeOrigin: true,
+        secure: false,
+      },
       '/images': { target: 'http://localhost:8082', changeOrigin: true },
       '/videos': { target: 'http://localhost:8082', changeOrigin: true },
-      '/oauth2': { target: 'http://localhost:8082', changeOrigin: true },
-      '/login': { target: 'http://localhost:8082', changeOrigin: true },
-      '/logout': { target: 'http://localhost:8082', changeOrigin: true },
+      '/oauth2': { target: 'http://127.0.0.1:8082', changeOrigin: true, secure: false },
+      '/login/oauth2': { target: 'http://127.0.0.1:8082', changeOrigin: true, secure: false },
+      '/logout': { target: 'http://127.0.0.1:8082', changeOrigin: true, secure: false },
     },
   },
   build: {

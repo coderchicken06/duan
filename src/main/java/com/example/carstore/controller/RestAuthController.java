@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -39,14 +40,15 @@ public class RestAuthController {
     private final SecureRandom secureRandom = new SecureRandom();
 
     public RestAuthController(AccountRepository accountRepo,
-                              PasswordEncoder passwordEncoder,
-                              MailService mailService) {
+            PasswordEncoder passwordEncoder,
+            MailService mailService) {
         this.accountRepo = accountRepo;
         this.passwordEncoder = passwordEncoder;
         this.mailService = mailService;
     }
 
     @PostMapping("/signup")
+    @Transactional
     public Map<String, Object> signup(@RequestBody Account account) {
         String validation = validateSignup(account);
         if (validation != null) {
@@ -104,6 +106,7 @@ public class RestAuthController {
     }
 
     @PostMapping("/resend-verification")
+    @Transactional
     public Map<String, Object> resendVerification(@RequestBody Map<String, String> payload) {
         String username = payload == null ? null : payload.get("username");
         if (isBlank(username)) {
@@ -119,8 +122,8 @@ public class RestAuthController {
             return ResponseUtils.ok("Email đã được xác thực trước đó");
         }
         if (account.getVerificationExpired() != null
-                && account.getVerificationExpired().getTime() - System.currentTimeMillis()
-                > EMAIL_VERIFICATION_TTL_MILLIS - 60_000L) {
+                && account.getVerificationExpired().getTime()
+                        - System.currentTimeMillis() > EMAIL_VERIFICATION_TTL_MILLIS - 60_000L) {
             return ResponseUtils.fail("Vui lòng chờ 60 giây trước khi gửi lại mã");
         }
 
@@ -134,7 +137,7 @@ public class RestAuthController {
 
     @PostMapping("/login")
     public Map<String, Object> login(@RequestBody Map<String, String> credentials,
-                                     HttpServletRequest request) {
+            HttpServletRequest request) {
         String username = credentials == null ? null : credentials.get("username");
         String password = credentials == null ? null : credentials.get("password");
 
@@ -146,7 +149,8 @@ public class RestAuthController {
         }
 
         java.util.Optional<Account> accountOpt = accountRepo.findById(username);
-        if (accountOpt.isEmpty()) return ResponseUtils.fail("Sai tài khoản hoặc mật khẩu");
+        if (accountOpt.isEmpty())
+            return ResponseUtils.fail("Sai tài khoản hoặc mật khẩu");
         Account account = accountOpt.get();
         if (!passwordEncoder.matches(password, account.getPassword())) {
             return ResponseUtils.fail("Sai tài khoản hoặc mật khẩu");
@@ -211,7 +215,7 @@ public class RestAuthController {
 
     @PostMapping("/forgot-password")
     public Map<String, Object> forgotPassword(@RequestBody Map<String, String> payload,
-                                              HttpSession session) {
+            HttpSession session) {
         String email = payload == null ? null : payload.get("email");
         if (isBlank(email)) {
             return ResponseUtils.fail("Email is required");
@@ -223,16 +227,19 @@ public class RestAuthController {
         }
 
         String otp = String.valueOf(100000 + secureRandom.nextInt(900000));
+
+        mailService.sendOtp(accountOpt.get().getEmail(), otp);
+
         session.setAttribute("resetEmail", accountOpt.get().getEmail());
         session.setAttribute("resetOtp", otp);
         session.setAttribute("resetOtpExpiresAt", System.currentTimeMillis() + 10 * 60 * 1000L);
-        mailService.sendOtp(accountOpt.get().getEmail(), otp);
+
         return ResponseUtils.ok("Mã OTP đã được gửi đến email của bạn");
     }
 
     @PostMapping("/verify-otp")
     public Map<String, Object> verifyOtp(@RequestBody Map<String, String> payload,
-                                         HttpSession session) {
+            HttpSession session) {
         String otp = payload == null ? null : payload.get("otp");
         String expectedOtp = (String) session.getAttribute("resetOtp");
         Long expiresAt = (Long) session.getAttribute("resetOtpExpiresAt");
@@ -248,7 +255,7 @@ public class RestAuthController {
 
     @PostMapping("/reset-password")
     public Map<String, Object> resetPassword(@RequestBody Map<String, String> payload,
-                                             HttpSession session) {
+            HttpSession session) {
         String password = payload == null ? null : payload.get("password");
         String confirmPassword = payload == null ? null : payload.get("confirmPassword");
         String email = (String) session.getAttribute("resetEmail");
@@ -284,18 +291,25 @@ public class RestAuthController {
     }
 
     private String validateSignup(Account account) {
-        if (account == null || isBlank(account.getUsername())) return "Username is required";
+        if (account == null || isBlank(account.getUsername()))
+            return "Username is required";
         account.setUsername(account.getUsername().trim());
         if (!account.getUsername().matches("^[a-zA-Z0-9._-]{3,50}$")) {
             return "Username phải có 3-50 ký tự và chỉ gồm chữ, số, dấu chấm, gạch dưới hoặc gạch ngang";
         }
-        if (accountRepo.existsById(account.getUsername())) return "Username already exists";
-        if (isBlank(account.getPassword())) return "Password is required";
-        if (account.getPassword().length() < 6) return "Mật khẩu phải có ít nhất 6 ký tự";
-        if (isBlank(account.getEmail())) return "Email is required";
+        if (accountRepo.existsById(account.getUsername()))
+            return "Username already exists";
+        if (isBlank(account.getPassword()))
+            return "Password is required";
+        if (account.getPassword().length() < 6)
+            return "Mật khẩu phải có ít nhất 6 ký tự";
+        if (isBlank(account.getEmail()))
+            return "Email is required";
         account.setEmail(account.getEmail().trim().toLowerCase());
-        if (!account.getEmail().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) return "Email không hợp lệ";
-        if (accountRepo.findByEmail(account.getEmail()).isPresent()) return "Email đã được sử dụng";
+        if (!account.getEmail().matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"))
+            return "Email không hợp lệ";
+        if (accountRepo.findByEmail(account.getEmail()).isPresent())
+            return "Email đã được sử dụng";
         return null;
     }
 
