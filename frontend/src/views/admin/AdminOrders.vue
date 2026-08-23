@@ -20,7 +20,8 @@
             <td>{{ o.address }}</td>
             <td>
               <select :value="o.status" class="form-select form-select-sm"
-                :disabled="isSubmitting(o.id) || ['CANCELLED', 'DELIVERED'].includes(o.status)" @change="updateStatus(o, $event.target.value)">
+                :disabled="isSubmitting(o.id) || ['CANCELLED', 'DELIVERED'].includes(o.status)"
+                @change="updateStatus(o, $event.target.value)">
                 <option v-for="status in availableStatuses(o)" :key="status" :value="status">
                   {{ statusLabels[status] }}
                 </option>
@@ -28,7 +29,8 @@
             </td>
             <td>
               <button v-if="!['CANCELLED', 'DELIVERED'].includes(o.status)" class="btn btn-sm cs-btn-danger"
-                :disabled="isSubmitting(o.id)" @click="cancel(o)">{{ isSubmitting(o.id) ? 'Đang xử lý...' : 'Hủy đơn' }}</button>
+                :disabled="isSubmitting(o.id)" @click="cancel(o)">{{ isSubmitting(o.id) ? 'Đang xử lý...' : 'Hủy đơn'
+                }}</button>
             </td>
           </tr>
           <tr v-if="orders.length === 0">
@@ -139,49 +141,48 @@ async function cancel(order) {
 
 const isSubmitting = (orderId) => submittingOrderId.value === orderId
 </script>
-<style
-  scoped>
-  .admin-eyebrow {
-    font-size: .72rem;
-    font-weight: 800;
-    letter-spacing: .08em;
-    color: #dc2626
-  }
+<style scoped>
+.admin-eyebrow {
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .08em;
+  color: #dc2626
+}
 
-  .cs-card {
-    box-shadow: 0 10px 30px rgba(31, 41, 55, .08)
-  }
+.cs-card {
+  box-shadow: 0 10px 30px rgba(31, 41, 55, .08)
+}
 
-  .cs-table {
-    color: #374151
-  }
+.cs-table {
+  color: #374151
+}
 
-  .cs-table thead th {
-    color: #6b7280;
-    background: #f9fafb
-  }
+.cs-table thead th {
+  color: #6b7280;
+  background: #f9fafb
+}
 
-  .cs-table tbody tr:hover {
-    background: #fffafa
-  }
+.cs-table tbody tr:hover {
+  background: #fffafa
+}
 
-  .form-select {
-    min-width: 235px;
-    background-color: #fff;
-    color: #374151;
-    border-color: #d1d5db;
-    font-weight: 600
-  }
+.form-select {
+  min-width: 235px;
+  background-color: #fff;
+  color: #374151;
+  border-color: #d1d5db;
+  font-weight: 600
+}
 
-  .empty-cell {
-    text-align: center;
-    color: #6b7280;
-    padding: 2.5rem !important
-  }
+.empty-cell {
+  text-align: center;
+  color: #6b7280;
+  padding: 2.5rem !important
+}
 
-  .btn:disabled,
-  .form-select:disabled {
-    cursor: wait;
-    opacity: .65
-  }
+.btn:disabled,
+.form-select:disabled {
+  cursor: wait;
+  opacity: .65
+}
 </style>

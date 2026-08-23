@@ -60,7 +60,7 @@
             <router-link to="/admin/inventory" @click="closeAdminMenu">📦 Quản lý tồn kho</router-link>
             <router-link to="/admin/products" @click="closeAdminMenu">🚗 Quản lý sản phẩm</router-link>
             <router-link to="/admin/orders" @click="closeAdminMenu">📦 Quản lý đơn hàng</router-link>
-            <router-link to="/admin/support" @click="closeAdminMenu">📋 Quản lý yêu cầu</router-link>
+            <router-link to="/admin/support" @click="closeAdminMenu">📋 Quản lý yêu cầu hỗ trợ</router-link>
             <router-link to="/admin/users" @click="closeAdminMenu">👥 Quản lý khách hàng</router-link>
             <router-link to="/admin/marketing" @click="closeAdminMenu">📣 Khuyến mãi & tin tức</router-link>
             <router-link to="/admin/contracts" @click="closeAdminMenu">📄 Quản lý hợp đồng</router-link>
@@ -92,12 +92,13 @@
           <input v-model="searchQuery" type="search" aria-label="Tên xe cần tìm" placeholder="Tìm kiếm tên xe..."
             autocomplete="off" @focus="showCachedSuggestions" @input="handleSearchInput" />
           <div v-if="showDropdown && suggestions.length" class="search-suggestions" role="listbox">
-            <button v-for="item in suggestions" :key="item.id" class="search-suggestion" type="button"
-              role="option" @click="selectSuggestion(item)">
+            <button v-for="item in suggestions" :key="item.id" class="search-suggestion" type="button" role="option"
+              @click="selectSuggestion(item)">
               <img :src="item.mainImageUrl || '/images/default-car.jpg'" alt="" @error="useDefaultCarImage" />
-              <span class="search-suggestion-info"><strong>{{ item.carName }}</strong><small>{{ item.brandName }}</small><small
-                v-if="item.fuelType || item.seatCapacity" class="search-suggestion-tags">{{ item.fuelType || 'N/A' }}<template
-                  v-if="item.seatCapacity"> · {{ item.seatCapacity }} chỗ</template></small></span>
+              <span class="search-suggestion-info"><strong>{{ item.carName }}</strong><small>{{ item.brandName
+                  }}</small><small v-if="item.fuelType || item.seatCapacity" class="search-suggestion-tags">{{
+                    item.fuelType || 'N/A' }}<template v-if="item.seatCapacity"> · {{ item.seatCapacity }}
+                    chỗ</template></small></span>
               <span class="search-suggestion-price">{{ formatPrice(item.price) }} VNĐ</span>
             </button>
           </div>
@@ -323,9 +324,19 @@ function selectSuggestion(item) {
   outline-offset: 3px;
 }
 
-.ford-search-row { position: relative; }
-.search-input-wrapper { min-width: 0; position: relative; flex: 1; }
-.search-input-wrapper input { width: 100%; }
+.ford-search-row {
+  position: relative;
+}
+
+.search-input-wrapper {
+  min-width: 0;
+  position: relative;
+  flex: 1;
+}
+
+.search-input-wrapper input {
+  width: 100%;
+}
 
 .search-suggestions {
   background: #fff;
@@ -357,17 +368,52 @@ function selectSuggestion(item) {
   width: 100%;
 }
 
-.search-suggestion:hover { background: #f8f8f8; }
-.search-suggestion:last-child { border-bottom: 0; }
-.search-suggestion img { height: 44px; object-fit: cover; width: 64px; }
-.search-suggestion-info { display: grid; min-width: 0; }
-.search-suggestion-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.search-suggestion-info small { color: #6b7280; }
-.search-suggestion-info .search-suggestion-tags { color: #92400e; font-size: .76rem; }
-.search-suggestion-price { color: #b91c1c; font-size: .9rem; font-weight: 800; white-space: nowrap; }
+.search-suggestion:hover {
+  background: #f8f8f8;
+}
+
+.search-suggestion:last-child {
+  border-bottom: 0;
+}
+
+.search-suggestion img {
+  height: 44px;
+  object-fit: cover;
+  width: 64px;
+}
+
+.search-suggestion-info {
+  display: grid;
+  min-width: 0;
+}
+
+.search-suggestion-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.search-suggestion-info small {
+  color: #6b7280;
+}
+
+.search-suggestion-info .search-suggestion-tags {
+  color: #92400e;
+  font-size: .76rem;
+}
+
+.search-suggestion-price {
+  color: #b91c1c;
+  font-size: .9rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
 
 @media (max-width: 768px) {
-  .search-suggestions { min-width: min(360px, calc(100vw - 2rem)); }
+  .search-suggestions {
+    min-width: min(360px, calc(100vw - 2rem));
+  }
+
   .ford-header-inner {
     grid-template-columns: auto 1fr auto;
     height: auto;

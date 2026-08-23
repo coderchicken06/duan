@@ -1,9 +1,19 @@
 <template>
   <div class="container cs-container py-5">
-    <span class="admin-eyebrow">CHĂM SÓC KHÁCH HÀNG</span><h2 class="cs-page-title mb-4">Quản lý yêu cầu hỗ trợ</h2>
+    <span class="admin-eyebrow">CHĂM SÓC KHÁCH HÀNG</span>
+    <h2 class="cs-page-title mb-4">Quản lý yêu cầu hỗ trợ</h2>
     <div class="table-responsive cs-card p-3">
       <table class="table cs-table mb-0">
-        <thead><tr><th>ID</th><th>KH</th><th>Loại</th><th>Chi tiết</th><th>Trạng thái</th><th></th></tr></thead>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>KH</th>
+            <th>Loại</th>
+            <th>Chi tiết</th>
+            <th>Trạng thái</th>
+            <th></th>
+          </tr>
+        </thead>
         <tbody>
           <tr v-for="r in requests" :key="r.id">
             <td>{{ r.id }}</td>
@@ -27,7 +37,9 @@
             </td>
             <td><button class="btn btn-sm cs-btn-danger" @click="remove(r.id)">Xóa</button></td>
           </tr>
-          <tr v-if="requests.length === 0"><td colspan="6" class="empty-cell">Chưa có yêu cầu hỗ trợ nào.</td></tr>
+          <tr v-if="requests.length === 0">
+            <td colspan="6" class="empty-cell">Chưa có yêu cầu hỗ trợ nào.</td>
+          </tr>
         </tbody>
       </table>
     </div>
@@ -74,4 +86,48 @@ async function remove(id) {
   }
 }
 </script>
-<style scoped>.admin-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:#dc2626}.cs-card{box-shadow:0 10px 30px rgba(31,41,55,.08)}.cs-table{color:#374151}.cs-table thead th{color:#6b7280;background:#f9fafb}.cs-table tbody tr:hover{background:#fffafa}.cs-table td small{display:block;color:#6b7280;margin-top:3px}.form-select{min-width:145px;background-color:#fff;color:#374151;border-color:#d1d5db}.empty-cell{text-align:center;color:#6b7280;padding:2.5rem!important}</style>
+<style
+  scoped>
+  .admin-eyebrow {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: #dc2626
+  }
+
+  .cs-card {
+    box-shadow: 0 10px 30px rgba(31, 41, 55, .08)
+  }
+
+  .cs-table {
+    color: #374151
+  }
+
+  .cs-table thead th {
+    color: #6b7280;
+    background: #f9fafb
+  }
+
+  .cs-table tbody tr:hover {
+    background: #fffafa
+  }
+
+  .cs-table td small {
+    display: block;
+    color: #6b7280;
+    margin-top: 3px
+  }
+
+  .form-select {
+    min-width: 145px;
+    background-color: #fff;
+    color: #374151;
+    border-color: #d1d5db
+  }
+
+  .empty-cell {
+    text-align: center;
+    color: #6b7280;
+    padding: 2.5rem !important
+  }
+</style>
