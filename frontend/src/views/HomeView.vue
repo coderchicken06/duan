@@ -46,7 +46,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
@@ -64,6 +64,11 @@ const q = ref(route.query.q || '')
 
 onMounted(loadCars)
 useAutoRefresh(() => loadCars(true))
+
+watch(() => route.fullPath, () => {
+  q.value = String(route.query.q || '')
+  loadCars(true)
+})
 
 async function loadCars(silent = false) {
   if (!silent) {

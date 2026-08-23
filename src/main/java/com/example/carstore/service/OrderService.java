@@ -49,7 +49,7 @@ public class OrderService {
         this(orderRepo, detailRepo, carRepo, null, null);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Orders checkout(String username, String address, String registrationAddress, String paymentMethod, Map<Integer, CartItem> cart) {
         if (!StringUtils.hasText(username)) {
             throw new IllegalArgumentException("User is required");
@@ -127,12 +127,12 @@ public class OrderService {
     }
 
     // Overload hàm checkout cũ để tránh vỡ code ở các Controller hiện tại chưa truyền đủ tham số
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Orders checkout(String username, String address, Map<Integer, CartItem> cart) {
         return checkout(username, address, address, "SePay", cart);
     }
 
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public Orders updateStatus(Integer orderId, String targetStatus) {
         if (!OrderStatus.VALID_STATUSES.contains(targetStatus)) {
             throw new IllegalArgumentException("Trạng thái đơn hàng không hợp lệ.");

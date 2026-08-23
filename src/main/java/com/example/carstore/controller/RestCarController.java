@@ -2,6 +2,7 @@ package com.example.carstore.controller;
 
 import com.example.carstore.entity.Car;
 import com.example.carstore.repository.CarRepository;
+import com.example.carstore.repository.BrandRepository;
 import com.example.carstore.util.ResponseUtils;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -21,9 +23,11 @@ import java.util.stream.Collectors;
 public class RestCarController {
 
     private final CarRepository carRepo;
+    private final BrandRepository brandRepo;
 
-    public RestCarController(CarRepository carRepo) {
+    public RestCarController(CarRepository carRepo, BrandRepository brandRepo) {
         this.carRepo = carRepo;
+        this.brandRepo = brandRepo;
     }
 
     @GetMapping
@@ -66,6 +70,39 @@ public class RestCarController {
                 : carRepo.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(query, query);
         cars = cars.stream().filter(this::isAvailable).collect(Collectors.toList());
         return Map.of("success", true, "data", cars, "count", cars.size());
+    }
+
+    @GetMapping("/suggest")
+    public Map<String, Object> suggest(@RequestParam String keyword) {
+        String query = keyword == null ? "" : keyword.trim();
+        if (query.isEmpty()) {
+            return Map.of("success", true, "data", List.of());
+        }
+        Map<Integer, String> brandNames = brandRepo.findAll().stream()
+                .collect(Collectors.toMap(b -> b.getId(), b -> b.getName()));
+        List<Car> matchedCars = carRepo.findSmartSuggestions(query, PageRequest.of(0, 6));
+        if (matchedCars.isEmpty()) {
+            String normalizedQuery = query.replaceAll("(?i)\\s*chỗ", "").trim();
+            if (!normalizedQuery.isEmpty() && !normalizedQuery.equalsIgnoreCase(query)) {
+                matchedCars = carRepo.findSmartSuggestions(normalizedQuery, PageRequest.of(0, 6));
+            }
+        }
+        List<Map<String, Object>> suggestions = matchedCars.stream()
+                .map(car -> toSuggestion(car, brandNames))
+                .collect(Collectors.toList());
+        return Map.of("success", true, "data", suggestions);
+    }
+
+    private Map<String, Object> toSuggestion(Car car, Map<Integer, String> brandNames) {
+        Map<String, Object> result = new java.util.LinkedHashMap<>();
+        result.put("id", car.getId());
+        result.put("carName", car.getName());
+        result.put("price", car.getPrice());
+        result.put("mainImageUrl", car.getImageUrl());
+        result.put("brandName", brandNames.getOrDefault(car.getBrandId(), "Chưa xác định"));
+        result.put("fuelType", car.getFuelType());
+        result.put("seatCapacity", car.getSeats());
+        return result;
     }
 
     @GetMapping("/stats/count")

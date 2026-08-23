@@ -52,6 +52,7 @@ onMounted(async () => {
 })
 
 async function submit() {
+  if (submitting.value) return
   submitting.value = true
   error.value = ''
   try {

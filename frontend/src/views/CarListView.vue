@@ -38,7 +38,7 @@
             <span>Mức giá</span>
             <select v-model="filters.priceRange">
               <option value="">Tất cả</option>
-              <option value="demo">Đến 5 triệu (giá demo)</option>
+              <option value="demo">Đến 5 triệu</option>
               <option value="5m-500m">Trên 5 triệu đến dưới 500 triệu</option>
               <option value="500m-1b">Từ 500 triệu đến dưới 1 tỷ</option>
               <option value="1b-2b">Từ 1 đến 2 tỷ</option>
@@ -58,6 +58,20 @@
             <span>Màu sắc</span>
             <input v-model="filters.color" type="text" placeholder="Ví dụ: Đen, Trắng" />
           </label>
+          <label>
+            <span>Nhiên liệu</span>
+            <select v-model="filters.fuelType">
+              <option value="">Tất cả</option>
+              <option v-for="fuel in availableFuelTypes" :key="fuel" :value="fuel">{{ fuel }}</option>
+            </select>
+          </label>
+          <label>
+            <span>Số chỗ</span>
+            <select v-model="filters.seats">
+              <option value="">Tất cả</option>
+              <option v-for="seat in availableSeats" :key="seat" :value="String(seat)">{{ seat }} chỗ</option>
+            </select>
+          </label>
         </div>
 
         <div class="ford-filter-actions">
@@ -66,7 +80,12 @@
         </div>
       </div>
 
-      <div class="row g-4">
+      <div v-if="loading" class="row g-4" aria-label="Đang tải danh sách xe">
+        <div v-for="item in 6" :key="item" class="col-12 col-md-6 col-lg-4">
+          <div class="car-skeleton"></div>
+        </div>
+      </div>
+      <div v-else class="row g-4">
         <div v-for="car in filteredCars" :key="car.id" class="col-12 col-md-6 col-lg-4">
           <CarCard :car="car" @add-cart="addToCart" />
         </div>
@@ -99,6 +118,8 @@ const filters = ref({
   priceRange: '',
   year: '',
   color: '',
+  fuelType: '',
+  seats: '',
 })
 
 const availableYears = computed(() => {
@@ -107,6 +128,8 @@ const availableYears = computed(() => {
     .filter((year) => year != null)
   return Array.from(new Set(years)).sort((a, b) => b - a)
 })
+const availableFuelTypes = computed(() => [...new Set(allCars.value.map((car) => car.fuelType).filter(Boolean))])
+const availableSeats = computed(() => [...new Set(allCars.value.map((car) => car.seats).filter((seat) => seat != null))].sort((a, b) => a - b))
 
 const filteredCars = computed(() => {
   const query = String(q.value || '').trim().toLowerCase()
@@ -131,13 +154,15 @@ const filteredCars = computed(() => {
     const matchesYear = !filters.value.year || String(car.year) === filters.value.year
     const matchesColor = !filters.value.color || color.includes(filters.value.color.trim().toLowerCase())
 
-    return matchesQuery && matchesBrand && matchesPrice && matchesStatus && matchesYear && matchesColor
+    const matchesFuel = !filters.value.fuelType || car.fuelType === filters.value.fuelType
+    const matchesSeats = !filters.value.seats || String(car.seats) === filters.value.seats
+    return matchesQuery && matchesBrand && matchesPrice && matchesStatus && matchesYear && matchesColor && matchesFuel && matchesSeats
   })
 })
 
-watch(() => route.query.q, (val) => {
-  q.value = String(val || '')
-  loadCars()
+watch(() => route.fullPath, () => {
+  q.value = String(route.query.q || '')
+  loadCars(true)
 })
 
 onMounted(loadCars)
@@ -174,6 +199,8 @@ function resetFilters() {
     priceRange: '',
     year: '',
     color: '',
+    fuelType: '',
+    seats: '',
   }
 }
 
@@ -205,5 +232,18 @@ async function addToCart(id) {
 
 .car-list-hero .ford-hero-panel-content {
   max-width: 760px;
+}
+
+.car-skeleton {
+  animation: pulse 1.2s ease-in-out infinite;
+  background: #e5e7eb;
+  border-radius: 8px;
+  height: 360px;
+}
+
+@keyframes pulse {
+  50% {
+    opacity: .55;
+  }
 }
 </style>

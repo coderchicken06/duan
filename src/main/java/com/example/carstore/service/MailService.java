@@ -2,22 +2,31 @@ package com.example.carstore.service;
 
 import com.example.carstore.entity.Account;
 import com.example.carstore.entity.Orders;
+import com.example.carstore.entity.OrderDetail;
 import com.example.carstore.entity.PaymentTransaction;
+import com.example.carstore.repository.BrandRepository;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import javax.mail.internet.MimeMessage;
 import java.text.SimpleDateFormat;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class MailService {
 
     private final JavaMailSender mailSender;
+    private final BrandRepository brandRepo;
+    @Value("${app.frontend.base-url:http://192.168.1.63:5173}")
+    private String frontendBaseUrl;
 
-    public MailService(JavaMailSender mailSender) {
+    public MailService(JavaMailSender mailSender, BrandRepository brandRepo) {
         this.mailSender = mailSender;
+        this.brandRepo = brandRepo;
     }
 
     public void sendOtp(String toEmail, String otp) {
@@ -54,6 +63,11 @@ public class MailService {
     }
 
     public void sendInvoiceEmail(Account account, Orders order, PaymentTransaction transaction) {
+        sendInvoiceEmail(account, order, transaction, List.of(), "");
+    }
+
+    public void sendInvoiceEmail(Account account, Orders order, PaymentTransaction transaction,
+            List<OrderDetail> details, String transferContent) {
         if (account == null || account.getEmail() == null || account.getEmail().isBlank()) {
             return;
         }
@@ -62,39 +76,46 @@ public class MailService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            String recipientName = account.getFullname() != null && !account.getFullname().isBlank()
-                    ? account.getFullname()
-                    : account.getUsername();
+            String recipientName = escapeHtml(account.getFullname() != null && !account.getFullname().isBlank()
+                    ? account.getFullname() : account.getUsername());
             String transactionNo = transaction != null && transaction.getTransactionNo() != null
                     ? transaction.getTransactionNo()
                     : "N/A";
             String paidAt = transaction != null && transaction.getPaidAt() != null
                     ? new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(transaction.getPaidAt())
                     : new SimpleDateFormat("dd/MM/yyyy HH:mm:ss").format(System.currentTimeMillis());
-            String depositAmount = order != null && order.getDepositAmount() != null
-                    ? String.format("%,.0f", order.getDepositAmount()) + " VNĐ"
+            String depositAmount = transaction != null && transaction.getAmount() != null
+                    ? String.format("%,.0f", transaction.getAmount()) + " VNĐ"
                     : "0 VNĐ";
-            String contractCode = order != null && order.getId() != null ? "VELOR" + order.getId() : "N/A";
-            String deliveryAddress = order != null && order.getAddress() != null && !order.getAddress().isBlank()
-                    ? order.getAddress()
-                    : "Chưa cung cấp";
+            String orderId = order != null && order.getId() != null ? String.valueOf(order.getId()) : "N/A";
+            String productName = firstCarName(details, orderId);
+            String transferNote = escapeHtml(transferContent == null || transferContent.isBlank()
+                    ? "VELOR" + orderId : transferContent);
+            String contractUrl = contractUrl(orderId);
+            String carRows = details == null || details.isEmpty()
+                    ? "<tr><td colspan='3' style='padding:12px; border:1px solid #e5e7eb;'>Chi tiết xe đang được cập nhật.</td></tr>"
+                    : details.stream().map(this::carRow).collect(Collectors.joining());
 
             String html = "<html><body style='font-family: Arial, sans-serif; color: #1f2937;'>"
                     + "<div style='max-width: 680px; margin: 0 auto; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px;'>"
-                    + "<h2 style='color: #b91c1c; margin-bottom: 12px;'>CarStore - Hóa đơn xác nhận thanh toán</h2>"
+                    + "<h2 style='color: #b91c1c; margin: 0 0 8px;'>Hóa đơn điện tử &amp; Hợp đồng mua bán xe CarStore</h2>"
                     + "<p>Xin chào <strong>" + recipientName + "</strong>,</p>"
-                    + "<p>Thanh toán đặt cọc / xác nhận giao dịch của bạn đã được xử lý thành công qua SePay.</p>"
-                    + "<table style='width: 100%; border-collapse: collapse; margin-top: 16px;'>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700; width: 220px;'>Mã đơn hàng</td><td style='padding: 8px 0;'>#" + order.getId() + "</td></tr>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Mã hợp đồng</td><td style='padding: 8px 0;'>" + contractCode + "</td></tr>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Tài khoản đặt xe</td><td style='padding: 8px 0;'>" + (order.getUsername() != null ? order.getUsername() : "Chưa cung cấp") + "</td></tr>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Giá trị cọc / thanh toán</td><td style='padding: 8px 0;'>" + depositAmount + "</td></tr>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Mã giao dịch SePay</td><td style='padding: 8px 0;'>" + transactionNo + "</td></tr>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Ngày giờ giao dịch</td><td style='padding: 8px 0;'>" + paidAt + "</td></tr>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Người nhận</td><td style='padding: 8px 0;'>" + recipientName + "</td></tr>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Email</td><td style='padding: 8px 0;'>" + account.getEmail() + "</td></tr>"
-                    + "<tr><td style='padding: 8px 0; font-weight: 700;'>Địa chỉ nhận xe</td><td style='padding: 8px 0;'>" + deliveryAddress + "</td></tr>"
-                    + "</table>"
+                    + "<p>Thanh toán của bạn đã được CarStore xác nhận thành công.</p>"
+                    + "<table style='width:100%; border-collapse:collapse; margin-top:16px;'><tbody>"
+                    + "<tr><td style='padding:8px; font-weight:700; width:42%;'>Mã giao dịch</td><td style='padding:8px;'>" + escapeHtml(transactionNo) + "</td></tr>"
+                    + "<tr><td style='padding:8px; font-weight:700;'>Ngày giờ thanh toán</td><td style='padding:8px;'>" + paidAt + "</td></tr>"
+                    + "<tr><td style='padding:8px; font-weight:700;'>Tên sản phẩm</td><td style='padding:8px;'>" + escapeHtml(productName) + "</td></tr>"
+                    + "<tr><td style='padding:8px; font-weight:700;'>Số tiền đã thanh toán</td><td style='padding:8px;'>" + depositAmount + "</td></tr>"
+                    + "<tr><td style='padding:8px; font-weight:700;'>Phương thức / nội dung</td><td style='padding:8px;'>SePay / " + transferNote + "</td></tr>"
+                    + "<tr><td style='padding:8px; font-weight:700;'>Trạng thái</td><td style='padding:8px; color:#15803d; font-weight:700;'>ĐÃ THANH TOÁN (PAID) / HOÀN TẤT ĐẶT CỌC</td></tr>"
+                    + "</tbody></table>"
+                    + "<h3 style='margin:24px 0 8px; color:#1f2937;'>Chi tiết xe</h3>"
+                    + "<table style='width:100%; border-collapse:collapse;'><thead><tr style='background:#f3f4f6;'><th style='padding:10px; border:1px solid #e5e7eb; text-align:left;'>Tên xe</th><th style='padding:10px; border:1px solid #e5e7eb; text-align:left;'>Hãng xe</th><th style='padding:10px; border:1px solid #e5e7eb; text-align:right;'>Số tiền</th></tr></thead><tbody>"
+                    + carRows + "</tbody></table>"
+                    + "<h3 style='margin:24px 0 8px; color:#1f2937;'>Hợp đồng &amp; nhận xe</h3>"
+                    + "<p>Hợp đồng mua bán điện tử của bạn đã được kích hoạt. Vui lòng xem và lưu lại hợp đồng trước khi đến showroom.</p>"
+                    + "<p><a href='" + contractUrl + "' style='display:inline-block; padding:12px 24px; background-color:#ef4444; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold;'>Xem hợp đồng điện tử</a></p>"
+                    + "<p>Chuẩn bị khi nhận xe: CCCD/CMND, giấy tờ theo thông tin đăng ký xe, biên nhận thanh toán và email xác nhận này.</p>"
                     + "<p style='margin-top: 18px;'>Cảm ơn bạn đã tin tưởng CarStore.</p>"
                     + "</div></body></html>";
 
@@ -105,5 +126,39 @@ public class MailService {
         } catch (Exception exception) {
             throw new IllegalStateException("Không thể gửi email hóa đơn thanh toán.", exception);
         }
+    }
+
+    private String contractUrl(String orderId) {
+        return frontendBaseUrl.replaceAll("/+$", "") + "/orders/" + orderId + "/contract";
+    }
+
+    private String carRow(OrderDetail detail) {
+        String carName = detail.getCar() == null ? "Chưa xác định" : detail.getCar().getName();
+        String brandName = detail.getCar() == null || detail.getCar().getBrandId() == null
+                ? "Chưa xác định"
+                : brandRepo.findById(detail.getCar().getBrandId()).map(brand -> brand.getName()).orElse("Chưa xác định");
+        double lineTotal = (detail.getPrice() == null ? 0D : detail.getPrice())
+                * (detail.getQuantity() == null ? 0 : detail.getQuantity());
+        return "<tr><td style='padding:10px; border:1px solid #e5e7eb;'>" + escapeHtml(carName)
+                + "</td><td style='padding:10px; border:1px solid #e5e7eb;'>" + escapeHtml(brandName)
+                + "</td><td style='padding:10px; border:1px solid #e5e7eb; text-align:right;'>"
+                + String.format("%,.0f VNĐ", lineTotal) + "</td></tr>";
+    }
+
+    private String firstCarName(List<OrderDetail> details, String orderId) {
+        if (details != null && !details.isEmpty()) {
+            OrderDetail detail = details.get(0);
+            if (detail != null && detail.getCar() != null && detail.getCar().getName() != null
+                    && !detail.getCar().getName().isBlank()) {
+                return detail.getCar().getName();
+            }
+        }
+        return "Xe thuộc đơn hàng #" + orderId;
+    }
+
+    private String escapeHtml(String value) {
+        if (value == null) return "";
+        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                .replace("\"", "&quot;").replace("'", "&#39;");
     }
 }

@@ -1,0 +1,18 @@
+
+.car-list-hero[data-v-c2fd31f2] {
+  grid-template-columns: minmax(0, 1fr);
+}
+.car-list-hero .ford-hero-panel-content[data-v-c2fd31f2] {
+  max-width: 760px;
+}
+.car-skeleton[data-v-c2fd31f2] {
+  animation: pulse-c2fd31f2 1.2s ease-in-out infinite;
+  background: #e5e7eb;
+  border-radius: 8px;
+  height: 360px;
+}
+@keyframes pulse-c2fd31f2 {
+50% {
+    opacity: .55;
+}
+}

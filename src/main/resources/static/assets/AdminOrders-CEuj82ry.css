@@ -1,0 +1,37 @@
+
+.admin-eyebrow[data-v-dd4fe7aa] {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: #dc2626
+}
+.cs-card[data-v-dd4fe7aa] {
+    box-shadow: 0 10px 30px rgba(31, 41, 55, .08)
+}
+.cs-table[data-v-dd4fe7aa] {
+    color: #374151
+}
+.cs-table thead th[data-v-dd4fe7aa] {
+    color: #6b7280;
+    background: #f9fafb
+}
+.cs-table tbody tr[data-v-dd4fe7aa]:hover {
+    background: #fffafa
+}
+.form-select[data-v-dd4fe7aa] {
+    min-width: 235px;
+    background-color: #fff;
+    color: #374151;
+    border-color: #d1d5db;
+    font-weight: 600
+}
+.empty-cell[data-v-dd4fe7aa] {
+    text-align: center;
+    color: #6b7280;
+    padding: 2.5rem !important
+}
+.btn[data-v-dd4fe7aa]:disabled,
+  .form-select[data-v-dd4fe7aa]:disabled {
+    cursor: wait;
+    opacity: .65
+}

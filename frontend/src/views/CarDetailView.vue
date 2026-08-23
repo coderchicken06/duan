@@ -44,10 +44,10 @@
           </div>
 
           <div class="action-grid">
-            <button class="ford-btn-primary hero-action" type="button" :disabled="Number(car.stock || 0) <= 0"
+            <button class="ford-btn-primary hero-action" type="button" :disabled="addingToCart || Number(car.stock || 0) <= 0"
               @click="addToCart">
               <span class="action-icon" aria-hidden="true">🛒</span>
-              <span>{{ Number(car.stock || 0) > 0 ? 'Thêm vào giỏ hàng' : 'Xe đã hết hàng' }}</span>
+              <span>{{ addingToCart ? 'Đang thêm...' : (Number(car.stock || 0) > 0 ? 'Thêm vào giỏ hàng' : 'Xe đã hết hàng') }}</span>
             </button>
             <button class="ford-btn-outline hero-action" type="button" @click="toggleCurrent">
               <span class="action-icon" aria-hidden="true">⚖</span>
@@ -130,31 +130,15 @@
         </div>
         <div class="review-summary"><strong>{{ reviewAverage.toFixed(1) }}/5</strong><span>{{ reviews.length }} đánh giá
             từ khách đã mua</span></div>
-        <form v-if="auth.isLoggedIn && (!myReview || editingReviewId)" class="review-form"
-          @submit.prevent="submitReview">
-          <select v-model.number="reviewForm.rating" class="form-select" required>
-            <option :value="0" disabled>Chọn số sao</option>
-            <option v-for="star in 5" :key="star" :value="star">{{ star }} sao</option>
-          </select>
-          <textarea v-model="reviewForm.comment" class="form-control" rows="3" maxlength="1000"
-            placeholder="Chia sẻ trải nghiệm của bạn" required></textarea>
-          <div class="review-actions"><button class="ford-btn-primary" type="submit" :disabled="reviewSubmitting">{{
-            reviewSubmitting ? 'Đang lưu...' : (editingReviewId ? 'Lưu đánh giá' : 'Gửi đánh giá') }}</button><button
-              v-if="editingReviewId" class="btn btn-outline-secondary" type="button"
-              @click="cancelReviewEdit">Hủy</button></div>
-        </form>
-        <div v-if="reviewMessage" class="alert cart-alert show"
-          :class="[reviewOk ? 'alert-success' : 'alert-danger', { error: !reviewOk }]">{{
-          reviewMessage }}</div>
+        <div class="alert alert-info mt-3" role="status">
+          Đánh giá chỉ dành cho khách hàng đã hoàn tất mua xe. Vui lòng gửi đánh giá tại mục Lịch sử đơn hàng của bạn.
+        </div>
         <div v-if="reviews.length" class="review-list">
           <article v-for="review in reviews" :key="review.id" class="review-item">
             <div class="review-avatar">{{ review.username?.charAt(0)?.toUpperCase() }}</div>
             <div class="review-content"><strong>{{ review.username }}</strong>
               <div class="review-stars">{{ '★'.repeat(review.rating) }}{{ '☆'.repeat(5 - review.rating) }}</div>
               <p>{{ review.comment }}</p><small>{{ new Date(review.reviewDate).toLocaleDateString('vi-VN') }}</small>
-              <div v-if="isOwnReview(review)" class="review-actions mt-2"><button class="btn btn-sm btn-outline-primary"
-                  type="button" @click="startReviewEdit(review)">Sửa</button><button
-                  class="btn btn-sm btn-outline-danger" type="button" @click="deleteReview(review)">Xóa</button></div>
             </div>
           </article>
         </div>
@@ -177,7 +161,6 @@ import { useRoute, useRouter } from 'vue-router'
 import { carApi, cartApi, carImageUrl, formatPrice, promotionApi, quotationApi, useDefaultCarImage } from '../api'
 import CarCard from '../components/CarCard.vue'
 import { useCompare } from '../composables/useCompare'
-import { useAuthStore } from '../stores/auth'
 import { reviewApi } from '../api'
 import { showCartToast } from '../composables/useCartToast'
 import { useAutoRefresh } from '../composables/useAutoRefresh'
@@ -185,16 +168,10 @@ import { useCartStore } from '../stores/cart'
 
 const route = useRoute()
 const router = useRouter()
-const auth = useAuthStore()
 const cart = useCartStore()
 const car = ref(null)
 const reviews = ref([])
 const reviewAverage = ref(0)
-const reviewForm = ref({ rating: 0, comment: '' })
-const reviewSubmitting = ref(false)
-const reviewMessage = ref('')
-const reviewOk = ref(false)
-const editingReviewId = ref(null)
 const similarCars = ref([])
 const message = ref('')
 const success = ref(false)
@@ -202,10 +179,10 @@ const selectedImage = ref('')
 const serverImages = ref([])
 const loadError = ref('')
 const promotion = ref(null)
+const addingToCart = ref(false)
 let loadVersion = 0
 
 const { has, toggle, count } = useCompare()
-const myReview = computed(() => reviews.value.find(isOwnReview))
 const displayPrice = computed(() => {
   const price = Number(car.value?.price || 0)
   if (!promotion.value) return price
@@ -372,19 +349,28 @@ async function addById(id) {
     success.value = false
     return
   }
+  const isCurrentCar = id === car.value?.id
+  if (isCurrentCar) addingToCart.value = true
+  const previousItemCount = cart.itemCount
+  cart.itemCount = previousItemCount + 1
+  success.value = true
+  message.value = ''
+  showCartToast('Thêm vào giỏ hàng thành công!')
   try {
     const { data } = await cartApi.add(id)
-    success.value = Boolean(data.success)
     if (data.success) {
-      await cart.refresh()
-      showCartToast('Thêm vào giỏ hàng thành công!')
-      message.value = ''
+      void cart.refresh()
     } else {
+      cart.itemCount = previousItemCount
+      success.value = false
       message.value = data.message || 'Không thể thêm vào giỏ hàng'
     }
   } catch (error) {
+    cart.itemCount = previousItemCount
     message.value = error.response?.data?.message || 'Không thể thêm vào giỏ hàng'
     success.value = false
+  } finally {
+    if (isCurrentCar) addingToCart.value = false
   }
 }
 
@@ -406,53 +392,6 @@ async function loadReviews(carId = route.params.id) {
   if (String(route.params.id) !== requestedCarId) return
   reviews.value = data.data || []
   reviewAverage.value = Number(data.average || 0)
-}
-
-async function submitReview() {
-  reviewSubmitting.value = true
-  reviewMessage.value = ''
-  try {
-    if (editingReviewId.value) await reviewApi.update(editingReviewId.value, reviewForm.value)
-    else await reviewApi.create(car.value.id, reviewForm.value)
-    reviewOk.value = true
-    reviewMessage.value = editingReviewId.value ? 'Đã cập nhật đánh giá.' : 'Cảm ơn bạn đã đánh giá.'
-    editingReviewId.value = null
-    reviewForm.value = { rating: 0, comment: '' }
-    await loadReviews()
-  } catch (error) {
-    reviewOk.value = false
-    reviewMessage.value = error.response?.data?.message || 'Không thể gửi đánh giá'
-  } finally {
-    reviewSubmitting.value = false
-  }
-}
-
-function isOwnReview(review) {
-  return Boolean(auth.user?.username && review.username === auth.user.username)
-}
-
-function startReviewEdit(review) {
-  editingReviewId.value = review.id
-  reviewForm.value = { rating: review.rating, comment: review.comment }
-}
-
-function cancelReviewEdit() {
-  editingReviewId.value = null
-  reviewForm.value = { rating: 0, comment: '' }
-}
-
-async function deleteReview(review) {
-  if (!confirm('Bạn có chắc muốn xóa đánh giá này?')) return
-  try {
-    await reviewApi.delete(review.id)
-    cancelReviewEdit()
-    reviewOk.value = true
-    reviewMessage.value = 'Đã xóa đánh giá.'
-    await loadReviews()
-  } catch (error) {
-    reviewOk.value = false
-    reviewMessage.value = error.response?.data?.message || 'Không thể xóa đánh giá'
-  }
 }
 
 </script>

@@ -93,7 +93,8 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { carImageUrl, contractApi, formatPrice, useDefaultCarImage } from '../api'
+import { carImageUrl, formatPrice, useDefaultCarImage } from '../api'
+import api from '../api/client'
 import { useAutoRefresh } from '../composables/useAutoRefresh'
 const route = useRoute(), loading = ref(true), error = ref(''), data = ref({})
 const contract = computed(() => data.value.contract || {}), order = computed(() => data.value.order || {})
@@ -107,7 +108,7 @@ const formatDate = value => value ? new Date(value).toLocaleString('vi-VN') : 'C
 const printContract = () => window.print()
 async function loadContract() {
   try {
-    const response = await contractApi.getByOrder(route.params.id, { params: { _ts: Date.now() } })
+    const response = await api.get(`/api/contracts/public/order/${route.params.id}`, { params: { _ts: Date.now() } })
     data.value = response.data.data
     error.value = ''
   } catch (e) {
@@ -287,6 +288,11 @@ useAutoRefresh(loadContract)
 }
 
 @media print {
+  :global(.ford-header),
+  :global(.ford-footer) {
+    display: none !important
+  }
+
   .contract-page {
     background: #fff
   }

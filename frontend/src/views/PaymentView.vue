@@ -21,6 +21,7 @@
         <div v-else>
           <!-- Nút lấy mã QR (ẩn đi khi QR đã được tạo) -->
           <button v-if="!qrUrl" class="btn btn-danger w-100" :disabled="submitting" @click="payDeposit">
+            <span v-if="submitting" class="spinner-border spinner-border-sm me-2"></span>
             {{ submitting ? 'Đang tạo mã QR...' : 'Lấy mã QR thanh toán' }}
           </button>
 
@@ -84,10 +85,11 @@
 
 <script setup>
 import { onMounted, onUnmounted, ref, computed } from 'vue'
-import { useRoute } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { contractApi, paymentTransactionApi, formatPrice } from '../api'
 
 const route = useRoute()
+const router = useRouter()
 const loading = ref(true), submitting = ref(false), error = ref(''), contract = ref({}), payments = ref([])
 const order = ref({})
 // Thêm biến lưu URL ảnh QR
@@ -150,9 +152,10 @@ async function checkPaymentStatus() {
         window.dispatchEvent(new CustomEvent('carstore-toast', {
           detail: { message: 'Tiền cọc đã được xác nhận thành công', type: 'success' },
         }));
+        wasDepositPaid = true;
+        stopAllTimers();
+        window.setTimeout(() => router.replace(`/orders/${route.params.id}/contract`), 400);
       }
-      wasDepositPaid = true;
-      stopAllTimers();
     }
 
     try {
@@ -170,7 +173,7 @@ function startPolling() {
   syncRemainingTime();
 
   if (!pollInterval) {
-    pollInterval = setInterval(checkPaymentStatus, 2000);
+    pollInterval = setInterval(checkPaymentStatus, 3000);
   }
 
   scheduleReconciliationStop();
@@ -237,6 +240,7 @@ function stopAllTimers() {
 }
 
 async function payDeposit() {
+  if (submitting.value || qrUrl.value) return;
   submitting.value = true;
   error.value = '';
   try {

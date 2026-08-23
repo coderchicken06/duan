@@ -1,0 +1,41 @@
+
+.date-picker-input[data-v-852d73a3] {
+  position: relative;
+  width: 100%;
+}
+.date-picker-input__display[data-v-852d73a3] {
+  padding-right: 3rem;
+  cursor: pointer;
+}
+.date-picker-input__icon[data-v-852d73a3] {
+  position: absolute;
+  z-index: 1;
+  top: 50%;
+  right: 0.85rem;
+  width: 1.2rem;
+  height: 1.2rem;
+  color: #64748b;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+.date-picker-input__icon svg[data-v-852d73a3] {
+  display: block;
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+.date-picker-input__native[data-v-852d73a3] {
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  right: 0;
+  width: 3rem;
+  height: 100%;
+  margin: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.date-picker-input--disabled .date-picker-input__display[data-v-852d73a3],
+.date-picker-input--disabled .date-picker-input__native[data-v-852d73a3] {
+  cursor: not-allowed;
+}

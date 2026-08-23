@@ -33,11 +33,10 @@ public class CartService {
         }
 
         if (cart.containsKey(item.getId())) {
-            CartItem old = cart.get(item.getId());
-            old.setQuantity(old.getQuantity() + item.getQuantity());
-        } else {
-            cart.put(item.getId(), item);
+            throw new IllegalArgumentException("Xe này đã có trong giỏ hàng của bạn.");
         }
+        item.setQuantity(1);
+        cart.put(item.getId(), item);
     }
 
     public void remove(Integer id, HttpSession session) {

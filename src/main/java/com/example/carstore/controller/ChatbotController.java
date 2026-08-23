@@ -1,90 +1,173 @@
 package com.example.carstore.controller;
 
 import com.example.carstore.entity.Car;
+import com.example.carstore.repository.BrandRepository;
 import com.example.carstore.repository.CarRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/chat")
 @CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class ChatbotController {
+    private static final List<String> INITIAL_SUGGESTIONS = List.of(
+            "Tư vấn theo tầm giá", "Tư vấn theo nhu cầu sử dụng", "Xe 5 chỗ gia đình",
+            "Xe 7 chỗ rộng rãi", "Xem xe mới nhất");
+    private static final List<String> FINISH_SUGGESTIONS = List.of(
+            "Xem thêm xe khác", "Tư vấn lại từ đầu", "Liên hệ nhân viên");
 
     private final CarRepository carRepository;
+    private final BrandRepository brandRepository;
 
     public ChatbotController(CarRepository carRepository) {
+        this(carRepository, null);
+    }
+
+    @Autowired
+    public ChatbotController(CarRepository carRepository, BrandRepository brandRepository) {
         this.carRepository = carRepository;
+        this.brandRepository = brandRepository;
     }
 
     @PostMapping
-    public ResponseEntity<Map<String, Object>> processMessage(@RequestBody(required = false) Map<String, String> payload) {
-        Map<String, Object> response = new HashMap<>();
-        List<Car> carResults = new ArrayList<>();
-        String replyText = "";
+    public ResponseEntity<Map<String, Object>> processMessage(
+            @RequestBody(required = false) Map<String, String> payload) {
+        String message = payload == null ? "" : payload.getOrDefault("message", "");
+        String text = message.trim();
+        String normalized = text.toLowerCase(java.util.Locale.ROOT);
+        List<Car> cars = new ArrayList<>();
+        List<String> suggestions;
+        String reply;
 
-        // Tránh crash lỗi 500 nếu payload gửi sang bị rỗng
-        if (payload == null || !payload.containsKey("message") || payload.get("message") == null) {
-            response.put("reply", "Vui lòng nhập nội dung tin nhắn!");
-            response.put("cars", Collections.emptyList());
-            return ResponseEntity.badRequest().body(response);
+        if (text.isEmpty() || isGreeting(normalized)) {
+            reply = "Xin chào! CarStore có thể tư vấn xe theo tầm giá hoặc nhu cầu sử dụng của bạn.";
+            suggestions = INITIAL_SUGGESTIONS;
+        } else if (normalized.contains("tầm giá") || normalized.contains("giá")) {
+            reply = "Anh/chị dự kiến ngân sách ở khoảng nào?";
+            suggestions = List.of("Dưới 600 triệu", "600 - 900 triệu", "900 triệu - 1.5 tỷ", "Trên 1.5 tỷ");
+        } else if (normalized.contains("nhu cầu")) {
+            reply = "CarStore sẽ chọn xe phù hợp với cách sử dụng của anh/chị.";
+            suggestions = List.of("Đi lại đô thị tiết kiệm xăng", "Chở gia đình & du lịch",
+                    "Xe gầm cao offroad / bán tải", "Xe sang trọng lịch lãm");
+        } else if (isPriceRange(normalized)) {
+            cars = findByPriceRange(normalized);
+            reply = cars.isEmpty() ? "Hiện chưa có xe phù hợp trong tầm giá này."
+                    : "Đây là các mẫu xe đang có sẵn phù hợp với tầm giá của anh/chị.";
+            suggestions = FINISH_SUGGESTIONS;
+        } else if (isNeed(normalized)) {
+            cars = findByNeed(normalized);
+            reply = cars.isEmpty() ? "Hiện chưa có mẫu xe phù hợp nhu cầu này trong kho."
+                    : "Đây là các mẫu xe CarStore gợi ý theo nhu cầu sử dụng của anh/chị.";
+            suggestions = FINISH_SUGGESTIONS;
+        } else if (normalized.contains("xem xe mới nhất") || normalized.contains("xem thêm xe khác")) {
+            cars = availableCars().stream().limit(4).collect(Collectors.toList());
+            reply = "Đây là các mẫu xe đang có sẵn tại CarStore.";
+            suggestions = FINISH_SUGGESTIONS;
+        } else if (normalized.contains("tư vấn lại từ đầu")) {
+            reply = "Mình bắt đầu lại nhé. Anh/chị muốn chọn xe theo tiêu chí nào?";
+            suggestions = INITIAL_SUGGESTIONS;
+        } else if (normalized.contains("liên hệ nhân viên") || normalized.contains("hotline")) {
+            reply = "Anh/chị có thể liên hệ CarStore qua hotline 0909.123.456 để được hỗ trợ trực tiếp.";
+            suggestions = INITIAL_SUGGESTIONS;
+        } else {
+            String keyword = extractKeyword(text);
+            cars = carRepository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(keyword, keyword).stream()
+                    .filter(this::isAvailable).limit(6).collect(Collectors.toList());
+            reply = cars.isEmpty()
+                    ? "CarStore chưa có mẫu xe '" + keyword + "'. Đây là một số xe đang có sẵn để anh/chị tham khảo."
+                    : "CarStore tìm thấy các mẫu xe phù hợp với '" + keyword + "'.";
+            if (cars.isEmpty()) cars = availableCars().stream().limit(4).collect(Collectors.toList());
+            suggestions = FINISH_SUGGESTIONS;
         }
 
-        String userText = payload.get("message").toLowerCase().trim();
-
-        // -------------------------------------------------------------
-        // LOGIC 1: CHÀO HỎI & THÔNG TIN SHOWROOM
-        // -------------------------------------------------------------
-        if (userText.contains("chào") || userText.contains("hi") || userText.contains("hello")) {
-            replyText = "Xin chào! Chào mừng bạn đến với Showroom CarStore. Bạn cần tìm mẫu xe nào hôm nay?";
-        } 
-        else if (userText.contains("địa chỉ") || userText.contains("ở đâu") || userText.contains("showroom")) {
-            replyText = "Showroom CarStore tọa lạc tại số 123 Đường ABC, Quận 1, TP.HCM. Giờ mở cửa: 8h00 - 20h00 hàng ngày.";
-        } 
-        else if (userText.contains("sđt") || userText.contains("hotline") || userText.contains("liên hệ")) {
-            replyText = "Bạn có thể gọi trực tiếp hotline tư vấn qua số: 0909.123.456 nhé!";
-        }
-
-        // -------------------------------------------------------------
-        // LOGIC 2: TÌM XE THEO TÊN / MÔ TẢ (Query trực tiếp Database)
-        // -------------------------------------------------------------
-        else if (userText.contains("tìm") || userText.contains("xe") || userText.contains("xem")) {
-            // Tách các từ thừa để trích xuất từ khóa tìm kiếm
-            String keyword = userText.replace("tìm", "")
-                                     .replace("kiếm", "")
-                                     .replace("cho tôi", "")
-                                     .replace("xe", "")
-                                     .trim();
-
-            if (!keyword.isEmpty()) {
-                // Gọi hàm có sẵn trong CarRepository của bạn
-                carResults = carRepository.findByNameContainingIgnoreCaseOrDescriptionContainingIgnoreCase(keyword, keyword);
-                carResults = carResults.stream()
-                        .filter(car -> car != null && "AVAILABLE".equalsIgnoreCase(car.getStatus()))
-                        .collect(java.util.stream.Collectors.toList());
-                
-                if (!carResults.isEmpty()) {
-                    replyText = "Dưới đây là các mẫu xe phù hợp với từ khóa '" + keyword + "' tại CarStore:";
-                } else {
-                    replyText = "Rất tiếc, CarStore không tìm thấy mẫu xe nào phù hợp với từ khóa '" + keyword + "'.";
-                }
-            } else {
-                replyText = "Bạn muốn tìm mẫu xe gì? (Ví dụ: 'tìm xe Vios', 'tìm xe SUV'...)";
-            }
-        }
-
-        // -------------------------------------------------------------
-        // LOGIC MẶC ĐỊNH (Khi không khớp từ khóa nào)
-        // -------------------------------------------------------------
-        else {
-            replyText = "Cảm ơn bạn đã nhắn tin! Bạn có thể hỏi tôi về:\n" +
-                        "1. Tìm xe theo tên/kiểu dáng (VD: 'tìm xe Vios', 'tìm xe Sedan')\n" +
-                        "2. Địa chỉ showroom hoặc Hotline liên hệ.";
-        }
-
-        response.put("reply", replyText);
-        response.put("cars", carResults); // Trả về mảng danh sách xe lấy từ CSDL
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("reply", reply);
+        response.put("suggestions", suggestions);
+        response.put("recommendedCars", toCards(cars));
+        response.put("cars", cars);
         return ResponseEntity.ok(response);
+    }
+
+    private boolean isGreeting(String text) {
+        return text.equals("bắt đầu") || text.equals("tư vấn") || text.contains("xin chào")
+                || text.equals("chào") || text.equals("hi") || text.equals("hello");
+    }
+
+    private boolean isPriceRange(String text) {
+        return text.contains("dưới 600") || text.contains("600 - 900")
+                || text.contains("900 triệu - 1.5") || text.contains("trên 1.5");
+    }
+
+    private boolean isNeed(String text) {
+        return text.contains("đô thị") || text.contains("gia đình") || text.contains("offroad")
+                || text.contains("bán tải") || text.contains("sang trọng");
+    }
+
+    private List<Car> findByPriceRange(String text) {
+        return availableCars().stream().filter(car -> {
+            double price = car.getPrice() == null ? 0D : car.getPrice();
+            if (text.contains("dưới 600")) return price < 600_000_000D;
+            if (text.contains("600 - 900")) return price >= 600_000_000D && price <= 900_000_000D;
+            if (text.contains("900 triệu - 1.5")) return price >= 900_000_000D && price <= 1_500_000_000D;
+            return price > 1_500_000_000D;
+        }).limit(6).collect(Collectors.toList());
+    }
+
+    private List<Car> findByNeed(String text) {
+        return availableCars().stream().filter(car -> {
+            String searchable = (safe(car.getBodyType()) + " " + safe(car.getDescription()) + " "
+                    + safe(car.getFuelType()) + " " + safe(car.getName())).toLowerCase(java.util.Locale.ROOT);
+            if (text.contains("đô thị")) return car.getSeats() != null && car.getSeats() <= 5;
+            if (text.contains("gia đình")) return car.getSeats() != null && car.getSeats() >= 5;
+            if (text.contains("offroad") || text.contains("bán tải")) {
+                return searchable.contains("suv") || searchable.contains("pickup") || searchable.contains("bán tải");
+            }
+            return searchable.contains("luxury") || searchable.contains("sang")
+                    || car.getPrice() != null && car.getPrice() >= 1_500_000_000D;
+        }).limit(6).collect(Collectors.toList());
+    }
+
+    private List<Car> availableCars() {
+        return carRepository.findAll().stream().filter(this::isAvailable).collect(Collectors.toList());
+    }
+
+    private List<Map<String, Object>> toCards(List<Car> cars) {
+        Map<Integer, String> brands = brandRepository == null ? Collections.emptyMap()
+                : brandRepository.findAll().stream()
+                        .collect(Collectors.toMap(brand -> brand.getId(), brand -> brand.getName()));
+        return cars.stream().map(car -> {
+            Map<String, Object> card = new LinkedHashMap<>();
+            card.put("id", car.getId());
+            card.put("carName", car.getName());
+            card.put("price", car.getPrice());
+            card.put("mainImageUrl", car.getImageUrl());
+            card.put("brandName", brands.getOrDefault(car.getBrandId(), "Chưa xác định"));
+            return card;
+        }).collect(Collectors.toList());
+    }
+
+    private String extractKeyword(String message) {
+        String result = message.replaceAll("(?i)\\b(tìm|kiếm|xe|cho tôi|xem)\\b", "").trim();
+        return result.isEmpty() ? message : result;
+    }
+
+    private boolean isAvailable(Car car) {
+        return car != null && "AVAILABLE".equalsIgnoreCase(car.getStatus());
+    }
+
+    private String safe(String value) {
+        return value == null ? "" : value;
     }
 }

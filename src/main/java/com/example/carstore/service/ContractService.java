@@ -6,8 +6,11 @@ import com.example.carstore.entity.PaymentTransaction;
 import com.example.carstore.repository.ContractRepository;
 import com.example.carstore.repository.PaymentTransactionRepository;
 import com.example.carstore.repository.QuotationRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.Date;
 import java.util.List;
 
@@ -46,6 +49,17 @@ public class ContractService {
     public Contract getByOrderId(Integer orderId) {
         return contractRepo.findByOrderId(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hợp đồng."));
+    }
+
+    public void assertCurrentUserCanAccess(Orders order, Authentication authentication) {
+        if (authentication == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
+        boolean admin = authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_ADMIN".equals(authority.getAuthority()));
+        if (!admin && !authentication.getName().equals(order.getUsername())) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem hợp đồng này.");
+        }
     }
 
     public List<PaymentTransaction> getPayments(Integer orderId) {

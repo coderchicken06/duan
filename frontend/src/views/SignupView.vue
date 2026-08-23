@@ -47,6 +47,7 @@ const error = ref('')
 const form = ref({ username: '', fullname: '', email: '', password: '' })
 
 async function submit() {
+  if (loading.value) return
   loading.value = true
   error.value = ''
   try {

@@ -1,5 +1,5 @@
 <template>
-  <header class="ford-header">
+  <header ref="header" class="ford-header">
     <div class="ford-header-inner">
       <nav class="ford-nav-left" aria-label="Điều hướng chính">
         <router-link to="/news">Tin tức</router-link>
@@ -41,8 +41,8 @@
             </svg>
           </summary>
           <div class="role-menu-panel">
-            <router-link to="/order/my-orders" @click="closeUserMenu">📦 Lịch sử đơn hàng</router-link>
-            <router-link to="/quotation-history" @click="closeUserMenu">📋 Xem Lịch sử yêu cầu báo giá</router-link>
+            <router-link to="/my-orders" @click="closeUserMenu">📦 Lịch sử đơn hàng</router-link>
+            <router-link to="/quotation/history" @click="closeUserMenu">📋 Xem Lịch sử yêu cầu báo giá</router-link>
             <router-link to="/history" @click="closeUserMenu">📋 Lịch sử yêu cầu</router-link>
           </div>
         </details>
@@ -88,8 +88,20 @@
 
     <div v-if="showSearch" class="ford-search-row" :class="{ 'is-open': searchOpen }">
       <form class="ford-search-form" @submit.prevent="doSearch">
-        <input v-model="searchQuery" type="search" aria-label="Tên xe cần tìm" placeholder="Tìm kiếm tên xe..."
-          autocomplete="off" />
+        <div class="search-input-wrapper">
+          <input v-model="searchQuery" type="search" aria-label="Tên xe cần tìm" placeholder="Tìm kiếm tên xe..."
+            autocomplete="off" @focus="showCachedSuggestions" @input="handleSearchInput" />
+          <div v-if="showDropdown && suggestions.length" class="search-suggestions" role="listbox">
+            <button v-for="item in suggestions" :key="item.id" class="search-suggestion" type="button"
+              role="option" @click="selectSuggestion(item)">
+              <img :src="item.mainImageUrl || '/images/default-car.jpg'" alt="" @error="useDefaultCarImage" />
+              <span class="search-suggestion-info"><strong>{{ item.carName }}</strong><small>{{ item.brandName }}</small><small
+                v-if="item.fuelType || item.seatCapacity" class="search-suggestion-tags">{{ item.fuelType || 'N/A' }}<template
+                  v-if="item.seatCapacity"> · {{ item.seatCapacity }} chỗ</template></small></span>
+              <span class="search-suggestion-price">{{ formatPrice(item.price) }} VNĐ</span>
+            </button>
+          </div>
+        </div>
         <button type="submit">Tìm</button>
       </form>
     </div>
@@ -99,6 +111,8 @@
 <script setup>
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import api from '../api/client'
+import { brandApi, formatPrice, useDefaultCarImage } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 
@@ -108,7 +122,11 @@ const route = useRoute()
 const router = useRouter()
 const searchOpen = ref(false)
 const searchQuery = ref(String(route.query.q || ''))
+const carCache = ref([])
+const showDropdown = ref(false)
+const header = ref(null)
 const showSearch = computed(() => ['home', 'car-list'].includes(String(route.name || '')))
+let cacheRequest
 
 // Khai báo ref để tự động đóng menu quản lý/lịch sử khi click chọn hoặc click ra ngoài
 const adminMenuDetails = ref(null)
@@ -134,11 +152,15 @@ function handleClickOutside(event) {
   if (userMenuDetails.value && !userMenuDetails.value.contains(event.target)) {
     userMenuDetails.value.removeAttribute('open')
   }
+  if (header.value && !header.value.contains(event.target)) {
+    showDropdown.value = false
+  }
 }
 
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
   cart.refresh()
+  loadCarCache()
 })
 
 onUnmounted(() => {
@@ -152,6 +174,52 @@ watch(
   }
 )
 
+const normaliseSearch = (value) => String(value || '').toLowerCase().trim()
+
+function toCachedCar(car, brandNames) {
+  return {
+    carName: car.carName || car.name || '',
+    brandName: car.brandName || brandNames.get(Number(car.brandId)) || '',
+    mainImageUrl: car.mainImageUrl || car.imageUrl || car.image || '',
+    seatCapacity: car.seatCapacity ?? car.seats ?? '',
+    id: car.id,
+    price: car.price,
+    fuelType: car.fuelType || '',
+  }
+}
+
+const suggestions = computed(() => {
+  const kw = normaliseSearch(searchQuery.value)
+  return !kw ? [] : carCache.value.filter((car) => [
+    car.carName, car.brandName, car.fuelType,
+    car.seatCapacity && `${car.seatCapacity} chỗ`,
+  ].some((value) => normaliseSearch(value).includes(kw))).slice(0, 6)
+})
+
+function loadCarCache() {
+  if (carCache.value.length || cacheRequest) return cacheRequest
+  cacheRequest = Promise.all([api.get('/api/cars'), brandApi.getAll()])
+    .then(([carsResponse, brandsResponse]) => {
+      const cars = Array.isArray(carsResponse.data) ? carsResponse.data : carsResponse.data.data || []
+      const brands = Array.isArray(brandsResponse.data) ? brandsResponse.data : brandsResponse.data.data || []
+      const brandNames = new Map(brands.map((brand) => [Number(brand.id), brand.name]))
+      carCache.value = cars
+        .filter((car) => String(car.status || '').toUpperCase() === 'AVAILABLE')
+        .map((car) => toCachedCar(car, brandNames))
+    })
+    .catch(() => { carCache.value = [] })
+  return cacheRequest
+}
+
+async function showCachedSuggestions() {
+  if (!carCache.value.length) await loadCarCache()
+  showDropdown.value = Boolean(searchQuery.value.trim())
+}
+
+function handleSearchInput() {
+  showDropdown.value = Boolean(searchQuery.value.trim())
+}
+
 async function handleLogout() {
   await auth.logout()
   cart.reset()
@@ -162,6 +230,14 @@ function doSearch() {
   const keyword = searchQuery.value.trim()
   router.push({ name: 'car-list', query: keyword ? { q: keyword } : {} })
   searchOpen.value = false
+  showDropdown.value = false
+}
+
+function selectSuggestion(item) {
+  showDropdown.value = false
+  searchQuery.value = ''
+  searchOpen.value = false
+  router.push(`/car/detail/${item.id}`)
 }
 </script>
 
@@ -247,7 +323,51 @@ function doSearch() {
   outline-offset: 3px;
 }
 
+.ford-search-row { position: relative; }
+.search-input-wrapper { min-width: 0; position: relative; flex: 1; }
+.search-input-wrapper input { width: 100%; }
+
+.search-suggestions {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 10px 30px rgb(0 0 0 / 15%);
+  left: 0;
+  max-height: 400px;
+  min-width: 360px;
+  overflow-x: hidden;
+  overflow-y: auto;
+  position: absolute;
+  top: calc(100% + 8px);
+  width: 100%;
+  z-index: 9999;
+}
+
+.search-suggestion {
+  align-items: center;
+  background: #fff;
+  border: 0;
+  border-bottom: 1px solid #eee;
+  color: #1f2937;
+  display: grid;
+  gap: .75rem;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  padding: .65rem .85rem;
+  text-align: left;
+  width: 100%;
+}
+
+.search-suggestion:hover { background: #f8f8f8; }
+.search-suggestion:last-child { border-bottom: 0; }
+.search-suggestion img { height: 44px; object-fit: cover; width: 64px; }
+.search-suggestion-info { display: grid; min-width: 0; }
+.search-suggestion-info strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-suggestion-info small { color: #6b7280; }
+.search-suggestion-info .search-suggestion-tags { color: #92400e; font-size: .76rem; }
+.search-suggestion-price { color: #b91c1c; font-size: .9rem; font-weight: 800; white-space: nowrap; }
+
 @media (max-width: 768px) {
+  .search-suggestions { min-width: min(360px, calc(100vw - 2rem)); }
   .ford-header-inner {
     grid-template-columns: auto 1fr auto;
     height: auto;

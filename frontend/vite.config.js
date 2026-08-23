@@ -14,22 +14,28 @@ export default defineConfig({
     vue(),
   ],
   server: {
+    host: '0.0.0.0',
     port: 5173,
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8082',
+        target: 'http://localhost:8082',
         changeOrigin: true,
         secure: false,
       },
       '/images': { target: 'http://localhost:8082', changeOrigin: true },
       '/videos': { target: 'http://localhost:8082', changeOrigin: true },
-      '/oauth2': { target: 'http://127.0.0.1:8082', changeOrigin: true, secure: false },
-      '/login/oauth2': { target: 'http://127.0.0.1:8082', changeOrigin: true, secure: false },
-      '/logout': { target: 'http://127.0.0.1:8082', changeOrigin: true, secure: false },
+      '/oauth2': { target: 'http://localhost:8082', changeOrigin: true, secure: false },
+      '/login/oauth2': { target: 'http://localhost:8082', changeOrigin: true, secure: false },
+      '/logout': { target: 'http://localhost:8082', changeOrigin: true, secure: false },
     },
   },
   build: {
     outDir: '../src/main/resources/static',
     emptyOutDir: false,
+    minify: false,
+    terserOptions: {
+      compress: false,
+      mangle: false,
+    },
   },
 })

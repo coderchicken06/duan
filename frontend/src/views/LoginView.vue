@@ -68,6 +68,7 @@ const verified = ref(route.query.verified === '1')
 const resetSuccess = ref(route.query.resetSuccess === '1')
 
 async function submit() {
+  if (loading.value) return
   loading.value = true
   error.value = ''
   try {

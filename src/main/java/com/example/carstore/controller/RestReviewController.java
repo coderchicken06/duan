@@ -1,10 +1,8 @@
 package com.example.carstore.controller;
 
 import com.example.carstore.entity.Review;
-import com.example.carstore.repository.CarRepository;
-import com.example.carstore.repository.OrderDetailRepository;
-import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.repository.ReviewRepository;
+import com.example.carstore.service.ReviewService;
 import org.springframework.security.core.Authentication;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -16,12 +14,10 @@ import java.util.Map;
 @RequestMapping("/api/reviews")
 public class RestReviewController {
     private final ReviewRepository reviewRepo;
-    private final OrderRepository orderRepo;
-    private final OrderDetailRepository detailRepo;
-    private final CarRepository carRepo;
-    public RestReviewController(ReviewRepository reviewRepo, OrderRepository orderRepo,
-            OrderDetailRepository detailRepo, CarRepository carRepo) {
-        this.reviewRepo=reviewRepo; this.orderRepo=orderRepo; this.detailRepo=detailRepo; this.carRepo=carRepo;
+    private final ReviewService reviewService;
+    public RestReviewController(ReviewRepository reviewRepo, ReviewService reviewService) {
+        this.reviewRepo = reviewRepo;
+        this.reviewService = reviewService;
     }
 
     @GetMapping("/car/{carId}")
@@ -31,19 +27,26 @@ public class RestReviewController {
         return Map.of("success",true,"data",reviews,"count",reviews.size(),"average",average);
     }
 
+    @GetMapping("/my-reviewed-cars")
+    public List<Long> myReviewedCars(Authentication auth) {
+        if (auth == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
+        return reviewRepo.findAll().stream()
+                .filter(review -> auth.getName().equals(review.getUsername()))
+                .map(Review::getCarId)
+                .filter(java.util.Objects::nonNull)
+                .map(Integer::longValue)
+                .distinct()
+                .toList();
+    }
+
     @PostMapping("/car/{carId}")
     public Map<String,Object> create(@PathVariable Integer carId, @RequestBody Review payload, Authentication auth) {
-        if(auth==null) throw new IllegalArgumentException("Vui lòng đăng nhập.");
-        if(!carRepo.existsById(carId)) throw new IllegalArgumentException("Không tìm thấy xe.");
-        validate(payload);
-        boolean purchased=orderRepo.findByUsername(auth.getName()).stream()
-                .filter(o->"DELIVERED".equals(o.getStatus()))
-                .anyMatch(o->detailRepo.findByOrderId(o.getId()).stream().anyMatch(d->d.getCar()!=null&&carId.equals(d.getCar().getId())));
-        if(!purchased) throw new IllegalArgumentException("Chỉ khách hàng đã nhận xe mới được đánh giá.");
-        if(reviewRepo.existsByCarIdAndUsername(carId,auth.getName())) throw new IllegalArgumentException("Bạn đã đánh giá xe này.");
-        Review review=new Review(); review.setCarId(carId); review.setUsername(auth.getName());
-        review.setRating(payload.getRating()); review.setComment(payload.getComment().trim()); review.setReviewDate(new Date());
-        return Map.of("success",true,"data",reviewRepo.save(review));
+        if(auth==null) throw new org.springframework.web.server.ResponseStatusException(
+                org.springframework.http.HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        return Map.of("success",true,"data",reviewService.create(carId, payload, auth.getName()));
     }
 
     @PutMapping("/{id}")

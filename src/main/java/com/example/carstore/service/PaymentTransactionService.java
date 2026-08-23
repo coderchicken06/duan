@@ -172,7 +172,7 @@ public class PaymentTransactionService {
     }
 
     // Nhận webhook SePay, chống xử lý trùng và cập nhật thanh toán trong cùng giao dịch DB.
-    @Transactional
+    @Transactional(rollbackFor = Exception.class)
     public void processSePayWebhook(Map<String, Object> payload) {
         if (payload == null) {
             throw new IllegalArgumentException("Webhook payload is required.");
@@ -281,7 +281,8 @@ public class PaymentTransactionService {
         // 10. Gửi email hóa đơn xác nhận cho khách hàng, không làm rollback thanh toán nếu SMTP lỗi
         try {
             accountRepo.findByUsername(order.getUsername())
-                    .ifPresent(account -> mailService.sendInvoiceEmail(account, order, savedTransaction));
+                    .ifPresent(account -> mailService.sendInvoiceEmail(account, order, savedTransaction,
+                            detailRepo.findByOrderId(orderId), content));
         } catch (Exception exception) {
             logger.warn("Không thể gửi email hóa đơn cho đơn hàng {}: {}", orderId, exception.getMessage(), exception);
         }
@@ -365,11 +366,6 @@ public class PaymentTransactionService {
     }
 
     private void sendPaymentEmails(Orders order, double amount) {
-        accountRepo.findByUsername(order.getUsername()).ifPresent(account -> {
-            if (account.getEmail() != null && !account.getEmail().isBlank()) {
-                mailService.sendSePayPaymentSuccess(account.getEmail(), order.getId(), amount, false);
-            }
-        });
         for (Account account : accountRepo.findAll()) {
             if (account.getRole() != null
                     && ("ADMIN".equalsIgnoreCase(account.getRole())

@@ -19,8 +19,8 @@
             <td>{{ o.username }}</td>
             <td>{{ o.address }}</td>
             <td>
-              <select v-model="o.status" class="form-select form-select-sm"
-                :disabled="['CANCELLED', 'DELIVERED'].includes(o.status)" @change="updateStatus(o)">
+              <select :value="o.status" class="form-select form-select-sm"
+                :disabled="isSubmitting(o.id) || ['CANCELLED', 'DELIVERED'].includes(o.status)" @change="updateStatus(o, $event.target.value)">
                 <option v-for="status in availableStatuses(o)" :key="status" :value="status">
                   {{ statusLabels[status] }}
                 </option>
@@ -28,7 +28,7 @@
             </td>
             <td>
               <button v-if="!['CANCELLED', 'DELIVERED'].includes(o.status)" class="btn btn-sm cs-btn-danger"
-                @click="cancel(o)">Hủy đơn</button>
+                :disabled="isSubmitting(o.id)" @click="cancel(o)">{{ isSubmitting(o.id) ? 'Đang xử lý...' : 'Hủy đơn' }}</button>
             </td>
           </tr>
           <tr v-if="orders.length === 0">
@@ -41,11 +41,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { adminApi } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
 
 const orders = ref([])
+const submittingOrderId = ref(null)
+const route = useRoute()
 let pollInterval = null
 const statusLabels = {
   PENDING: 'PENDING - Chờ duyệt',
@@ -78,12 +81,14 @@ onUnmounted(() => {
   }
 })
 
+watch(() => route.path, load)
+
 async function load() {
   try {
     const { data } = await adminApi.getOrders()
     orders.value = Array.isArray(data) ? data : data.data || []
-  } catch (e) {
-    console.error('Lỗi tải danh sách đơn hàng:', e)
+  } catch {
+    showCartToast('Không thể tải danh sách đơn hàng', 'error')
   }
 }
 
@@ -95,37 +100,44 @@ async function loadSilent() {
 
     // Chỉ cập nhật lại nếu có sự thay đổi về dữ liệu để tránh làm reset lại trạng thái giao diện UI
     if (JSON.stringify(orders.value) !== JSON.stringify(latestOrders)) {
-      orders.value = latestOrders
+      const currentOrders = new Map(orders.value.map((order) => [order.id, order]))
+      orders.value = latestOrders.map((order) => isSubmitting(order.id)
+        ? currentOrders.get(order.id) || order
+        : order)
     }
   } catch (e) {
     // Bỏ qua lỗi ngầm trong lúc polling
   }
 }
 
-async function updateStatus(o) {
+async function updateStatus(o, nextStatus) {
+  if (isSubmitting(o.id)) return
+  const previousStatus = o.status
+  if (previousStatus === nextStatus) return
+  o.status = nextStatus
+  submittingOrderId.value = o.id
   try {
-    const { data } = await adminApi.updateOrderStatus(o.id, o.status)
-    if (!data.success) showCartToast(data.message || 'Không thể cập nhật trạng thái', 'error')
+    const { data } = await adminApi.updateOrderStatus(o.id, nextStatus)
+    if (!data.success) {
+      o.status = previousStatus
+      showCartToast(data.message || 'Không thể cập nhật trạng thái', 'error')
+    }
     else showCartToast(data.message || 'Đã cập nhật trạng thái đơn hàng')
   } catch (error) {
+    o.status = previousStatus
     showCartToast(error.response?.data?.message || 'Không thể cập nhật trạng thái', 'error')
   } finally {
-    await load()
+    submittingOrderId.value = null
   }
 }
 
 async function cancel(order) {
+  if (isSubmitting(order.id)) return
   if (!confirm('Hủy đơn hàng này? Tồn kho sẽ được hoàn lại nếu đơn chưa thanh toán cọc.')) return
-  try {
-    const { data } = await adminApi.updateOrderStatus(order.id, 'CANCELLED')
-    if (!data.success) showCartToast(data.message || 'Không thể hủy đơn hàng', 'error')
-    else showCartToast(data.message || 'Đã hủy đơn hàng')
-  } catch (error) {
-    showCartToast(error.response?.data?.message || 'Không thể hủy đơn hàng', 'error')
-  } finally {
-    await load()
-  }
+  await updateStatus(order, 'CANCELLED')
 }
+
+const isSubmitting = (orderId) => submittingOrderId.value === orderId
 </script>
 <style
   scoped>
@@ -165,5 +177,11 @@ async function cancel(order) {
     text-align: center;
     color: #6b7280;
     padding: 2.5rem !important
+  }
+
+  .btn:disabled,
+  .form-select:disabled {
+    cursor: wait;
+    opacity: .65
   }
 </style>

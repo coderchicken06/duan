@@ -26,13 +26,20 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { adminApi } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
 
 const users = ref([])
+const route = useRoute()
 
-onMounted(load)
+onMounted(() => {
+  load()
+  window.addEventListener('focus', load)
+})
+onBeforeUnmount(() => window.removeEventListener('focus', load))
+watch(() => route.path, load)
 
 async function load() {
   const { data } = await adminApi.getUsers()
@@ -41,15 +48,18 @@ async function load() {
 
 async function remove(username) {
   if (!confirm('Xóa user?')) return
+  const previousUsers = users.value
+  users.value = users.value.filter((user) => user.username !== username)
   try {
     const { data } = await adminApi.deleteUser(username)
     if (data.success === false) {
+      users.value = previousUsers
       showCartToast(data.message || 'Không thể xóa người dùng', 'error')
       return
     }
-    await load()
     showCartToast(data.message || 'Đã xóa người dùng')
   } catch (error) {
+    users.value = previousUsers
     showCartToast(error.response?.data?.message || 'Không thể xóa người dùng', 'error')
   }
 }

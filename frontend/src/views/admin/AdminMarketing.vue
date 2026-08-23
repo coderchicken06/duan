@@ -17,17 +17,17 @@
                         v-model="promotion.endDate" :min="today" aria-label="Ngày kết thúc"
                         title="Ngày kết thúc (dd/mm/yyyy)" /><label><input
                             v-model="promotion.status" type="checkbox"> Đang hoạt động</label><button
-                        class="btn btn-danger">{{ promotion.id ? 'Cập nhật' : 'Thêm' }}</button></form>
+                        class="btn btn-danger" :disabled="submitting">{{ submitting ? 'Đang lưu...' : (promotion.id ? 'Cập nhật' : 'Thêm') }}</button></form>
                 <div v-for="item in promotions" :key="item.id" class="admin-row"><span><strong>{{ item.name
                             }}</strong><small>{{ assignedCarName(item.id) }} giảm {{ item.value }}{{ item.type === 'PERCENT' ? '%' :
                                 ' VNĐ'
                             }}</small><small>Thời gian: {{ formatDateDisplay(item.startDate) || '—' }} - {{
                                 formatDateDisplay(item.endDate) || '—' }}</small></span><span><button v-if="!item.status"
-                                class="btn btn-sm btn-outline-success" @click="setPromotionStatus(item, true)">Áp dụng</button><button
-                                v-else class="btn btn-sm btn-outline-warning" @click="setPromotionStatus(item, false)">Ngừng áp dụng</button><button
+                                class="btn btn-sm btn-outline-success" :disabled="submitting" @click="setPromotionStatus(item, true)">Áp dụng</button><button
+                                v-else class="btn btn-sm btn-outline-warning" :disabled="submitting" @click="setPromotionStatus(item, false)">Ngừng áp dụng</button><button
                             class="btn btn-sm btn-outline-primary"
-                            @click="editPromotion(item)">Sửa</button><button
-                            class="btn btn-sm btn-outline-danger" @click="removePromotion(item.id)">Xóa</button></span>
+                            :disabled="submitting" @click="editPromotion(item)">Sửa</button><button
+                            class="btn btn-sm btn-outline-danger" :disabled="submitting" @click="removePromotion(item.id)">Xóa</button></span>
                 </div>
             </section>
             <section class="cs-card p-4">
@@ -43,18 +43,19 @@
                         rows="5" placeholder="Nội dung"></textarea><select v-model="article.status" class="form-select">
                         <option value="DRAFT">Bản nháp</option>
                         <option value="PUBLISHED">Xuất bản</option>
-                    </select><button class="btn btn-danger">{{ article.id ? 'Cập nhật' : 'Thêm' }}</button>
+                    </select><button class="btn btn-danger" :disabled="submitting">{{ submitting ? 'Đang lưu...' : (article.id ? 'Cập nhật' : 'Thêm') }}</button>
                 </form>
                 <div v-for="item in articles" :key="item.id" class="admin-row"><span><strong>{{ item.title
                             }}</strong><small>{{ item.status }}</small></span><span><button
-                            class="btn btn-sm btn-outline-primary" @click="article = { ...item }">Sửa</button><button
-                            class="btn btn-sm btn-outline-danger" @click="removeNews(item.id)">Xóa</button></span></div>
+                            class="btn btn-sm btn-outline-primary" :disabled="submitting" @click="article = { ...item }">Sửa</button><button
+                            class="btn btn-sm btn-outline-danger" :disabled="submitting" @click="removeNews(item.id)">Xóa</button></span></div>
             </section>
         </div>
     </main>
 </template>
 <script setup>
-import { onMounted, ref } from 'vue'
+import { onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { adminApi, promotionApi, newsApi, uploadApi } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
 import DatePickerInput from '../../components/DatePickerInput.vue'
@@ -62,6 +63,8 @@ import DatePickerInput from '../../components/DatePickerInput.vue'
 const promotions = ref([]), articles = ref([]), cars = ref([])
 const assignments = ref({})
 const selectedCarId = ref(null)
+const submitting = ref(false)
+const route = useRoute()
 const emptyPromotion = () => ({ name: '', type: 'PERCENT', value: null, startDate: '', endDate: '', status: true })
 const emptyNews = () => ({ title: '', thumbnail: '', summary: '', content: '', status: 'DRAFT' })
 const promotion = ref(emptyPromotion()), article = ref(emptyNews())
@@ -96,6 +99,8 @@ function assignedCarName(promotionId) {
 }
 
 async function action(fn, success) {
+    if (submitting.value) return false
+    submitting.value = true
     try {
         const response = await fn()
         if (response?.data?.success === false) {
@@ -105,6 +110,7 @@ async function action(fn, success) {
         await load(); showCartToast(success); return true
     }
     catch (e) { showCartToast(e.response?.data?.message || e.message || 'Không thể thực hiện', 'error'); return false }
+    finally { submitting.value = false }
 }
 
 async function savePromotion() {
@@ -159,6 +165,7 @@ async function saveNews() {
 }
 async function removeNews(id) { if (confirm('Xóa tin tức này?')) await action(() => newsApi.delete(id), 'Đã xóa tin tức') }
 onMounted(load)
+watch(() => route.path, load)
 </script>
 <style scoped>
 .marketing-grid {
@@ -192,6 +199,11 @@ onMounted(load)
 
 .admin-row small {
     color: #6b7280
+}
+
+button:disabled {
+    cursor: wait;
+    opacity: .65
 }
 
 @media(max-width:900px) {

@@ -384,39 +384,25 @@ VALUES
  N'Sedan cao cấp, an toàn, tiết kiệm xăng', 1, 2023, N'Đen', 8,
  N'Tháng 01 Năm 2023', 18000, N'Xăng', N'2.5L', N'Đen', N'Sedan', 5, N'FWD', N'Tự động', 178, N'231 Nm', N'Xăng', N'6.4 L/100km', N'12 tháng hoặc 20.000 km', N'CarStore Hồ Chí Minh', N'Quận 7, TP.HCM', N'CarStore Certified', N'Đã kiểm tra kỹ thuật và hồ sơ', N'ABS, cân bằng điện tử, camera lùi, 7 túi khí', N'Điều hòa tự động, màn hình trung tâm, Apple CarPlay'),
 
-(N'BMW X5', 3500000, 'x5.jpg',
+(N'BMW X5', 3500000, 'bmwx5.png',
  N'SUV sang trọng, động cơ mạnh, nội thất cao cấp', 2, 2024, N'Trắng', 5,
  N'Tháng 03 Năm 2024', 9000, N'Xăng', N'3.0L Turbo', N'Nâu', N'SUV', 5, N'AWD', N'Tự động 8 cấp', 381, N'520 Nm', N'Xăng', N'9.2 L/100km', N'18 tháng', N'CarStore Hà Nội', N'Cầu Giấy, Hà Nội', N'Premium Certified', N'Kiểm định 120 hạng mục', N'ABS, DSC, camera 360, cảnh báo điểm mù', N'Ghế điện, HUD, âm thanh Harman Kardon'),
 
-(N'Mercedes C300', 2500000, 'c300.jpg',
+(N'Mercedes C300', 2500000, 'mercedesC300.png',
  N'Sedan Đức, công nghệ mới, lái tự động', 3, 2023, N'Xám', 6,
  N'Tháng 06 Năm 2023', 15000, N'Xăng', N'2.0L Turbo', N'Đen', N'Sedan', 5, N'RWD', N'Tự động 9 cấp', 258, N'400 Nm', N'Xăng', N'7.1 L/100km', N'12 tháng', N'CarStore Đà Nẵng', N'Hải Châu, Đà Nẵng', N'CarStore Certified', N'Không tai nạn, ODO xác thực', N'ABS, ESP, hỗ trợ giữ làn, camera 360', N'MBUX, ghế nhớ vị trí, đèn viền nội thất'),
 
-(N'Honda Civic', 900000, 'civic.jpg',
+(N'Honda Civic', 900000, 'civic.png',
  N'Xe thể thao, thiết kế năng động, tiết kiệm', 4, 2022, N'Đỏ', 10,
  N'Tháng 11 Năm 2022', 23000, N'Xăng', N'1.5L Turbo', N'Đen', N'Sedan', 5, N'FWD', N'CVT', 176, N'240 Nm', N'Xăng', N'6.3 L/100km', N'12 tháng', N'CarStore Hồ Chí Minh', N'Thủ Đức, TP.HCM', N'CarStore Certified', N'Lịch sử bảo dưỡng đầy đủ', N'Honda Sensing, ABS, VSA, camera lùi', N'Apple CarPlay, điều hòa tự động, đề nổ từ xa'),
 
-(N'Toyota Corolla', 800000, 'corolla.jpg',
+(N'Toyota Corolla', 800000, 'Corolla.png',
  N'Sedan nhỏ gọn, tin cậy, bảo dưỡng rẻ', 1, 2023, N'Bạc', 9,
  N'Tháng 08 Năm 2023', 12000, N'Xăng', N'1.8L', N'Đen', N'Sedan', 5, N'FWD', N'CVT', 138, N'172 Nm', N'Xăng', N'6.0 L/100km', N'12 tháng', N'CarStore Cần Thơ', N'Ninh Kiều, Cần Thơ', N'CarStore Certified', N'Xe gia đình, hồ sơ rõ ràng', N'ABS, EBD, cân bằng điện tử, camera lùi', N'Màn hình cảm ứng, điều hòa tự động, Smart Key'),
 
-(N'BMW 3 Series', 2000000, 'bmw3.jpg',
+(N'BMW 3 Series', 2000000, 'bmw3series.png',
  N'Sedan thể thao, hiệu năng cao, lái cảm giác tuyệt vời', 2, 2024, N'Xanh đen', 4,
  N'Tháng 02 Năm 2024', 7000, N'Xăng', N'2.0L Turbo', N'Đen', N'Sedan', 5, N'RWD', N'Tự động 8 cấp', 184, N'300 Nm', N'Xăng', N'6.8 L/100km', N'18 tháng', N'CarStore Hà Nội', N'Nam Từ Liêm, Hà Nội', N'Premium Certified', N'Ngoại thất nguyên bản, ODO xác thực', N'ABS, DSC, hỗ trợ đỗ xe, cảnh báo va chạm', N'iDrive, ghế thể thao, điều hòa 3 vùng');
-GO
-
-INSERT INTO dbo.CarImage(car_id, image_url, sort_order, is_primary)
-SELECT id, image, 0, 1 FROM dbo.Car WHERE image IS NOT NULL AND LTRIM(RTRIM(image)) <> '';
-GO
-
-INSERT INTO dbo.CarImage(car_id, image_url, sort_order, is_primary)
-SELECT id, LEFT(image, LEN(image) - 4) + '-gallery1.jpg', 1, 0 FROM dbo.Car WHERE image LIKE '%.jpg';
-
-INSERT INTO dbo.CarImage(car_id, image_url, sort_order, is_primary)
-SELECT id, LEFT(image, LEN(image) - 4) + '-gallery2.jpg', 2, 0 FROM dbo.Car WHERE image LIKE '%.jpg';
-
-INSERT INTO dbo.CarImage(car_id, image_url, sort_order, is_primary)
-SELECT id, LEFT(image, LEN(image) - 4) + '-gallery3.jpg', 3, 0 FROM dbo.Car WHERE image LIKE '%.jpg';
 GO
 
 -- =============================================================
@@ -586,7 +572,7 @@ BEGIN
         dealer_name, dealer_address, inspection_level, inspection_note,
         safety_features, comfort_features
     )
-    SELECT N'Ford Ranger Wildtrak 2025', 950000000, N'default-car.jpg',
+    SELECT N'Ford Ranger Wildtrak 2025', 950000000, N'Wildtrak2025.png',
            N'Pick-up mạnh mẽ, phù hợp công việc và du lịch', b.id, 2025, N'Đen', 3,
            N'Tháng 01/2025', 12000, N'Diesel', N'2.8L', N'Nâu', N'Pick-up', 5, N'4x4', N'Tự động 10 cấp', 201,
            N'500 Nm', N'Diesel', N'8.2 L/100km', N'24 tháng', N'CarStore HCM', N'Q7, TP.HCM', N'CarStore Certified',
@@ -605,7 +591,7 @@ BEGIN
         dealer_name, dealer_address, inspection_level, inspection_note,
         safety_features, comfort_features
     )
-    SELECT N'VinFast VF 8 2025', 1090000000, N'default-car.jpg',
+    SELECT N'VinFast VF 8 2025', 1090000000, N'VF8.png',
            N'Xe điện SUV 7 chỗ, trạm sạc rộng, công nghệ an toàn', b.id, 2025, N'Xám', 3,
            N'Tháng 01/2025', 4200, N'Điện', N'300 kW', N'Trắng', N'SUV', 7, N'AWD', N'Tự động', 300,
            N'620 Nm', N'Điện', N'Không tiêu hao xăng', N'36 tháng', N'CarStore HN', N'Ba Đình, Hà Nội', N'Green Certified',
@@ -624,13 +610,100 @@ BEGIN
         dealer_name, dealer_address, inspection_level, inspection_note,
         safety_features, comfort_features
     )
-    SELECT N'Hyundai Tucson 2024', 930000000, N'default-car.jpg',
+    SELECT N'Hyundai Tucson 2024', 930000000, N'Tucson.png',
            N'SUV tiện nghi, phù hợp gia đình', b.id, 2024, N'Xanh', 4,
            N'Tháng 05/2024', 11000, N'Xăng', N'2.0L', N'Đen', N'SUV', 5, N'AWD', N'Tự động 8 cấp', 180,
            N'191 Nm', N'Xăng', N'7.4 L/100km', N'18 tháng', N'CarStore HCM', N'Bình Thạnh, TP.HCM', N'CarStore Certified',
            N'Kiểm tra kỹ thuật đầy đủ', N'ABS, EBD, cảnh báo xe phía sau', N'Điều hòa tự động 2 vùng, màn hình cảm ứng 10.25 inch'
     FROM dbo.Brand b WHERE b.name = N'Hyundai';
 END;
+GO
+
+-- Đồng bộ ảnh chính và thư viện ảnh theo đúng tên file trong static/images.
+SET ANSI_NULLS ON;
+SET QUOTED_IDENTIFIER ON;
+SET ANSI_PADDING ON;
+SET ANSI_WARNINGS ON;
+SET ARITHABORT ON;
+SET CONCAT_NULL_YIELDS_NULL ON;
+SET NUMERIC_ROUNDABORT OFF;
+
+DECLARE @CarImageSeed TABLE (
+    car_name NVARCHAR(100) NOT NULL,
+    image_url NVARCHAR(255) NOT NULL,
+    sort_order INT NOT NULL,
+    is_primary BIT NOT NULL
+);
+
+INSERT INTO @CarImageSeed (car_name, image_url, sort_order, is_primary) VALUES
+(N'Toyota Camry', N'camry.jpg', 0, 1),
+(N'BMW X5', N'bmwx5.png', 0, 1),
+(N'Mercedes C300', N'mercedesC300.png', 0, 1),
+(N'Honda Civic', N'civic.png', 0, 1),
+(N'Toyota Corolla', N'Corolla.png', 0, 1),
+(N'BMW 3 Series', N'bmw3series.png', 0, 1),
+(N'Ford Ranger Wildtrak 2025', N'Wildtrak2025.png', 0, 1),
+(N'VinFast VF 8 2025', N'VF8.png', 0, 1),
+(N'Hyundai Tucson 2024', N'Tucson.png', 0, 1),
+
+(N'Toyota Camry', N'camry-gallery1.jpg', 1, 0),
+(N'Toyota Camry', N'camry-gallery2.png', 2, 0),
+(N'Toyota Camry', N'camry-gallery3.png', 3, 0),
+(N'Toyota Camry', N'camry-gallery4.png', 4, 0),
+(N'Toyota Camry', N'camry-gallery5.png', 5, 0),
+(N'BMW X5', N'bmwx5-gallery1.png', 1, 0),
+(N'BMW X5', N'bmwx5-gallery2.png', 2, 0),
+(N'BMW X5', N'bmwx5-gallery3.png', 3, 0),
+(N'BMW X5', N'bmwx5-gallery4.png', 4, 0),
+(N'BMW X5', N'bmwx5-gallery5.png', 5, 0),
+(N'Mercedes C300', N'mercedesC300-gallery1.png', 1, 0),
+(N'Mercedes C300', N'mercedesC300-gallery2.png', 2, 0),
+(N'Mercedes C300', N'mercedesC300-gallery3.png', 3, 0),
+(N'Mercedes C300', N'mercedesC300-gallery4.png', 4, 0),
+(N'Mercedes C300', N'mercedesC300-gallery5.png', 5, 0),
+(N'Honda Civic', N'civic-gallery1.png', 1, 0),
+(N'Honda Civic', N'civic-gallery2.png', 2, 0),
+(N'Honda Civic', N'civic-gallery3.png', 3, 0),
+(N'Honda Civic', N'civic-gallery4.png', 4, 0),
+(N'Honda Civic', N'civic-gallery5.png', 5, 0),
+(N'Toyota Corolla', N'Corolla-gallery1.png', 1, 0),
+(N'Toyota Corolla', N'Corolla-gallery2.png', 2, 0),
+(N'Toyota Corolla', N'Corolla-gallery3.png', 3, 0),
+(N'Toyota Corolla', N'Corolla-gallery4.png', 4, 0),
+(N'BMW 3 Series', N'bmw3series-gallery1.png', 1, 0),
+(N'BMW 3 Series', N'bmw3series-gallery2.png', 2, 0),
+(N'BMW 3 Series', N'bmw3series-gallery3.png', 3, 0),
+(N'BMW 3 Series', N'bmw3series-gallery4.png', 4, 0),
+(N'Ford Ranger Wildtrak 2025', N'Wildtrak2025-gallery1.png', 1, 0),
+(N'Ford Ranger Wildtrak 2025', N'Wildtrak2025-gallery2.png', 2, 0),
+(N'Ford Ranger Wildtrak 2025', N'Wildtrak2025-gallery3.png', 3, 0),
+(N'Ford Ranger Wildtrak 2025', N'Wildtrak2025-gallery4.png', 4, 0),
+(N'Ford Ranger Wildtrak 2025', N'Wildtrak2025-gallery5.png', 5, 0),
+(N'VinFast VF 8 2025', N'VF8-gallery1.png', 1, 0),
+(N'VinFast VF 8 2025', N'VF8-gallery2.png', 2, 0),
+(N'VinFast VF 8 2025', N'VF8-gallery3.png', 3, 0),
+(N'VinFast VF 8 2025', N'VF8-gallery4.png', 4, 0),
+(N'VinFast VF 8 2025', N'VF8-gallery5.png', 5, 0),
+(N'Hyundai Tucson 2024', N'Tucson-gallery1.png', 1, 0),
+(N'Hyundai Tucson 2024', N'Tucson-gallery2.png', 2, 0),
+(N'Hyundai Tucson 2024', N'Tucson-gallery3.png', 3, 0),
+(N'Hyundai Tucson 2024', N'Tucson-gallery4.png', 4, 0),
+(N'Hyundai Tucson 2024', N'Tucson-gallery5.png', 5, 0);
+
+UPDATE car
+SET image = seed.image_url
+FROM dbo.Car car
+JOIN @CarImageSeed seed ON seed.car_name = car.name AND seed.is_primary = 1;
+
+DELETE car_image
+FROM dbo.CarImage car_image
+JOIN dbo.Car car ON car.id = car_image.car_id
+JOIN @CarImageSeed seed ON seed.car_name = car.name;
+
+INSERT INTO dbo.CarImage (car_id, image_url, sort_order, is_primary)
+SELECT car.id, seed.image_url, seed.sort_order, seed.is_primary
+FROM @CarImageSeed seed
+JOIN dbo.Car car ON car.name = seed.car_name;
 GO
 
 -- 23.4. Tạo hai đơn hàng mẫu cho khách hàng tu_nguyen

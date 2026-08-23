@@ -1,9 +1,21 @@
 import axios from 'axios'
 
+const getBaseURL = () => {
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost') {
+    return `http://${window.location.hostname}:8082`
+  }
+  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:8082'
+}
+
 const api = axios.create({
-  baseURL: '',
+  baseURL: getBaseURL(),
   withCredentials: true,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+    'Cache-Control': 'no-cache, no-store, must-revalidate',
+    Pragma: 'no-cache',
+    Expires: '0',
+  },
 })
 
 // Dữ liệu quản trị thay đổi thường xuyên; luôn lấy bản mới thay vì response GET
@@ -11,8 +23,9 @@ const api = axios.create({
 api.interceptors.request.use((config) => {
   if (String(config.method || 'get').toLowerCase() === 'get') {
     config.params = { ...(config.params || {}), _ts: Date.now() }
-    config.headers['Cache-Control'] = 'no-cache'
+    config.headers['Cache-Control'] = 'no-cache, no-store, must-revalidate'
     config.headers.Pragma = 'no-cache'
+    config.headers.Expires = '0'
   }
   return config
 })

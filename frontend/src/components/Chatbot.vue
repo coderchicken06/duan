@@ -16,14 +16,21 @@
       <div class="chat-body" ref="chatBody">
         <div v-for="(msg, index) in messages" :key="index" :class="['chat-message', msg.sender]">
           <div class="message-bubble">
-            <p>{{ msg.text }}</p>
+            <p v-if="msg.typing" class="typing-indicator" aria-label="Bot đang soạn câu trả lời">
+              <span></span><span></span><span></span>
+            </p>
+            <p v-else>{{ msg.text }}</p>
 
-            <!-- Render danh sách xe từ Database nếu có -->
-            <div v-if="msg.cars && msg.cars.length > 0" class="car-cards">
-              <div v-for="car in msg.cars" :key="car.id" class="car-card-item">
-                <strong>{{ car.name }}</strong>
-                <p v-if="car.description">{{ car.description }}</p>
-              </div>
+            <div v-if="!msg.typing && msg.recommendedCars?.length" class="car-cards">
+              <button v-for="car in msg.recommendedCars" :key="car.id" type="button" class="car-card-item"
+                @click="openCar(car.id)">
+                <img :src="car.mainImageUrl || '/images/default-car.jpg'" :alt="car.carName" @error="useDefaultCarImage" />
+                <span><strong>{{ car.carName }}</strong><small>{{ car.brandName }}</small><b>{{ formatPrice(car.price) }} VNĐ</b></span>
+              </button>
+            </div>
+            <div v-if="!msg.typing && msg.suggestions?.length" class="quick-replies" aria-label="Gợi ý tư vấn">
+              <button v-for="suggestion in msg.suggestions" :key="suggestion" type="button"
+                @click="sendMessage(suggestion)">{{ suggestion }}</button>
             </div>
           </div>
         </div>
@@ -31,62 +38,84 @@
 
       <!-- Khung nhập liệu -->
       <div class="chat-footer">
-        <input v-model="userMessage" @keyup.enter="sendMessage" placeholder="Nhập câu hỏi (VD: tìm xe vios)..." />
-        <button @click="sendMessage">Gửi</button>
+        <input v-model="userMessage" @keyup.enter="sendMessage()" placeholder="Nhập câu hỏi (VD: tìm xe vios)..." />
+        <button @click="sendMessage()">Gửi</button>
       </div>
     </div>
   </div>
 </template>
 
-<script>
-import { chatApi } from '../api';
+<script setup>
+import { nextTick, ref } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '../api/client'
+import { formatPrice, useDefaultCarImage } from '../api'
 
-export default {
-  name: 'ChatbotWidget',
-  data() {
-    return {
-      isOpen: false,
-      userMessage: '',
-      messages: [
-        { sender: 'bot', text: 'Xin chào! Em là bot tư vấn CarStore. Anh/chị cần tìm xe gì ạ?' }
-      ]
-    };
+const INITIAL_SUGGESTIONS = [
+  'Tư vấn theo tầm giá', 'Tư vấn theo nhu cầu sử dụng', 'Xe 5 chỗ gia đình',
+  'Xe 7 chỗ rộng rãi', 'Xem xe mới nhất',
+]
+
+const router = useRouter()
+const isOpen = ref(false)
+const userMessage = ref('')
+const chatBody = ref(null)
+const messages = ref([
+  {
+    sender: 'bot',
+    text: 'Xin chào! Em là bot tư vấn CarStore. Anh/chị cần tìm xe gì ạ?',
+    suggestions: INITIAL_SUGGESTIONS,
   },
-  methods: {
-    toggleChat() {
-      this.isOpen = !this.isOpen;
-    },
-    async sendMessage() {
-      if (!this.userMessage.trim()) return;
+])
 
-      const text = this.userMessage;
-      this.messages.push({ sender: 'user', text: text });
-      this.userMessage = '';
+function toggleChat() {
+  isOpen.value = !isOpen.value
+  scrollToBottom()
+}
 
-      try {
-        const response = await chatApi.send(text);
+async function sendMessage(quickReply = '') {
+  const text = String(quickReply || userMessage.value).trim()
+  if (!text) return
 
-        this.messages.push({
-          sender: 'bot',
-          text: response.data.reply,
-          cars: response.data.cars
-        });
-      } catch (error) {
-        this.messages.push({
-          sender: 'bot',
-          text: 'Rất tiếc, hệ thống tư vấn đang gặp sự cố. Vui lòng thử lại sau!'
-        });
-      }
+  messages.value.push({ sender: 'user', text })
+  userMessage.value = ''
+  const typingMessage = { sender: 'bot', typing: true }
+  messages.value.push(typingMessage)
+  await scrollToBottom()
 
-      // Tự cuộn xuống tin nhắn mới
-      this.$nextTick(() => {
-        if (this.$refs.chatBody) {
-          this.$refs.chatBody.scrollTop = this.$refs.chatBody.scrollHeight;
-        }
-      });
-    }
+  try {
+    // Keep the established public endpoint; it returns reply, suggestions and recommendedCars.
+    const { data } = await api.post('/api/chat', { message: text })
+    replaceTypingMessage(typingMessage, {
+      sender: 'bot',
+      text: data.reply || 'Em chưa hiểu rõ yêu cầu. Anh/chị có thể chọn một gợi ý bên dưới.',
+      suggestions: data.suggestions || [],
+      recommendedCars: data.recommendedCars || [],
+    })
+  } catch {
+    replaceTypingMessage(typingMessage, {
+      sender: 'bot',
+      text: 'Rất tiếc, hệ thống tư vấn đang gặp sự cố. Vui lòng thử lại sau!',
+      suggestions: INITIAL_SUGGESTIONS,
+    })
   }
-};
+  await scrollToBottom()
+}
+
+function replaceTypingMessage(typingMessage, message) {
+  const index = messages.value.indexOf(typingMessage)
+  if (index >= 0) messages.value.splice(index, 1, message)
+}
+
+function openCar(id) {
+  router.push(`/car/detail/${id}`)
+  isOpen.value = false
+}
+
+async function scrollToBottom() {
+  await nextTick()
+  if (chatBody.value) chatBody.value.scrollTop = chatBody.value.scrollHeight
+}
 </script>
 
 <style scoped>
@@ -173,18 +202,43 @@ export default {
   color: #333;
 }
 
+.typing-indicator { align-items: center; display: flex; gap: 4px; height: 18px; margin: 0; }
+.typing-indicator span { animation: typing-bounce .9s infinite ease-in-out; background: #6b7280; border-radius: 50%; height: 6px; width: 6px; }
+.typing-indicator span:nth-child(2) { animation-delay: .15s; }
+.typing-indicator span:nth-child(3) { animation-delay: .3s; }
+@keyframes typing-bounce { 0%, 60%, 100% { transform: translateY(0); } 30% { transform: translateY(-4px); } }
+
 .car-cards {
   margin-top: 8px;
+  display: grid;
+  gap: 6px;
 }
 
 .car-card-item {
+  align-items: center;
   background: #fff;
   border: 1px solid #ddd;
+  cursor: pointer;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 64px minmax(0, 1fr);
   padding: 6px;
   border-radius: 6px;
-  margin-top: 4px;
   color: #333;
+  text-align: left;
+  width: 100%;
 }
+
+.car-card-item:hover { border-color: #007bff; }
+.car-card-item img { height: 48px; object-fit: cover; width: 64px; }
+.car-card-item span { display: grid; min-width: 0; }
+.car-card-item strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.car-card-item small { color: #6b7280; }
+.car-card-item b { color: #b91c1c; font-size: 12px; }
+
+.quick-replies { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+.quick-replies button { background: #fff; border: 1px solid #007bff; border-radius: 999px; color: #0063cc; cursor: pointer; font-size: 12px; padding: 5px 8px; text-align: left; }
+.quick-replies button:hover { background: #eaf4ff; }
 
 .chat-footer {
   display: flex;
