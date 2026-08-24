@@ -179,14 +179,14 @@ function resetFilters() {
 async function addToCart(id) {
   const car = allCars.value.find((item) => item.id === id)
   if (!car || Number(car.stock || 0) <= 0) {
-    message.value = 'Xe đã hết hàng, không thể thêm vào đặt cọc xe'
+    message.value = 'Xe đã hết hàng, không thể thêm vào phiếu đặt cọc xe'
     return
   }
   try {
     const { data } = await cartApi.add(id)
     if (data.success) {
       await cart.refresh()
-      showCartToast('Thêm vào đặt cọc xe thành công!')
+      showCartToast('Thêm vào phiếu đặt cọc xe thành công!')
       message.value = ''
     } else {
       message.value = data.message || 'Lỗi'

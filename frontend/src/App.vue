@@ -7,13 +7,20 @@
           <div class="admin-sidebar-title">Quản trị CarStore</div>
           <nav class="admin-sidebar-nav">
             <router-link to="/admin/dashboard" exact-active-class="is-active">📊 <span>Thống kê</span></router-link>
-            <router-link to="/admin/inventory" exact-active-class="is-active">📦 <span>Quản lý tồn kho</span></router-link>
-            <router-link to="/admin/products" exact-active-class="is-active">🚗 <span>Quản lý sản phẩm</span></router-link>
-            <router-link to="/admin/orders" exact-active-class="is-active">📦 <span>Quản lý đơn hàng</span></router-link>
-            <router-link to="/admin/support" exact-active-class="is-active">📋 <span>Quản lý yêu cầu hỗ trợ</span></router-link>
-            <router-link to="/admin/users" exact-active-class="is-active">👥 <span>Quản lý khách hàng</span></router-link>
-            <router-link to="/admin/marketing" exact-active-class="is-active">📣 <span>Khuyến mãi & tin tức</span></router-link>
-            <router-link to="/admin/contracts" exact-active-class="is-active">📄 <span>Quản lý hợp đồng</span></router-link>
+            <router-link to="/admin/inventory" exact-active-class="is-active">📦 <span>Quản lý tồn
+                kho</span></router-link>
+            <router-link to="/admin/products" exact-active-class="is-active">🚗 <span>Quản lý sản
+                phẩm</span></router-link>
+            <router-link to="/admin/orders" exact-active-class="is-active">📦 <span>Quản lý đơn
+                hàng</span></router-link>
+            <router-link to="/admin/support" exact-active-class="is-active">📋 <span>Quản lý yêu cầu hỗ
+                trợ</span></router-link>
+            <router-link to="/admin/users" exact-active-class="is-active">👥 <span>Quản lý khách
+                hàng</span></router-link>
+            <router-link to="/admin/marketing" exact-active-class="is-active">📣 <span>Khuyến mãi & tin
+                tức</span></router-link>
+            <router-link to="/admin/contracts" exact-active-class="is-active">📄 <span>Quản lý hợp
+                đồng</span></router-link>
           </nav>
         </aside>
         <section class="admin-main-content">
@@ -72,7 +79,7 @@ function onToastEvent(event) {
     showToast(detail)
     return
   }
-  showToast(detail?.message || 'Thêm vào đặt cọc xe thành công!', detail?.type)
+  showToast(detail?.message || 'Thêm vào phiếu đặt cọc xe thành công!', detail?.type)
 }
 
 onMounted(() => {

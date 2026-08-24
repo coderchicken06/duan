@@ -65,10 +65,10 @@ public class RestCartController {
 
         CartItem existing = cartService.getCart(session).get(id);
         if (existing != null) {
-            return ResponseUtils.fail("Xe này đã có trong giỏ hàng của bạn.");
+            return ResponseUtils.fail("Xe này đã có trong phiếu đặt cọc xe của bạn.");
         }
         if (!cartService.getCart(session).isEmpty()) {
-            return ResponseUtils.fail("Giỏ hàng chỉ cho phép giữ chỗ một xe. Vui lòng xóa xe hiện tại trước.");
+            return ResponseUtils.fail("Phiếu đặt cọc xe chỉ cho phép giữ chỗ một xe. Vui lòng xóa xe hiện tại trước.");
         }
         int currentQuantity = existing == null ? 0 : existing.getQuantity();
         int requestedQuantity = currentQuantity + safeQuantity;

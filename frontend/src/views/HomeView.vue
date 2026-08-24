@@ -10,7 +10,7 @@
         </p>
         <div class="ford-intro-actions">
           <router-link class="ford-btn-primary" to="/car/list">Xem tất cả xe</router-link>
-          <router-link class="ford-btn-outline" to="/cart/view">Giỏ hàng của bạn</router-link>
+          <router-link class="ford-btn-outline" to="/cart/view">Phiếu đặt cọc xe của bạn</router-link>
         </div>
       </div>
       <div class="ford-hero-side">
@@ -101,10 +101,10 @@ async function addToCart(id) {
   const { data } = await cartApi.add(id)
   if (data.success) {
     await cart.refresh()
-    showCartToast('Thêm vào đặt cọc xe thành công!')
+    showCartToast('Thêm vào phiếu đặt cọc xe thành công!')
     alert.value = ''
   } else {
-    alert.value = data.message || 'Không thể thêm vào đặt cọc xe'
+    alert.value = data.message || 'Không thể thêm vào phiếu đặt cọc xe'
   }
 }
 </script>
