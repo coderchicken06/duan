@@ -1,23 +1,24 @@
 <template>
-  <header ref="header" class="ford-header">
+  <header ref="header" class="ford-header" :class="{ 'is-admin-header': auth.isAdmin }">
     <div class="ford-header-inner">
-      <nav class="ford-nav-left" aria-label="Điều hướng chính">
+      <nav v-if="!auth.isAdmin" class="ford-nav-left" aria-label="Điều hướng khách hàng">
         <router-link to="/news">Tin tức</router-link>
-        <router-link to="/car/list">Sản phẩm</router-link>
+        <router-link to="/cars">Sản phẩm</router-link>
         <router-link class="cart-nav-link" to="/cart/view">
-          Giỏ hàng
-          <span v-if="cart.itemCount > 0" class="cart-nav-count" aria-label="Số lượng xe trong giỏ">
+          Đặt cọc xe
+          <span v-if="cart.itemCount > 0" class="cart-nav-count" aria-label="Số lượng xe chờ đặt cọc">
             {{ cart.itemCount }}
           </span>
         </router-link>
         <router-link to="/service">Dịch vụ</router-link>
         <router-link to="/support">Hỗ trợ</router-link>
       </nav>
-
-      <router-link class="ford-logo" to="/" aria-label="CarStore - Trang chủ">CarStore</router-link>
+      <div v-if="auth.isAdmin" class="admin-header-spacer" aria-hidden="true"></div>
+      <router-link class="ford-logo" :to="auth.isAdmin ? '/admin/dashboard' : '/'"
+        :aria-label="auth.isAdmin ? 'CarStore - Trang quản trị' : 'CarStore - Trang chủ'">CarStore</router-link>
 
       <div class="ford-nav-right">
-        <button v-if="showSearch" type="button" class="ford-icon-btn" title="Tìm kiếm" aria-label="Mở ô tìm kiếm"
+        <button v-if="showSearch && !auth.isAdmin" type="button" class="ford-icon-btn" title="Tìm kiếm" aria-label="Mở ô tìm kiếm"
           :aria-expanded="searchOpen" @click="searchOpen = !searchOpen">
           <svg viewBox="0 0 24 24">
             <circle cx="11" cy="11" r="8" />
@@ -42,28 +43,8 @@
           </summary>
           <div class="role-menu-panel">
             <router-link to="/my-orders" @click="closeUserMenu">📦 Lịch sử đơn hàng</router-link>
-            <router-link to="/quotation/history" @click="closeUserMenu">📋 Xem Lịch sử yêu cầu báo giá</router-link>
+            <router-link to="/quotation-history" @click="closeUserMenu">📋 Xem Lịch sử yêu cầu báo giá</router-link>
             <router-link to="/history" @click="closeUserMenu">📋 Lịch sử yêu cầu</router-link>
-          </div>
-        </details>
-
-        <details v-if="auth.isAdmin" class="role-dropdown" ref="adminMenuDetails">
-          <summary class="ford-icon-btn" title="Quản lý" aria-label="Mở menu quản lý">
-            <svg viewBox="0 0 24 24">
-              <circle cx="12" cy="12" r="3" />
-              <path stroke-linecap="round" stroke-linejoin="round"
-                d="M12 2v3M12 19v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M2 12h3M19 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12" />
-            </svg>
-          </summary>
-          <div class="role-menu-panel">
-            <router-link to="/admin/dashboard" @click="closeAdminMenu">📊 Thống kê</router-link>
-            <router-link to="/admin/inventory" @click="closeAdminMenu">📦 Quản lý tồn kho</router-link>
-            <router-link to="/admin/products" @click="closeAdminMenu">🚗 Quản lý sản phẩm</router-link>
-            <router-link to="/admin/orders" @click="closeAdminMenu">📦 Quản lý đơn hàng</router-link>
-            <router-link to="/admin/support" @click="closeAdminMenu">📋 Quản lý yêu cầu hỗ trợ</router-link>
-            <router-link to="/admin/users" @click="closeAdminMenu">👥 Quản lý khách hàng</router-link>
-            <router-link to="/admin/marketing" @click="closeAdminMenu">📣 Khuyến mãi & tin tức</router-link>
-            <router-link to="/admin/contracts" @click="closeAdminMenu">📄 Quản lý hợp đồng</router-link>
           </div>
         </details>
 
@@ -86,7 +67,7 @@
       </div>
     </div>
 
-    <div v-if="showSearch" class="ford-search-row" :class="{ 'is-open': searchOpen }">
+    <div v-if="showSearch && !auth.isAdmin" class="ford-search-row" :class="{ 'is-open': searchOpen }">
       <form class="ford-search-form" @submit.prevent="doSearch">
         <div class="search-input-wrapper">
           <input v-model="searchQuery" type="search" aria-label="Tên xe cần tìm" placeholder="Tìm kiếm tên xe..."
@@ -99,7 +80,7 @@
                   }}</small><small v-if="item.fuelType || item.seatCapacity" class="search-suggestion-tags">{{
                     item.fuelType || 'N/A' }}<template v-if="item.seatCapacity"> · {{ item.seatCapacity }}
                     chỗ</template></small></span>
-              <span class="search-suggestion-price">{{ formatPrice(item.price) }} VNĐ</span>
+              <span class="search-suggestion-price">{{ formatSuggestionPrice(item.price) }}</span>
             </button>
           </div>
         </div>
@@ -113,7 +94,7 @@
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api/client'
-import { brandApi, formatPrice, useDefaultCarImage } from '../api'
+import { brandApi, useDefaultCarImage } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 
@@ -130,14 +111,7 @@ const showSearch = computed(() => ['home', 'car-list'].includes(String(route.nam
 let cacheRequest
 
 // Khai báo ref để tự động đóng menu quản lý/lịch sử khi click chọn hoặc click ra ngoài
-const adminMenuDetails = ref(null)
 const userMenuDetails = ref(null)
-
-function closeAdminMenu() {
-  if (adminMenuDetails.value) {
-    adminMenuDetails.value.removeAttribute('open')
-  }
-}
 
 function closeUserMenu() {
   if (userMenuDetails.value) {
@@ -147,9 +121,6 @@ function closeUserMenu() {
 
 // Cốt lõi xử lý: Đóng menu khi click bất kỳ đâu bên ngoài khung menu
 function handleClickOutside(event) {
-  if (adminMenuDetails.value && !adminMenuDetails.value.contains(event.target)) {
-    adminMenuDetails.value.removeAttribute('open')
-  }
   if (userMenuDetails.value && !userMenuDetails.value.contains(event.target)) {
     userMenuDetails.value.removeAttribute('open')
   }
@@ -176,6 +147,8 @@ watch(
 )
 
 const normaliseSearch = (value) => String(value || '').toLowerCase().trim()
+const vndFormatter = new Intl.NumberFormat('vi-VN')
+const formatSuggestionPrice = (value) => `${vndFormatter.format(Number(value || 0))} VNĐ`
 
 function toCachedCar(car, brandNames) {
   return {
@@ -194,7 +167,7 @@ const suggestions = computed(() => {
   return !kw ? [] : carCache.value.filter((car) => [
     car.carName, car.brandName, car.fuelType,
     car.seatCapacity && `${car.seatCapacity} chỗ`,
-  ].some((value) => normaliseSearch(value).includes(kw))).slice(0, 6)
+  ].some((value) => normaliseSearch(value).includes(kw))).slice(0, 5)
 })
 
 function loadCarCache() {
@@ -218,7 +191,15 @@ async function showCachedSuggestions() {
 }
 
 function handleSearchInput() {
-  showDropdown.value = Boolean(searchQuery.value.trim())
+  const keyword = searchQuery.value.trim()
+  showDropdown.value = Boolean(keyword)
+
+  if (route.name === 'car-list' && String(route.query.q || '') !== keyword) {
+    router.replace({
+      path: route.path,
+      query: { ...route.query, q: keyword || undefined },
+    })
+  }
 }
 
 async function handleLogout() {
@@ -247,9 +228,33 @@ function selectSuggestion(item) {
   height: 72px;
 }
 
+.ford-header.is-admin-header .ford-header-inner {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  max-width: none;
+  padding-inline: 32px;
+  width: 100%;
+}
+
+.ford-header.is-admin-header .admin-header-spacer {
+  grid-column: 1;
+}
+
+.ford-header.is-admin-header .ford-logo {
+  grid-column: 2;
+  margin: 0;
+}
+
+.ford-header.is-admin-header .ford-nav-right {
+  grid-column: 3;
+  justify-self: end;
+  margin-left: 0;
+}
+
 .ford-nav-left {
   gap: 24px;
 }
+
 
 .ford-nav-left a {
   font-size: 1rem;
@@ -410,6 +415,12 @@ function selectSuggestion(item) {
 }
 
 @media (max-width: 768px) {
+  .ford-header.is-admin-header .ford-header-inner {
+    display: grid;
+    height: 64px;
+    padding: 0 16px;
+  }
+
   .search-suggestions {
     min-width: min(360px, calc(100vw - 2rem));
   }

@@ -8,13 +8,16 @@
         </section>
         <nav aria-label="Khám phá">
           <h4>Khám phá</h4>
-          <router-link to="/car/list">Sản phẩm</router-link>
-          <router-link to="/cart/view">Giỏ hàng</router-link>
+          <router-link to="/cars">Sản phẩm</router-link>
+          <router-link to="/news">Tin tức</router-link>
+          <router-link v-if="!auth.isAdmin" to="/cart/view">Đặt cọc xe</router-link>
         </nav>
         <nav aria-label="Dịch vụ khách hàng">
           <h4>Dịch vụ khách hàng</h4>
-          <router-link to="/service">Đặt lịch dịch vụ</router-link>
-          <router-link to="/support">Hỗ trợ</router-link>
+          <router-link v-if="!auth.isAdmin" to="/service">Đặt lịch dịch vụ</router-link>
+          <router-link v-if="!auth.isAdmin" to="/support">Hỗ trợ</router-link>
+          <router-link v-if="auth.isUser" to="/my-orders">Đơn của tôi</router-link>
+          <router-link v-if="auth.isUser" to="/quotation-history">Báo giá</router-link>
         </nav>
         <section>
           <h4>Liên hệ</h4>
@@ -28,7 +31,10 @@
 </template>
 
 <script setup>
+import { useAuthStore } from '../stores/auth'
+
 const year = new Date().getFullYear()
+const auth = useAuthStore()
 </script>
 
 <style scoped>

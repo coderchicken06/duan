@@ -1,0 +1,36 @@
+
+.admin-eyebrow[data-v-8d5501fa] {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: #dc2626
+}
+.cs-card[data-v-8d5501fa] {
+    box-shadow: 0 10px 30px rgba(31, 41, 55, .08)
+}
+.cs-table[data-v-8d5501fa] {
+    color: #374151
+}
+.cs-table thead th[data-v-8d5501fa] {
+    color: #6b7280;
+    background: #f9fafb
+}
+.cs-table tbody tr[data-v-8d5501fa]:hover {
+    background: #fffafa
+}
+.cs-table td small[data-v-8d5501fa] {
+    display: block;
+    color: #6b7280;
+    margin-top: 3px
+}
+.form-select[data-v-8d5501fa] {
+    min-width: 145px;
+    background-color: #fff;
+    color: #374151;
+    border-color: #d1d5db
+}
+.empty-cell[data-v-8d5501fa] {
+    text-align: center;
+    color: #6b7280;
+    padding: 2.5rem !important
+}

@@ -6,18 +6,25 @@
       <table class="table cs-table mb-0">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>KH</th>
+            <th>Sản phẩm</th>
+            <th>Khách hàng</th>
             <th>Địa chỉ</th>
+            <th>Thời gian thanh toán cọc</th>
             <th>Trạng thái</th>
             <th></th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="o in orders" :key="o.id">
-            <td>#{{ o.id }}</td>
+            <td>
+              <div class="product-cell">
+                <img v-if="o.carImage" :src="carImageUrl(o.carImage)" :alt="o.carName || o.productName" @error="useDefaultCarImage" />
+                <span>{{ o.carName || o.productName }}</span>
+              </div>
+            </td>
             <td>{{ o.username }}</td>
             <td>{{ o.address }}</td>
+            <td>{{ formatDepositPaidAt(o) }}</td>
             <td>
               <select :value="o.status" class="form-select form-select-sm"
                 :disabled="isSubmitting(o.id) || ['CANCELLED', 'DELIVERED'].includes(o.status)"
@@ -34,7 +41,7 @@
             </td>
           </tr>
           <tr v-if="orders.length === 0">
-            <td colspan="5" class="empty-cell">Chưa có đơn hàng nào.</td>
+            <td colspan="6" class="empty-cell">Chưa có đơn hàng nào.</td>
           </tr>
         </tbody>
       </table>
@@ -43,21 +50,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { adminApi } from '../../api'
+import { adminApi, carImageUrl, useDefaultCarImage } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
+import { notifyDataUpdated, useAutoRefresh } from '../../composables/useAutoRefresh'
 
 const orders = ref([])
 const submittingOrderId = ref(null)
 const route = useRoute()
-let pollInterval = null
 const statusLabels = {
   PENDING: 'PENDING - Chờ duyệt',
   CONFIRMED: 'CONFIRMED - Đã duyệt, chờ cọc',
   PROCESSING: 'PROCESSING - Đã cọc, xử lý xe',
   DELIVERED: 'DELIVERED - Hoàn thành',
   CANCELLED: 'CANCELLED - Đã hủy',
+}
+
+function formatDepositPaidAt(order) {
+  const paymentTime = order.paidAt || order.paymentTime
+  if (paymentTime) {
+    return new Intl.DateTimeFormat('vi-VN', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date(paymentTime))
+  }
+  const status = String(order.status || '').toUpperCase()
+  const depositStatus = String(order.depositStatus || '').toUpperCase()
+  return ['PENDING', 'CANCELLED'].includes(status) && ['UNPAID', 'DEPOSIT_UNPAID', ''].includes(depositStatus)
+    ? 'Chưa thanh toán cọc'
+    : '--'
 }
 
 function availableStatuses(order) {
@@ -73,15 +94,8 @@ function availableStatuses(order) {
 
 onMounted(() => {
   load()
-  // Tự động làm mới danh sách đơn hàng mỗi 5 giây để cập nhật trạng thái khi khách cọc thành công
-  pollInterval = setInterval(loadSilent, 2000)
 })
-
-onUnmounted(() => {
-  if (pollInterval) {
-    clearInterval(pollInterval)
-  }
-})
+useAutoRefresh(loadSilent, 0)
 
 watch(() => route.path, load)
 
@@ -124,7 +138,10 @@ async function updateStatus(o, nextStatus) {
       o.status = previousStatus
       showCartToast(data.message || 'Không thể cập nhật trạng thái', 'error')
     }
-    else showCartToast(data.message || 'Đã cập nhật trạng thái đơn hàng')
+    else {
+      notifyDataUpdated()
+      showCartToast(data.message || 'Đã cập nhật trạng thái đơn hàng')
+    }
   } catch (error) {
     o.status = previousStatus
     showCartToast(error.response?.data?.message || 'Không thể cập nhật trạng thái', 'error')
@@ -185,4 +202,6 @@ const isSubmitting = (orderId) => submittingOrderId.value === orderId
   cursor: wait;
   opacity: .65
 }
+.product-cell { align-items: center; display: flex; gap: .65rem; min-width: 170px; }
+.product-cell img { border-radius: 4px; height: 38px; object-fit: cover; width: 58px; }
 </style>

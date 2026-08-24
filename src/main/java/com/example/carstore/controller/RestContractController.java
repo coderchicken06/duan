@@ -75,7 +75,7 @@ public class RestContractController {
         if (auth == null) throw new IllegalArgumentException("Vui lòng đăng nhập.");
         boolean admin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         List<Contract> contracts = admin ? contractService.getAll() : contractService.getByCustomer(auth.getName());
-        return Map.of("success", true, "data", contracts, "count", contracts.size());
+        return Map.of("success", true, "data", contractService.toResponses(contracts), "count", contracts.size());
     }
 
     @PutMapping("/manage/{id}")
@@ -83,6 +83,6 @@ public class RestContractController {
         boolean admin = auth != null && auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         if (!admin) throw new IllegalArgumentException("Bạn không có quyền cập nhật hợp đồng.");
-        return Map.of("success", true, "data", contractService.update(id, payload));
+        return Map.of("success", true, "data", contractService.toResponse(contractService.update(id, payload)));
     }
 }

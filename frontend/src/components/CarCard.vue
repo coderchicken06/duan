@@ -16,8 +16,8 @@
         xe</label>
       <div class="ford-car-actions">
         <router-link class="ford-btn-primary text-center" :to="`/car/detail/${car.id}`">Chi tiết</router-link>
-        <button type="button" class="ford-btn-outline" :disabled="stock <= 0" @click="$emit('add-cart', car.id)">
-          {{ stock > 0 ? 'Thêm giỏ' : 'Hết hàng' }}
+        <button v-if="!auth.isAdmin" type="button" class="ford-btn-outline" :disabled="stock <= 0" @click="$emit('add-cart', car.id)">
+          {{ stock > 0 ? 'Đặt cọc ngay' : 'Hết hàng' }}
         </button>
       </div>
     </div>
@@ -28,9 +28,11 @@ import { computed, onMounted, ref } from 'vue'
 import { carImageUrl, formatPrice, promotionApi, useDefaultCarImage } from '../api'
 import { useCompare } from '../composables/useCompare'
 import { showCartToast } from '../composables/useCartToast'
+import { useAuthStore } from '../stores/auth'
 const props = defineProps({ car: { type: Object, required: true } })
 defineEmits(['add-cart'])
 const stock = computed(() => Number(props.car.stock || 0))
+const auth = useAuthStore()
 const promotion = ref(null)
 const displayPrice = computed(() => {
   const price = Number(props.car.price || 0)

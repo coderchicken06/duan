@@ -25,14 +25,13 @@
           <tr>
             <th>Xe</th>
             <th>Thương hiệu</th>
-            <th>Số khung/Biển số</th>
             <th>Tồn kho</th>
             <th>Trạng thái kinh doanh</th>
           </tr>
         </thead>
         <tbody>
           <tr v-if="loading">
-            <td colspan="5" class="empty-cell">Đang tải dữ liệu tồn kho...</td>
+            <td colspan="4" class="empty-cell">Đang tải dữ liệu tồn kho...</td>
           </tr>
           <tr v-for="car in cars" v-else :key="car.id">
             <td>
@@ -42,12 +41,11 @@
               </div>
             </td>
             <td>{{ brandName(car.brandId) }}</td>
-            <td class="identity-cell">{{ vehicleIdentity(car) }}</td>
             <td><span class="stock-badge" :class="stockClass(car.stock)">{{ car.stock }}</span></td>
             <td><span class="status-badge" :class="statusClass(car.status)">{{ statusLabel(car.status) }}</span></td>
           </tr>
           <tr v-if="!loading && cars.length === 0">
-            <td colspan="5" class="empty-cell">Chưa có xe trong kho.</td>
+            <td colspan="4" class="empty-cell">Chưa có xe trong kho.</td>
           </tr>
         </tbody>
       </table>
@@ -114,7 +112,6 @@ async function load(silent = false) {
 }
 
 const brandName = (brandId) => brandMap.value.get(Number(brandId)) || 'Chưa xác định'
-const vehicleIdentity = (car) => car.vin || car.chassisNumber || car.licensePlate || 'Chưa có dữ liệu'
 const stockClass = (stock) => ({ low: Number(stock) > 0 && Number(stock) <= 3, empty: Number(stock || 0) === 0 })
 const statusLabel = (status) => ({
   AVAILABLE: 'Có sẵn',
@@ -188,7 +185,21 @@ const statusClass = (status) => String(status || '').toLowerCase()
 .cs-table thead th {
   color: #6b7280;
   background: #f9fafb;
+  padding: .85rem 1rem;
   white-space: nowrap
+}
+
+.cs-table th:nth-child(1) { min-width: 280px; }
+.cs-table th:nth-child(2) { min-width: 150px; }
+.cs-table th:nth-child(3) { min-width: 110px; text-align: center; }
+.cs-table th:nth-child(4) { min-width: 190px; }
+
+.cs-table td {
+  padding: .85rem 1rem;
+}
+
+.cs-table td:nth-child(3) {
+  text-align: center;
 }
 
 .cs-table tbody tr:hover {
@@ -218,10 +229,6 @@ const statusClass = (status) => String(status || '').toLowerCase()
 .car-cell small {
   margin-top: .15rem;
   color: #9ca3af
-}
-
-.identity-cell {
-  color: #6b7280
 }
 
 .stock-badge,

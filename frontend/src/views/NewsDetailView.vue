@@ -3,8 +3,8 @@
         <div v-if="error" class="alert alert-danger">{{ error }}</div>
         <article v-else-if="news"><span class="eyebrow">TIN TỨC CARSTORE</span>
             <h1>{{ news.title }}</h1>
-            <p class="meta">{{ formatDate(news.createdAt) }} · {{ news.author }}</p><img v-if="news.thumbnail"
-                :src="carImageUrl(news.thumbnail)" :alt="news.title">
+            <p class="meta">{{ formatDate(news.createdAt) }} · {{ news.author }}</p><img class="news-image"
+                :src="newsImageUrl(news)" :alt="news.title" @error="useNewsFallback">
             <p class="summary">{{ news.summary }}</p>
             <div class="content">{{ news.content }}</div>
         </article>
@@ -21,6 +21,12 @@ const route = useRoute()
 const news = ref(null)
 const error = ref('')
 const formatDate = value => value ? new Date(value).toLocaleDateString('vi-VN') : ''
+const newsImageUrl = item => carImageUrl(item?.image || item?.thumbnail || 'Wildtrak2025.png')
+
+function useNewsFallback(event) {
+  event.target.onerror = null
+  event.target.src = '/images/Wildtrak2025.png'
+}
 
 async function loadNews() {
   try {
@@ -55,11 +61,13 @@ useAutoRefresh(loadNews)
         color: #6b7280
     }
 
-    .news-detail img {
+    .news-detail .news-image {
         width: 100%;
-        max-height: 480px;
+        max-height: 400px;
         object-fit: cover;
+        object-position: center;
         border-radius: 14px;
+        background: #f3f4f6;
         margin: 20px 0
     }
 

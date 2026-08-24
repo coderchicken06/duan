@@ -2,12 +2,16 @@ package com.example.carstore.repository;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import java.util.List;
 import com.example.carstore.entity.OrderDetail;
 
 public interface OrderDetailRepository extends JpaRepository<OrderDetail, Integer> {
 
     List<OrderDetail> findByOrderId(Integer orderId);
+
+    @Query("SELECT d FROM OrderDetail d JOIN FETCH d.car WHERE d.orderId = :orderId")
+    List<OrderDetail> findByOrderIdWithCar(@Param("orderId") Integer orderId);
 
     boolean existsByCar_Id(Integer carId);
 

@@ -74,7 +74,8 @@ async function submit() {
   try {
     const data = await auth.login(username.value, password.value)
     if (data.success) {
-      router.push(String(route.query.redirect || '/'))
+      const redirect = String(route.query.redirect || '')
+      router.push(auth.isAdmin && (!redirect || redirect === '/') ? '/admin/dashboard' : (redirect || '/'))
     } else if (data.requiresVerification) {
       router.push({ path: '/verify-email', query: { username: data.username || username.value } })
     } else {

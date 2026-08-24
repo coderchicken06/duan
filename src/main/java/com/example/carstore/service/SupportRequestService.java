@@ -102,6 +102,11 @@ public class SupportRequestService {
         if (!LocalDateTime.of(appointmentDate, appointmentTime).isAfter(now)) {
             throw new IllegalArgumentException("Giờ hẹn phải sau thời điểm hiện tại.");
         }
+        LocalTime openingTime = LocalTime.of(7, 30);
+        LocalTime closingTime = LocalTime.of(18, 30);
+        if (appointmentTime.isBefore(openingTime) || appointmentTime.isAfter(closingTime)) {
+            throw new IllegalArgumentException("Showroom chỉ tiếp nhận xe từ 07:30 đến 18:30.");
+        }
 
         String username = SecurityUtils.username(auth);
         if (!StringUtils.hasText(username)) {

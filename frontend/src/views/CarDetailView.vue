@@ -44,21 +44,21 @@
           </div>
 
           <div class="action-grid">
-            <button class="ford-btn-primary hero-action" type="button" :disabled="addingToCart || Number(car.stock || 0) <= 0"
+            <button v-if="!auth.isAdmin" class="ford-btn-primary hero-action" type="button" :disabled="addingToCart || Number(car.stock || 0) <= 0"
               @click="addToCart">
               <span class="action-icon" aria-hidden="true">🛒</span>
-              <span>{{ addingToCart ? 'Đang thêm...' : (Number(car.stock || 0) > 0 ? 'Thêm vào giỏ hàng' : 'Xe đã hết hàng') }}</span>
+              <span>{{ addingToCart ? 'Đang chuẩn bị...' : (Number(car.stock || 0) > 0 ? 'Đặt cọc giữ chỗ' : 'Xe đã hết hàng') }}</span>
             </button>
             <button class="ford-btn-outline hero-action" type="button" @click="toggleCurrent">
               <span class="action-icon" aria-hidden="true">⚖</span>
               <span>{{ has(car.id) ? 'Bỏ khỏi so sánh' : 'Thêm vào so sánh' }}</span>
             </button>
-            <router-link class="ford-btn-outline hero-action text-center"
+            <router-link v-if="!auth.isAdmin" class="ford-btn-outline hero-action text-center"
               :to="{ path: '/service', query: { carId: car.id } }">
               <span class="action-icon" aria-hidden="true">▣</span>
               <span>Đặt lịch xem xe</span>
             </router-link>
-            <button class="ford-btn-outline hero-action" type="button" @click="requestQuotation">
+            <button v-if="!auth.isAdmin" class="ford-btn-outline hero-action" type="button" @click="requestQuotation">
               <span class="action-icon" aria-hidden="true">₫</span>
               <span>Yêu cầu báo giá</span>
             </button>
@@ -165,10 +165,12 @@ import { reviewApi } from '../api'
 import { showCartToast } from '../composables/useCartToast'
 import { useAutoRefresh } from '../composables/useAutoRefresh'
 import { useCartStore } from '../stores/cart'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const cart = useCartStore()
+const auth = useAuthStore()
 const car = ref(null)
 const reviews = ref([])
 const reviewAverage = ref(0)
@@ -341,11 +343,16 @@ function toggleCurrent() {
 }
 
 async function addById(id) {
+  if (auth.isAdmin) {
+    message.value = 'Tài khoản quản trị không thể thực hiện đặt cọc.'
+    success.value = false
+    return
+  }
   const target = id === car.value?.id
     ? car.value
     : similarCars.value.find((item) => item.id === id)
   if (!target || Number(target.stock || 0) <= 0) {
-    message.value = 'Xe đã hết hàng, không thể thêm vào giỏ'
+    message.value = 'Xe đã hết hàng, không thể đặt cọc'
     success.value = false
     return
   }
@@ -355,7 +362,7 @@ async function addById(id) {
   cart.itemCount = previousItemCount + 1
   success.value = true
   message.value = ''
-  showCartToast('Thêm vào giỏ hàng thành công!')
+  showCartToast('Đã thêm xe vào phiếu đặt cọc')
   try {
     const { data } = await cartApi.add(id)
     if (data.success) {
@@ -363,11 +370,11 @@ async function addById(id) {
     } else {
       cart.itemCount = previousItemCount
       success.value = false
-      message.value = data.message || 'Không thể thêm vào giỏ hàng'
+      message.value = data.message || 'Không thể thêm xe vào phiếu đặt cọc'
     }
   } catch (error) {
     cart.itemCount = previousItemCount
-    message.value = error.response?.data?.message || 'Không thể thêm vào giỏ hàng'
+    message.value = error.response?.data?.message || 'Không thể thêm xe vào phiếu đặt cọc'
     success.value = false
   } finally {
     if (isCurrentCar) addingToCart.value = false

@@ -380,29 +380,41 @@ INSERT INTO dbo.Car
  horsepower, torque, fuel_type, fuel_consumption, warranty, dealer_name, dealer_address,
  inspection_level, inspection_note, safety_features, comfort_features)
 VALUES
-(N'Toyota Camry', 1200000, 'camry.jpg',
+(N'Toyota Camry', 1200000000, 'camry.jpg',
  N'Sedan cao cấp, an toàn, tiết kiệm xăng', 1, 2023, N'Đen', 8,
  N'Tháng 01 Năm 2023', 18000, N'Xăng', N'2.5L', N'Đen', N'Sedan', 5, N'FWD', N'Tự động', 178, N'231 Nm', N'Xăng', N'6.4 L/100km', N'12 tháng hoặc 20.000 km', N'CarStore Hồ Chí Minh', N'Quận 7, TP.HCM', N'CarStore Certified', N'Đã kiểm tra kỹ thuật và hồ sơ', N'ABS, cân bằng điện tử, camera lùi, 7 túi khí', N'Điều hòa tự động, màn hình trung tâm, Apple CarPlay'),
 
-(N'BMW X5', 3500000, 'bmwx5.png',
+(N'BMW X5', 3500000000, 'bmwx5.png',
  N'SUV sang trọng, động cơ mạnh, nội thất cao cấp', 2, 2024, N'Trắng', 5,
  N'Tháng 03 Năm 2024', 9000, N'Xăng', N'3.0L Turbo', N'Nâu', N'SUV', 5, N'AWD', N'Tự động 8 cấp', 381, N'520 Nm', N'Xăng', N'9.2 L/100km', N'18 tháng', N'CarStore Hà Nội', N'Cầu Giấy, Hà Nội', N'Premium Certified', N'Kiểm định 120 hạng mục', N'ABS, DSC, camera 360, cảnh báo điểm mù', N'Ghế điện, HUD, âm thanh Harman Kardon'),
 
-(N'Mercedes C300', 2500000, 'mercedesC300.png',
+(N'Mercedes C300', 2500000000, 'mercedesC300.png',
  N'Sedan Đức, công nghệ mới, lái tự động', 3, 2023, N'Xám', 6,
  N'Tháng 06 Năm 2023', 15000, N'Xăng', N'2.0L Turbo', N'Đen', N'Sedan', 5, N'RWD', N'Tự động 9 cấp', 258, N'400 Nm', N'Xăng', N'7.1 L/100km', N'12 tháng', N'CarStore Đà Nẵng', N'Hải Châu, Đà Nẵng', N'CarStore Certified', N'Không tai nạn, ODO xác thực', N'ABS, ESP, hỗ trợ giữ làn, camera 360', N'MBUX, ghế nhớ vị trí, đèn viền nội thất'),
 
-(N'Honda Civic', 900000, 'civic.png',
+(N'Honda Civic', 900000000, 'civic.png',
  N'Xe thể thao, thiết kế năng động, tiết kiệm', 4, 2022, N'Đỏ', 10,
  N'Tháng 11 Năm 2022', 23000, N'Xăng', N'1.5L Turbo', N'Đen', N'Sedan', 5, N'FWD', N'CVT', 176, N'240 Nm', N'Xăng', N'6.3 L/100km', N'12 tháng', N'CarStore Hồ Chí Minh', N'Thủ Đức, TP.HCM', N'CarStore Certified', N'Lịch sử bảo dưỡng đầy đủ', N'Honda Sensing, ABS, VSA, camera lùi', N'Apple CarPlay, điều hòa tự động, đề nổ từ xa'),
 
-(N'Toyota Corolla', 800000, 'Corolla.png',
+(N'Toyota Corolla', 800000000, 'Corolla.png',
  N'Sedan nhỏ gọn, tin cậy, bảo dưỡng rẻ', 1, 2023, N'Bạc', 9,
  N'Tháng 08 Năm 2023', 12000, N'Xăng', N'1.8L', N'Đen', N'Sedan', 5, N'FWD', N'CVT', 138, N'172 Nm', N'Xăng', N'6.0 L/100km', N'12 tháng', N'CarStore Cần Thơ', N'Ninh Kiều, Cần Thơ', N'CarStore Certified', N'Xe gia đình, hồ sơ rõ ràng', N'ABS, EBD, cân bằng điện tử, camera lùi', N'Màn hình cảm ứng, điều hòa tự động, Smart Key'),
 
-(N'BMW 3 Series', 2000000, 'bmw3series.png',
+(N'BMW 3 Series', 2000000000, 'bmw3series.png',
  N'Sedan thể thao, hiệu năng cao, lái cảm giác tuyệt vời', 2, 2024, N'Xanh đen', 4,
  N'Tháng 02 Năm 2024', 7000, N'Xăng', N'2.0L Turbo', N'Đen', N'Sedan', 5, N'RWD', N'Tự động 8 cấp', 184, N'300 Nm', N'Xăng', N'6.8 L/100km', N'18 tháng', N'CarStore Hà Nội', N'Nam Từ Liêm, Hà Nội', N'Premium Certified', N'Ngoại thất nguyên bản, ODO xác thực', N'ABS, DSC, hỗ trợ đỗ xe, cảnh báo va chạm', N'iDrive, ghế thể thao, điều hòa 3 vùng');
+GO
+
+UPDATE dbo.Car
+SET price = CASE name
+    WHEN N'Toyota Camry' THEN 1200000000
+    WHEN N'BMW X5' THEN 3500000000
+    WHEN N'Mercedes C300' THEN 2500000000
+    WHEN N'BMW 3 Series' THEN 2000000000
+    WHEN N'Honda Civic' THEN 900000000
+    WHEN N'Toyota Corolla' THEN 800000000
+END
+WHERE name IN (N'Toyota Camry', N'BMW X5', N'Mercedes C300', N'BMW 3 Series', N'Honda Civic', N'Toyota Corolla');
 GO
 
 -- =============================================================
@@ -440,33 +452,33 @@ INSERT INTO dbo.Orders
  deposit_status, deposit_amount, deposit_method, deposit_paid_at)
 VALUES
 ('user1', N'TP Hồ Chí Minh', N'TP Hồ Chí Minh', N'SePay', N'DELIVERED',
- 'PAID', 120000, N'SePay', GETDATE()),
+ 'PAID', 50000000, N'SePay', '2026-08-20T09:15:00'),
 
 ('user1', N'Bình Dương', N'Bình Dương', N'SePay', N'PROCESSING',
- 'PAID', 350000, N'SePay', GETDATE());
+ 'PAID', 50000000, N'SePay', '2026-08-22T14:30:00');
 GO
 
 INSERT INTO dbo.OrderDetail(order_id, car_id, price, quantity)
 VALUES
-(1, 1, 1200000, 1),
-(2, 2, 3500000, 1);
+(1, 1, 1200000000, 1),
+(2, 2, 3500000000, 1);
 GO
 
 -- =============================================================
 -- 18. DỮ LIỆU MẪU BÁO GIÁ
 -- =============================================================
 INSERT INTO dbo.Quotation
-(customer_username, car_id, car_price, discount, total_price, note, status)
+(customer_username, car_id, car_price, discount, total_price, note, status, quotation_no)
 VALUES
-('user1', 1, 1200000, 20000, 1180000, N'Khách muốn trả góp', N'Chờ xác nhận'),
-('user1', 2, 3500000, 50000, 3450000, N'Ưu đãi tháng 7', N'Khách đã xác nhận');
+('user1', 1, 1200000000, 20000000, 1180000000, N'Khách muốn trả góp', N'Đã duyệt', N'BG-001'),
+('user1', 2, 3500000000, 50000000, 3450000000, N'Ưu đãi tháng 7', N'Đã duyệt', N'BG-002');
 GO
 
 INSERT INTO dbo.QuotationItem
 (quotation_id, car_id, quantity, unit_price, discount, total)
 VALUES
-(1, 1, 1, 1200000, 20000, 1180000),
-(2, 2, 1, 3500000, 50000, 3450000);
+(1, 1, 1, 1200000000, 20000000, 1180000000),
+(2, 2, 1, 3500000000, 50000000, 3450000000);
 GO
 
 -- =============================================================
@@ -482,8 +494,8 @@ GO
 INSERT INTO dbo.PaymentTransaction
 (order_id, gateway, transaction_no, amount, status, response_code, paid_at)
 VALUES
-(1, N'SePay', 'VQR001', 120000, 'SUCCESS', '00', GETDATE()),
-(2, N'SePay', 'VQR002', 350000, 'SUCCESS', '00', GETDATE());
+(1, N'SePay', 'VQR001', 50000000, 'SUCCESS', '00', '2026-08-20T09:15:00'),
+(2, N'SePay', 'VQR002', 50000000, 'SUCCESS', '00', '2026-08-22T14:30:00');
 GO
 
 -- =============================================================
@@ -491,13 +503,13 @@ GO
 -- =============================================================
 INSERT INTO dbo.Contract
 (order_id, customer_username, employee_username, deposit, total,
- payment_method, status, deposit_status, deposit_amount, deposit_method, deposit_paid_at)
+ payment_method, status, deposit_status, deposit_amount, deposit_method, deposit_paid_at, contract_no)
 VALUES
-(1, 'user1', 'admin', 120000, 1200000,
- N'Chuyển khoản', N'Đã ký', 'PAID', 120000, N'SePay', GETDATE()),
+(1, 'user1', 'admin', 50000000, 1200000000,
+ N'Chuyển khoản', N'Đã ký', 'PAID', 50000000, N'SePay', '2026-08-20T09:15:00', N'HD-001'),
 
-(2, 'user1', 'admin', 350000, 3500000,
- N'Trả góp', N'Đã ký', 'PAID', 350000, N'SePay', GETDATE());
+(2, 'user1', 'admin', 50000000, 3500000000,
+ N'Trả góp', N'Đã ký', 'PAID', 50000000, N'SePay', '2026-08-22T14:30:00', N'HD-002');
 GO
 
 -- =============================================================
@@ -714,7 +726,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO dbo.Orders(username, address, registration_address, payment_method, status, deposit_status, deposit_amount, deposit_method, deposit_paid_at)
-    VALUES ('tu_nguyen', N'123 Lê Lợi, Quận 1, TP.HCM', N'123 Lê Lợi, Quận 1, TP.HCM', N'SePay', 'PROCESSING', 'PAID', 95000000, N'SePay', GETDATE());
+    VALUES ('tu_nguyen', N'123 Lê Lợi, Quận 1, TP.HCM', N'123 Lê Lợi, Quận 1, TP.HCM', N'SePay', 'PROCESSING', 'PAID', 50000000, N'SePay', '2026-08-24T10:05:00');
 END;
 GO
 
@@ -725,7 +737,7 @@ IF NOT EXISTS (
 )
 BEGIN
     INSERT INTO dbo.Orders(username, address, registration_address, payment_method, status, deposit_status, deposit_amount, deposit_method, deposit_paid_at)
-    VALUES ('tu_nguyen', N'456 Nguyễn Huệ, Quận 1, TP.HCM', N'456 Nguyễn Huệ, Quận 1, TP.HCM', N'SePay', 'PENDING', 'UNPAID', 90000, N'SePay', NULL);
+    VALUES ('tu_nguyen', N'456 Nguyễn Huệ, Quận 1, TP.HCM', N'456 Nguyễn Huệ, Quận 1, TP.HCM', N'SePay', 'CANCELLED', 'UNPAID', 50000000, N'SePay', NULL);
 END;
 GO
 
@@ -774,7 +786,7 @@ GO
 IF NOT EXISTS (SELECT 1 FROM dbo.PaymentTransaction WHERE transaction_no = 'SEPAY_DEMO_001')
 BEGIN
     INSERT INTO dbo.PaymentTransaction(order_id, gateway, transaction_no, bank_code, amount, status, response_code, paid_at)
-    SELECT o.id, N'SePay', 'SEPAY_DEMO_001', N'VietinBank', 95000000, 'SUCCESS', '00', GETDATE()
+    SELECT o.id, N'SePay', 'SEPAY_DEMO_001', N'VietinBank', 50000000, 'SUCCESS', '00', '2026-08-24T10:05:00'
     FROM dbo.Orders o
     WHERE o.username = 'tu_nguyen'
       AND o.address = N'123 Lê Lợi, Quận 1, TP.HCM'
@@ -792,8 +804,8 @@ BEGIN
     INSERT INTO dbo.Contract
         (order_id, customer_username, total, deposit, payment_method, status,
          deposit_status, deposit_amount, deposit_method, deposit_paid_at, contract_no)
-    SELECT o.id, o.username, 950000000, 95000000, N'SePay', N'Chờ ký',
-           'PAID', 95000000, N'SePay', o.deposit_paid_at, N'HD-DEMO-PAID'
+    SELECT o.id, o.username, 950000000, 50000000, N'SePay', N'Chờ ký',
+           'PAID', 50000000, N'SePay', o.deposit_paid_at, N'HD-003'
     FROM dbo.Orders o
     WHERE o.username = 'tu_nguyen' AND o.address = N'123 Lê Lợi, Quận 1, TP.HCM';
 END;
@@ -808,12 +820,46 @@ BEGIN
     INSERT INTO dbo.Contract
         (order_id, customer_username, total, deposit, payment_method, status,
          deposit_status, deposit_amount, deposit_method, contract_no)
-    SELECT o.id, o.username, 900000, 90000, N'SePay', N'Chờ ký',
-           'UNPAID', 90000, N'SePay', N'HD-DEMO-PENDING'
+    SELECT o.id, o.username, 900000000, 50000000, N'SePay', N'Hủy',
+           'UNPAID', 50000000, N'SePay', N'HD-004'
     FROM dbo.Orders o
     WHERE o.username = 'tu_nguyen' AND o.address = N'456 Nguyễn Huệ, Quận 1, TP.HCM';
 END;
 GO
+GO
+
+-- 23.7. Chuẩn hóa lại thời điểm thanh toán của dữ liệu demo đã tồn tại.
+UPDATE o
+SET status = 'DELIVERED', deposit_status = 'PAID', deposit_paid_at = '2026-08-20T09:15:00'
+FROM dbo.Orders o
+JOIN dbo.OrderDetail od ON od.order_id = o.id
+JOIN dbo.Car c ON c.id = od.car_id
+WHERE o.username = 'user1' AND c.name = N'Toyota Camry';
+
+UPDATE o
+SET status = 'PROCESSING', deposit_status = 'PAID', deposit_paid_at = '2026-08-22T14:30:00'
+FROM dbo.Orders o
+JOIN dbo.OrderDetail od ON od.order_id = o.id
+JOIN dbo.Car c ON c.id = od.car_id
+WHERE o.username = 'user1' AND c.name = N'BMW X5';
+
+UPDATE o
+SET status = 'PROCESSING', deposit_status = 'PAID', deposit_paid_at = '2026-08-24T10:05:00'
+FROM dbo.Orders o
+JOIN dbo.OrderDetail od ON od.order_id = o.id
+JOIN dbo.Car c ON c.id = od.car_id
+WHERE o.username = 'tu_nguyen'
+  AND o.address = N'123 Lê Lợi, Quận 1, TP.HCM'
+  AND c.name = N'Ford Ranger Wildtrak 2025';
+
+UPDATE o
+SET status = 'CANCELLED', deposit_status = 'UNPAID', deposit_paid_at = NULL
+FROM dbo.Orders o
+JOIN dbo.OrderDetail od ON od.order_id = o.id
+JOIN dbo.Car c ON c.id = od.car_id
+WHERE o.username = 'tu_nguyen'
+  AND o.address = N'456 Nguyễn Huệ, Quận 1, TP.HCM'
+  AND c.name = N'Honda Civic';
 GO
 
 INSERT INTO dbo.PromotionCar(promotion_id, car_id) VALUES
@@ -826,13 +872,21 @@ GO
 -- =============================================================
 INSERT INTO dbo.News(title, slug, image, summary, content, status, author)
 VALUES
-(N'Ford Ranger 2026 ra mắt', 'ford-ranger-2026-ra-mat', 'default-car.jpg',
+(N'Ford Ranger 2026 ra mắt', 'ford-ranger-2026-ra-mat', '/images/FordRanger2026.png',
  N'Ford Ranger phiên bản mới',
  N'Phiên bản mới có nhiều công nghệ hỗ trợ lái hiện đại...', 'PUBLISHED', 'admin'),
 
-(N'BMW giảm giá mùa hè', 'bmw-giam-gia-mua-he', 'x5.jpg',
+(N'BMW giảm giá mùa hè', 'bmw-giam-gia-mua-he', '/images/bmwx5-gallery1.png',
  N'Ưu đãi lên đến 200 triệu',
  N'Chương trình áp dụng đến hết tháng 8...', 'PUBLISHED', 'admin');
+GO
+
+UPDATE dbo.News
+SET image = CASE slug
+    WHEN 'ford-ranger-2026-ra-mat' THEN '/images/FordRanger2026.png'
+    WHEN 'bmw-giam-gia-mua-he' THEN '/images/bmwx5-gallery1.png'
+END
+WHERE slug IN ('ford-ranger-2026-ra-mat', 'bmw-giam-gia-mua-he');
 GO
 
 -- =============================================================

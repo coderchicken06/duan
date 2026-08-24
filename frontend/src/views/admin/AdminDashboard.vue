@@ -76,9 +76,10 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { adminApi, quotationApi, formatPrice } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
+import { notifyDataUpdated, useAutoRefresh } from '../../composables/useAutoRefresh'
 
 const stats = ref({
   totalCars: 0,
@@ -136,19 +137,16 @@ async function loadDashboard(silent = false) {
   }
 }
 
-let pollTimer = null
-
 onMounted(() => {
   loadDashboard()
-  pollTimer = window.setInterval(() => loadDashboard(true), 2000)
 })
-
-onBeforeUnmount(() => window.clearInterval(pollTimer))
+useAutoRefresh(() => loadDashboard(true), 0)
 
 async function setQuotationStatus(quote, status) {
   try {
     await quotationApi.update(quote.id, { discount: quote.discount || 0, status })
     await loadDashboard()
+    notifyDataUpdated()
     showCartToast(status === 'Đã duyệt' ? 'Đã duyệt báo giá' : 'Đã từ chối báo giá')
   } catch (error) {
     showCartToast(error.response?.data?.message || 'Không thể cập nhật báo giá.', 'error')

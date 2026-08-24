@@ -13,10 +13,17 @@
         <thead>
           <tr>
             <th class="label-col">Tiêu chí</th>
-            <th v-for="car in cars" :key="car.id"><img :src="carImageUrl(car.image)" :alt="car.name" @error="useDefaultCarImage" />
-              <h3>{{ car.name }}</h3>
-              <div class="price">{{ formatPrice(car.price) }} VNĐ</div><router-link :to="`/car/detail/${car.id}`">Xem
-                chi tiết</router-link>
+            <th v-for="car in cars" :key="car.id">
+              <div class="compare-car-card">
+                <div class="compare-car-img-wrapper">
+                  <img class="compare-car-img" :src="carImageUrl(car.image)" :alt="car.name" @error="useCompareFallback" />
+                </div>
+                <div class="compare-car-info">
+                  <h3 class="compare-car-name">{{ car.name }}</h3>
+                  <div class="compare-car-price">{{ formatPrice(car.price) }} VNĐ</div>
+                  <router-link class="compare-car-link" :to="`/car/detail/${car.id}`">Xem chi tiết</router-link>
+                </div>
+              </div>
             </th>
           </tr>
         </thead>
@@ -33,7 +40,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { carApi, carImageUrl, formatPrice, useDefaultCarImage } from '../api'
+import { carApi, carImageUrl, formatPrice } from '../api'
 import { useCompare } from '../composables/useCompare'
 const route = useRoute(), router = useRouter(), cars = ref([]), loading = ref(true)
 const { selectedIds, clear } = useCompare()
@@ -65,6 +72,7 @@ onMounted(async () => {
   }
 })
 function clearAndBack() { clear(); router.push('/car/list') }
+function useCompareFallback(event) { event.target.onerror = null; event.target.src = '/images/camry.jpg' }
 </script>
 <style scoped>
 .compare-heading {
@@ -104,25 +112,61 @@ function clearAndBack() { clear(); router.push('/car/list') }
 
 .compare-table th {
   background: #fff;
-  min-width: 230px
+  min-width: 230px;
+  vertical-align: top
 }
 
-.compare-table th img {
+.compare-car-card {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+}
+
+.compare-car-img-wrapper {
   width: 100%;
-  height: 145px;
+  height: 180px;
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.compare-car-img {
+  display: block;
+  height: 100%;
+  object-position: center;
   object-fit: cover;
-  border-radius: 8px
+  width: 100%;
 }
 
-.compare-table h3 {
-  font-size: 18px;
-  margin: 12px 0 4px
+.compare-car-info {
+  align-items: center;
+  display: grid;
+  grid-template-rows: minmax(44px, auto) auto auto;
+  justify-items: center;
+  min-height: 104px;
+  width: 100%;
 }
 
-.price {
+.compare-car-name {
+  color: #111827;
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  text-align: center;
+}
+
+.compare-car-price {
   color: #d71920;
+  font-size: 15px;
   font-weight: 800;
-  margin-bottom: 8px
+  margin-bottom: 6px;
+  text-align: center;
 }
 
 .label-col {
@@ -139,9 +183,11 @@ function clearAndBack() { clear(); router.push('/car/list') }
   background: #fff8d8
 }
 
-.compare-table a {
+.compare-car-link {
   color: #d71920;
-  font-weight: 700
+  font-size: 13px;
+  font-weight: 700;
+  text-decoration: underline;
 }
 
 @media(max-width:700px) {

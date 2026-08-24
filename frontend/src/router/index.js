@@ -8,12 +8,12 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     { path: '/', name: 'home', component: () => import('../views/HomeView.vue') },
-    { path: '/car/list', name: 'car-list', component: () => import('../views/CarListView.vue') },
+    { path: '/car/list', alias: '/cars', name: 'car-list', component: () => import('../views/CarListView.vue') },
     { path: '/car/detail/:id', alias: '/cars/:id', name: 'car-detail', component: () => import('../views/CarDetailView.vue') },
     { path: '/compare', name: 'compare', component: () => import('../views/CompareView.vue') },
     { path: '/car/create', name: 'car-create', meta: adminMeta, component: () => import('../views/CarFormView.vue') },
     { path: '/car/edit/:id', name: 'car-edit', meta: adminMeta, component: () => import('../views/CarFormView.vue') },
-    { path: '/cart/view', name: 'cart', component: () => import('../views/CartView.vue') },
+    { path: '/cart/view', name: 'cart', meta: authMeta, component: () => import('../views/CartView.vue') },
     { path: '/checkout', name: 'checkout', meta: authMeta, component: () => import('../views/CheckoutView.vue') },
     { path: '/login', name: 'login', component: () => import('../views/LoginView.vue') },
     { path: '/login/form', redirect: '/login' },
@@ -55,6 +55,9 @@ router.beforeEach(async (to) => {
   }
   if ((to.meta.auth || to.meta.requiresAuth) && !auth.isLoggedIn) {
     return { name: 'login', query: { redirect: to.fullPath } }
+  }
+  if (to.name === 'cart' && auth.isAdmin) {
+    return { name: 'admin-dashboard' }
   }
   if (to.meta.admin && !auth.isAdmin) {
     return auth.isLoggedIn ? { name: 'home' } : { name: 'login', query: { redirect: to.fullPath } }

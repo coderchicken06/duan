@@ -1,5 +1,5 @@
 <template>
-  <aside v-if="selectedCars.length" class="compare-bar">
+  <aside v-if="selectedCars.length && !isComparePage" class="compare-bar">
     <div class="compare-bar__title">
       <strong>So sánh xe</strong>
       <span>{{ selectedCars.length }} xe đã chọn · tối đa 3</span>
@@ -7,7 +7,7 @@
 
     <div class="compare-bar__cars">
       <div v-for="car in selectedCars" :key="car.id" class="compare-chip">
-        <img :src="carImageUrl(car.image)" :alt="car.name" @error="useDefaultCarImage" />
+        <img class="compare-bar-thumb" :src="carImageUrl(car.image)" :alt="car.name" @error="useCompareFallback" />
         <span>{{ car.name }}</span>
         <button type="button" aria-label="Bỏ xe khỏi so sánh" @click="remove(car.id)">×</button>
       </div>
@@ -28,13 +28,17 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
-import { carApi, carImageUrl, useDefaultCarImage } from '../api'
+import { computed, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { carApi, carImageUrl } from '../api'
 import { useCompare } from '../composables/useCompare'
 
 const { selectedIds, remove } = useCompare()
+const route = useRoute()
 const selectedCars = ref([])
+const isComparePage = computed(() => route.path.startsWith('/compare'))
 let requestVersion = 0
+function useCompareFallback(event) { event.target.onerror = null; event.target.src = '/images/camry.jpg' }
 
 watch(
   selectedIds,
@@ -119,11 +123,12 @@ watch(
   font-weight: 700;
 }
 
-.compare-chip img {
-  width: 58px;
-  height: 42px;
+.compare-bar-thumb {
+  width: 50px;
+  height: 34px;
   object-fit: cover;
-  border-radius: 5px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
 }
 
 .compare-chip span {
@@ -178,7 +183,7 @@ watch(
     min-height: 48px;
   }
 
-  .compare-chip img {
+  .compare-bar-thumb {
     display: none;
   }
 

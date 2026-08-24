@@ -1,0 +1,48 @@
+
+.admin-eyebrow[data-v-6c35e5a6] {
+    font-size: .72rem;
+    font-weight: 800;
+    letter-spacing: .08em;
+    color: #dc2626
+}
+.cs-card[data-v-6c35e5a6] {
+    box-shadow: 0 10px 30px rgba(31, 41, 55, .08)
+}
+.cs-table[data-v-6c35e5a6] {
+    color: #374151
+}
+.cs-table thead th[data-v-6c35e5a6] {
+    color: #6b7280;
+    background: #f9fafb
+}
+.cs-table tbody tr[data-v-6c35e5a6]:hover {
+    background: #fffafa
+}
+.role-badge[data-v-6c35e5a6] {
+    display: inline-block;
+    padding: .3rem .55rem;
+    border-radius: 999px;
+    background: #e0f2fe;
+    color: #075985;
+    font-size: .72rem;
+    font-weight: 700
+}
+.role-badge.is-admin[data-v-6c35e5a6] {
+    background: #fee2e2;
+    color: #991b1b
+}
+.empty-cell[data-v-6c35e5a6] {
+    text-align: center;
+    color: #6b7280;
+    padding: 2.5rem !important
+}
+@media(max-width:575.98px) {
+.container>div[data-v-6c35e5a6]:first-child {
+      align-items: flex-start !important;
+      gap: 1rem;
+      flex-direction: column
+}
+.container>div:first-child .btn[data-v-6c35e5a6] {
+      width: 100%
+}
+}

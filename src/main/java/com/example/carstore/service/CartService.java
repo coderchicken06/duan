@@ -35,6 +35,9 @@ public class CartService {
         if (cart.containsKey(item.getId())) {
             throw new IllegalArgumentException("Xe này đã có trong giỏ hàng của bạn.");
         }
+        if (!cart.isEmpty()) {
+            throw new IllegalArgumentException("Giỏ hàng chỉ cho phép giữ chỗ một xe. Vui lòng xóa xe hiện tại trước.");
+        }
         item.setQuantity(1);
         cart.put(item.getId(), item);
     }

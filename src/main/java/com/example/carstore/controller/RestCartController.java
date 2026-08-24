@@ -64,6 +64,12 @@ public class RestCartController {
         int safeQuantity = quantity == null || quantity < 1 ? 1 : quantity;
 
         CartItem existing = cartService.getCart(session).get(id);
+        if (existing != null) {
+            return ResponseUtils.fail("Xe này đã có trong giỏ hàng của bạn.");
+        }
+        if (!cartService.getCart(session).isEmpty()) {
+            return ResponseUtils.fail("Giỏ hàng chỉ cho phép giữ chỗ một xe. Vui lòng xóa xe hiện tại trước.");
+        }
         int currentQuantity = existing == null ? 0 : existing.getQuantity();
         int requestedQuantity = currentQuantity + safeQuantity;
 
@@ -116,6 +122,9 @@ public class RestCartController {
         if (!isAvailable(car)) {
             return ResponseUtils.fail("Xe " + car.getName() + " hiện không khả dụng.");
         }
+        if (quantity > 1) {
+            return ResponseUtils.fail("Mỗi đơn đặt cọc chỉ được giữ chỗ một xe.");
+        }
         if (car.getStock() == null || quantity > car.getStock()) {
             return ResponseUtils.fail("Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock());
         }
@@ -161,6 +170,9 @@ public class RestCartController {
             return ResponseUtils.fail("Item not in cart");
         }
 
+        if (item.getQuantity() >= 1) {
+            return ResponseUtils.fail("Mỗi đơn đặt cọc chỉ được giữ chỗ một xe.");
+        }
         java.util.Optional<Car> carOpt = carService.findById(id);
         if (carOpt.isEmpty()) {
             return ResponseUtils.fail("Car not found");

@@ -2,14 +2,14 @@
   <main class="cart-page">
     <header class="ford-hero-panel compact content-only cart-heading">
       <div class="ford-hero-panel-content">
-        <span class="cart-eyebrow">GIỎ HÀNG CỦA BẠN</span>
-        <h1 class="cs-page-title">Xe đang quan tâm</h1>
-        <p>Kiểm tra số lượng và thông tin xe trước khi gửi yêu cầu đặt xe.</p>
+        <span class="cart-eyebrow">THÔNG TIN ĐẶT CỌC</span>
+        <h1 class="cs-page-title">Phiếu đặt cọc xe</h1>
+        <p>Thông tin xe giữ chỗ: Mỗi giao dịch áp dụng đặt cọc cho một xe duy nhất.</p>
       </div>
     </header>
 
     <div class="container cs-container cart-content">
-      <div v-if="loading" class="cs-card cart-state">Đang tải giỏ hàng...</div>
+      <div v-if="loading" class="cs-card cart-state">Đang tải phiếu đặt cọc...</div>
 
       <div v-else-if="loadError" class="alert alert-danger" role="alert">
         {{ loadError }}
@@ -18,13 +18,13 @@
 
       <section v-else-if="items.length === 0" class="cs-card cart-empty">
         <div class="cart-empty-icon">🚗</div>
-        <h2>Giỏ hàng đang trống</h2>
-        <p class="cs-muted">Hãy chọn mẫu xe phù hợp để tiếp tục gửi yêu cầu đặt xe.</p>
+        <h2>Chưa có xe nào trong phiếu đặt cọc</h2>
+        <p class="cs-muted">Hãy chọn mẫu xe phù hợp từ danh sách xe để tiến hành đặt cọc giữ chỗ.</p>
         <router-link class="btn cs-btn cs-btn-primary" to="/car/list">Xem danh sách xe</router-link>
       </section>
 
       <div v-else class="cart-layout">
-        <section class="cart-items" aria-label="Sản phẩm trong giỏ">
+        <section class="cart-items" aria-label="Xe trong phiếu đặt cọc">
           <article v-for="item in items" :key="item.id" class="cs-card cart-item">
             <img class="cart-image" :src="carImageUrl(item.image)" :alt="item.name" @error="useDefaultCarImage" />
 
@@ -52,15 +52,7 @@
 
                 <div class="cart-quantity">
                   <span class="cart-label">Số lượng</span>
-                  <div class="quantity-control">
-                    <button type="button" :disabled="busyId === item.id" @click="decrement(item.id)">−</button>
-                    <span>{{ item.quantity }}</span>
-                    <button type="button"
-                      :disabled="busyId === item.id || (item.stock != null && item.quantity >= item.stock)"
-                      @click="increment(item.id)">
-                      +
-                    </button>
-                  </div>
+                  <strong>1 xe</strong>
                 </div>
 
                 <div class="cart-line-total">
@@ -73,12 +65,12 @@
         </section>
 
         <aside class="cs-card cart-summary">
-          <h2>Tóm tắt giỏ hàng</h2>
+          <h2>Tóm tắt phiếu đặt cọc</h2>
           <div class="summary-row"><span>Số lượng</span><strong>{{ totalQuantity }} xe</strong></div>
           <div class="summary-total"><span>Tổng tiền</span><strong>{{ formatPrice(total) }} VNĐ</strong></div>
-          <router-link class="btn cs-btn cs-btn-primary w-100" to="/checkout">Gửi yêu cầu đặt xe</router-link>
+          <router-link class="btn cs-btn cs-btn-primary w-100" to="/checkout">Tiến hành đặt cọc</router-link>
           <button class="btn cs-btn cs-btn-ghost w-100" type="button" :disabled="clearing" @click="clearCart">
-            {{ clearing ? 'Đang xóa...' : 'Xóa toàn bộ giỏ' }}
+            {{ clearing ? 'Đang xóa...' : 'Xóa toàn bộ xe đã chọn' }}
           </button>
           <router-link class="cart-continue" to="/car/list">← Tiếp tục xem xe</router-link>
         </aside>
@@ -116,7 +108,7 @@ async function loadCart() {
     cart.setItems(items.value)
     total.value = Number(data.total || 0)
   } catch {
-    loadError.value = 'Không thể tải giỏ hàng. Vui lòng kiểm tra kết nối máy chủ.'
+    loadError.value = 'Không thể tải phiếu đặt cọc. Vui lòng kiểm tra kết nối máy chủ.'
   } finally {
     loading.value = false
   }
@@ -133,18 +125,10 @@ async function updateQuantity(id, action) {
     }
     await loadCart()
   } catch {
-    message.value = 'Không thể cập nhật giỏ hàng. Vui lòng thử lại.'
+    message.value = 'Không thể cập nhật phiếu đặt cọc. Vui lòng thử lại.'
   } finally {
     busyId.value = null
   }
-}
-
-function increment(id) {
-  return updateQuantity(id, () => cartApi.increment(id))
-}
-
-function decrement(id) {
-  return updateQuantity(id, () => cartApi.decrement(id))
 }
 
 function remove(id) {
@@ -158,7 +142,7 @@ async function clearCart() {
     await cartApi.clear()
     await loadCart()
   } catch {
-    message.value = 'Không thể xóa giỏ hàng. Vui lòng thử lại.'
+    message.value = 'Không thể xóa phiếu đặt cọc. Vui lòng thử lại.'
   } finally {
     clearing.value = false
   }

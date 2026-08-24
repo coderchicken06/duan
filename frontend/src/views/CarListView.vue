@@ -38,26 +38,12 @@
             <span>Mức giá</span>
             <select v-model="filters.priceRange">
               <option value="">Tất cả</option>
-              <option value="demo">Đến 5 triệu</option>
-              <option value="5m-500m">Trên 5 triệu đến dưới 500 triệu</option>
-              <option value="500m-1b">Từ 500 triệu đến dưới 1 tỷ</option>
+              <option value="under-1b">Dưới 1 tỷ</option>
               <option value="1b-2b">Từ 1 đến 2 tỷ</option>
-              <option value="2b-plus">Trên 2 tỷ</option>
+              <option value="over-2b">Trên 2 tỷ</option>
             </select>
           </label>
 
-          <label>
-            <span>Năm</span>
-            <select v-model="filters.year">
-              <option value="">Tất cả</option>
-              <option v-for="year in availableYears" :key="year" :value="String(year)">{{ year }}</option>
-            </select>
-          </label>
-
-          <label>
-            <span>Màu sắc</span>
-            <input v-model="filters.color" type="text" placeholder="Ví dụ: Đen, Trắng" />
-          </label>
           <label>
             <span>Nhiên liệu</span>
             <select v-model="filters.fuelType">
@@ -116,57 +102,45 @@ const q = ref(route.query.q || '')
 const filters = ref({
   brandId: '',
   priceRange: '',
-  year: '',
-  color: '',
   fuelType: '',
   seats: '',
 })
 
-const availableYears = computed(() => {
-  const years = allCars.value
-    .map((car) => car.year)
-    .filter((year) => year != null)
-  return Array.from(new Set(years)).sort((a, b) => b - a)
-})
 const availableFuelTypes = computed(() => [...new Set(allCars.value.map((car) => car.fuelType).filter(Boolean))])
 const availableSeats = computed(() => [...new Set(allCars.value.map((car) => car.seats).filter((seat) => seat != null))].sort((a, b) => a - b))
+const brandNames = computed(() => new Map(brands.value.map((brand) => [String(brand.id), String(brand.name || '')])))
 
 const filteredCars = computed(() => {
   const query = String(q.value || '').trim().toLowerCase()
   return allCars.value.filter((car) => {
     const name = (car.name || '').toLowerCase()
     const description = (car.description || '').toLowerCase()
-    const color = (car.color || '').toLowerCase()
+    const brandName = String(car.brandName || brandNames.value.get(String(car.brandId)) || '').toLowerCase()
     const price = Number(car.price || 0)
 
-    const matchesQuery = !query || name.includes(query) || description.includes(query)
+    const matchesQuery = !query || name.includes(query) || brandName.includes(query) || description.includes(query)
     const matchesBrand = !filters.value.brandId || String(car.brandId) === filters.value.brandId
     const matchesPrice = (() => {
       if (!filters.value.priceRange) return true
-      if (filters.value.priceRange === 'demo') return price <= 5000000
-      if (filters.value.priceRange === '5m-500m') return price > 5000000 && price < 500000000
-      if (filters.value.priceRange === '500m-1b') return price >= 500000000 && price < 1000000000
+      if (filters.value.priceRange === 'under-1b') return price < 1000000000
       if (filters.value.priceRange === '1b-2b') return price >= 1000000000 && price <= 2000000000
-      if (filters.value.priceRange === '2b-plus') return price > 2000000000
+      if (filters.value.priceRange === 'over-2b') return price > 2000000000
       return true
     })()
     const matchesStatus = String(car.status || '').toUpperCase() === 'AVAILABLE'
-    const matchesYear = !filters.value.year || String(car.year) === filters.value.year
-    const matchesColor = !filters.value.color || color.includes(filters.value.color.trim().toLowerCase())
 
     const matchesFuel = !filters.value.fuelType || car.fuelType === filters.value.fuelType
     const matchesSeats = !filters.value.seats || String(car.seats) === filters.value.seats
-    return matchesQuery && matchesBrand && matchesPrice && matchesStatus && matchesYear && matchesColor && matchesFuel && matchesSeats
+    return matchesQuery && matchesBrand && matchesPrice && matchesStatus && matchesFuel && matchesSeats
   })
 })
 
 watch(() => route.fullPath, () => {
   q.value = String(route.query.q || '')
-  loadCars(true)
 })
 
 onMounted(loadCars)
-useAutoRefresh(() => loadCars(true))
+useAutoRefresh(() => loadCars(true), 0)
 
 async function loadCars(silent = false) {
   if (!silent) {
@@ -175,7 +149,7 @@ async function loadCars(silent = false) {
   }
   try {
     const [carsResponse, brandsResponse] = await Promise.all([
-      carApi.getAll(String(q.value || '') || undefined),
+      carApi.getAll(),
       brandApi.getAll(),
     ])
     const carData = carsResponse.data
@@ -197,8 +171,6 @@ function resetFilters() {
   filters.value = {
     brandId: '',
     priceRange: '',
-    year: '',
-    color: '',
     fuelType: '',
     seats: '',
   }
@@ -232,6 +204,16 @@ async function addToCart(id) {
 
 .car-list-hero .ford-hero-panel-content {
   max-width: 760px;
+}
+
+.ford-filter-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 768px) {
+  .ford-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 .car-skeleton {

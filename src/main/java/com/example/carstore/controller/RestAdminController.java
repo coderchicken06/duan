@@ -10,9 +10,10 @@ import org.springframework.security.oauth2.client.authentication.OAuth2Authentic
 import org.springframework.web.bind.annotation.*;
 
 import com.example.carstore.entity.Account;
+import com.example.carstore.dto.AccountDto;
 import com.example.carstore.entity.Brand;
 import com.example.carstore.entity.Car;
-import com.example.carstore.entity.Orders;
+import com.example.carstore.dto.OrderResponseDto;
 import com.example.carstore.repository.AccountRepository;
 import com.example.carstore.repository.BrandRepository;
 import com.example.carstore.repository.CarRepository;
@@ -62,8 +63,10 @@ public class RestAdminController {
     // ===== USERS MANAGEMENT =====
 
     @GetMapping("/users")
-    public List<Account> getUsers() {
-        return accountRepo.findAll();
+    public List<AccountDto> getUsers() {
+        return accountRepo.findAll().stream()
+                .map(AccountDto::from)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @PostMapping("/users")
@@ -201,8 +204,8 @@ public class RestAdminController {
     // ===== ORDERS MANAGEMENT =====
 
     @GetMapping("/orders")
-    public List<Orders> getOrders() {
-        return orderRepo.findAll();
+    public List<OrderResponseDto> getOrders() {
+        return orderService.toOrderResponses(orderRepo.findAll());
     }
 
         @PutMapping("/orders/{id}/status")

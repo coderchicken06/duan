@@ -2,6 +2,7 @@ package com.example.carstore.controller;
 
 import com.example.carstore.entity.OrderDetail;
 import com.example.carstore.entity.Orders;
+import com.example.carstore.dto.OrderResponseDto;
 import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.CartService;
@@ -76,7 +77,8 @@ public class RestOrderController {
                 ? orderRepo.findAll()
                 : orderRepo.findByUsername(auth.getName());
 
-        return Map.of("success", true, "data", orders, "count", orders.size());
+        List<OrderResponseDto> responses = orderService.toOrderResponses(orders);
+        return Map.of("success", true, "data", responses, "count", responses.size());
     }
 
     @GetMapping("/{id}")
@@ -162,7 +164,8 @@ public class RestOrderController {
         }
 
         List<Orders> orders = orderRepo.findByUsername(auth.getName());
-        return Map.of("success", true, "data", orders, "count", orders.size());
+        List<OrderResponseDto> responses = orderService.toOrderResponses(orders);
+        return Map.of("success", true, "data", responses, "count", responses.size());
     }
 
     @GetMapping("/{id}/details")

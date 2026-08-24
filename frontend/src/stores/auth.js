@@ -7,8 +7,9 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
 
   const isLoggedIn = computed(() => !!user.value)
-  const isAdmin = computed(() => user.value?.role === 'ROLE_ADMIN')
-  const isUser = computed(() => user.value?.role === 'ROLE_USER')
+  const normalizedRole = computed(() => String(user.value?.role || '').toUpperCase())
+  const isAdmin = computed(() => ['ADMIN', 'ROLE_ADMIN'].includes(normalizedRole.value))
+  const isUser = computed(() => ['USER', 'ROLE_USER'].includes(normalizedRole.value))
 
   async function fetchUser() {
     loading.value = true

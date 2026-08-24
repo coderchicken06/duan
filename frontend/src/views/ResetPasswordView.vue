@@ -14,10 +14,26 @@
                   class="btn password-toggle" type="button" @click="showPassword = !showPassword">{{ showPassword ? 'Ẩn'
                   : 'Hiện' }}</button></div>
             </div>
-            <div><label class="form-label">Xác nhận mật khẩu</label><input v-model="confirmPassword"
-                :type="showPassword ? 'text' : 'password'" class="form-control" required placeholder="Nhập lại mật khẩu"
-                autocomplete="new-password" /></div>
-            <button class="btn cs-btn cs-btn-primary w-100" type="submit">Đổi mật khẩu</button>
+            <div>
+              <label class="form-label">Xác nhận mật khẩu</label>
+              <div class="input-group">
+                <input
+                  v-model="confirmPassword"
+                  :type="showConfirmPassword ? 'text' : 'password'"
+                  class="form-control"
+                  :class="{ 'input-error': isPasswordMismatch }"
+                  :aria-invalid="isPasswordMismatch"
+                  required
+                  placeholder="Nhập lại mật khẩu"
+                  autocomplete="new-password"
+                />
+                <button class="btn password-toggle" type="button" @click="showConfirmPassword = !showConfirmPassword">
+                  {{ showConfirmPassword ? 'Ẩn' : 'Hiện' }}
+                </button>
+              </div>
+              <p v-if="isPasswordMismatch" class="error-text">Mật khẩu không trùng khớp</p>
+            </div>
+            <button class="btn cs-btn cs-btn-primary w-100" type="submit" :disabled="isPasswordMismatch">Đổi mật khẩu</button>
           </form>
         </div>
       </div>
@@ -26,7 +42,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authApi } from '../api'
 
@@ -35,9 +51,24 @@ const password = ref('')
 const confirmPassword = ref('')
 const error = ref('')
 const showPassword = ref(false)
+const showConfirmPassword = ref(false)
+
+const isPasswordMismatch = computed(
+  () => confirmPassword.value.length > 0 && password.value !== confirmPassword.value,
+)
+
+const isFormValid = computed(
+  () => password.value.length >= 6 && password.value === confirmPassword.value,
+)
 
 async function submit() {
   error.value = ''
+  if (!isFormValid.value) {
+    if (!isPasswordMismatch.value) {
+      error.value = 'Mật khẩu mới phải có ít nhất 6 ký tự.'
+    }
+    return
+  }
   const { data } = await authApi.resetPassword(password.value, confirmPassword.value)
   if (data.success) {
     router.push({ path: '/login', query: { resetSuccess: '1' } })
@@ -80,6 +111,18 @@ async function submit() {
     border: 1px solid #d1d5db;
     background: #f9fafb;
     color: #4b5563
+  }
+
+  .input-error {
+    border-color: #ef4444 !important;
+    box-shadow: 0 0 0 1px #ef4444 !important;
+  }
+
+  .error-text {
+    color: #ef4444;
+    font-size: 13px;
+    font-weight: 500;
+    margin: 6px 0 0;
   }
 
   .cs-btn {

@@ -66,15 +66,15 @@
           </div>
           <div class="field">
             <label for="service-time">Giờ hẹn *</label>
-            <input id="service-time" v-model="form.appointmentTime" :min="minimumAppointmentTime" type="time"
+            <input id="service-time" v-model="form.appointmentTime" :min="minimumAppointmentTime" max="18:30" type="time"
               class="form-control" />
-            <small v-if="form.appointmentDate === today">Vui lòng chọn giờ sau thời điểm hiện tại.</small>
+            <small>Showroom nhận lịch từ 07:30 đến 18:30.</small>
           </div>
 
           <div class="booking-actions">
             <div v-if="msg" class="alert cart-alert show" :class="[ok ? 'alert-success' : 'alert-danger', { error: !ok }]" role="alert">{{ msg }}
             </div>
-            <button class="btn cs-btn cs-btn-primary" type="submit" :disabled="submitting">
+            <button class="btn cs-btn cs-btn-primary" type="submit" :disabled="submitting || auth.isAdmin">
               {{ submitting ? 'Đang gửi yêu cầu...' : 'Xác nhận đặt lịch' }}
             </button>
           </div>
@@ -90,8 +90,10 @@ import { useRoute } from 'vue-router'
 import { carApi, supportApi } from '../api'
 import DatePickerInput from '../components/DatePickerInput.vue'
 import { isValidVietnamesePhone, normalizeVietnamesePhone } from '../utils/phone'
+import { useAuthStore } from '../stores/auth'
 
 const route = useRoute()
+const auth = useAuthStore()
 const toLocalDate = (value) => {
   const year = value.getFullYear()
   const month = String(value.getMonth() + 1).padStart(2, '0')
@@ -120,10 +122,13 @@ const msg = ref('')
 const ok = ref(false)
 const submitting = ref(false)
 const selectedFromCatalog = ref(false)
+const showroomOpenTime = '07:30'
+const showroomCloseTime = '18:30'
 const minimumAppointmentTime = computed(() => {
-  if (form.value.appointmentDate !== today) return undefined
+  if (form.value.appointmentDate !== today) return showroomOpenTime
   const nextMinute = new Date(Date.now() + 60_000)
-  return `${String(nextMinute.getHours()).padStart(2, '0')}:${String(nextMinute.getMinutes()).padStart(2, '0')}`
+  const nextTime = `${String(nextMinute.getHours()).padStart(2, '0')}:${String(nextMinute.getMinutes()).padStart(2, '0')}`
+  return nextTime > showroomOpenTime ? nextTime : showroomOpenTime
 })
 
 onMounted(async () => {
@@ -148,6 +153,9 @@ function validateForm() {
   if (!isValidVietnamesePhone(form.value.phone)) {
     return 'Số điện thoại phải có 9 chữ số, 10 chữ số bắt đầu bằng 0, hoặc bắt đầu bằng +84/84.'
   }
+  if (form.value.appointmentTime < showroomOpenTime || form.value.appointmentTime > showroomCloseTime) {
+    return 'Showroom chỉ tiếp nhận xe từ 07:30 đến 18:30.'
+  }
   const appointment = new Date(`${form.value.appointmentDate}T${form.value.appointmentTime}`)
   if (Number.isNaN(appointment.getTime()) || appointment.getTime() <= Date.now()) {
     return 'Thời gian hẹn phải sau thời điểm hiện tại.'
@@ -156,6 +164,11 @@ function validateForm() {
 }
 
 async function submit() {
+  if (auth.isAdmin) {
+    ok.value = false
+    msg.value = 'Tài khoản quản trị không thể gửi yêu cầu dịch vụ.'
+    return
+  }
   msg.value = validateForm()
   ok.value = false
   if (msg.value) return

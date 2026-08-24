@@ -5,8 +5,9 @@
       <table class="table cs-table mb-0">
         <thead>
           <tr>
-            <th>Mã</th>
-            <th>Ngày</th>
+            <th>Sản phẩm</th>
+            <th>Ngày đặt</th>
+            <th>Thời gian thanh toán cọc</th>
             <th>Địa chỉ</th>
             <th>Trạng thái</th>
             <th>Tiền cọc</th>
@@ -15,11 +16,17 @@
         </thead>
         <tbody>
           <tr v-for="o in orders" :key="o.id">
-            <td>#{{ o.id }}</td>
+            <td>
+              <div class="product-cell">
+                <img v-if="o.carImage" :src="carImageUrl(o.carImage)" :alt="o.carName || o.productName" @error="useDefaultCarImage" />
+                <span>{{ o.carName || o.productName }}</span>
+              </div>
+            </td>
             <td>{{ formatDate(o.createDate) }}</td>
+            <td>{{ formatDepositPaidAt(o) }}</td>
             <td>{{ o.address }}</td>
             <td><span class="badge bg-secondary">{{ o.status }}</span></td>
-            <td>{{ o.depositStatus === 'PAID' ? 'Đã thanh toán' : (o.status === 'CONFIRMED' ? 'Chờ thanh toán' : 'Chưa mở') }}</td>
+            <td>{{ o.depositAmount != null ? `${formatPrice(o.depositAmount)} VNĐ` : 'Chưa xác định' }}</td>
             <td>
               <router-link :to="`/order/detail/${o.id}`">Chi tiết</router-link>
               <span v-if="isCompleted(o) && isOrderReviewed(o)" class="badge bg-secondary ms-2">Đã đánh giá</span>
@@ -74,7 +81,7 @@
 
 <script setup>
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import { orderApi, reviewApi } from '../api'
+import { carImageUrl, formatPrice, orderApi, reviewApi, useDefaultCarImage } from '../api'
 import api from '../api/client'
 import { showCartToast } from '../composables/useCartToast'
 
@@ -130,6 +137,20 @@ onBeforeUnmount(() => window.clearInterval(pollTimer))
 
 function formatDate(d) {
   return d ? new Date(d).toLocaleDateString('vi-VN') : ''
+}
+
+function formatDepositPaidAt(order) {
+  const paymentTime = order.paidAt || order.paymentTime
+  if (paymentTime) {
+    return new Intl.DateTimeFormat('vi-VN', {
+      day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date(paymentTime))
+  }
+  const status = String(order.status || '').toUpperCase()
+  const depositStatus = String(order.depositStatus || '').toUpperCase()
+  return ['PENDING', 'CANCELLED'].includes(status) && ['UNPAID', 'DEPOSIT_UNPAID', ''].includes(depositStatus)
+    ? 'Chưa thanh toán cọc'
+    : '--'
 }
 
 function isCompleted(order) {
@@ -208,4 +229,6 @@ async function submitReview() {
 .rating-star svg.active { fill: #f59e0b; stroke: #f59e0b; }
 .rating-label { color: #6b7280; display: block; margin-top: .35rem; }
 .rating-star:focus-visible { border-radius: .25rem; outline: 2px solid #1d4ed8; outline-offset: 2px; }
+.product-cell { align-items: center; display: flex; gap: .65rem; min-width: 180px; }
+.product-cell img { border-radius: 4px; height: 42px; object-fit: cover; width: 64px; }
 </style>

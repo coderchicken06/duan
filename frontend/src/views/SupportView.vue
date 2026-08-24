@@ -84,7 +84,7 @@
 
             <div class="form-actions field-full">
               <p>Yêu cầu sẽ được lưu trong lịch sử hỗ trợ của tài khoản.</p>
-              <button class="btn cs-btn cs-btn-primary" type="submit" :disabled="submitting">
+              <button class="btn cs-btn cs-btn-primary" type="submit" :disabled="submitting || auth.isAdmin">
                 {{ submitting ? 'Đang gửi...' : 'Gửi yêu cầu' }}
               </button>
             </div>
@@ -99,8 +99,10 @@
 import { ref } from 'vue'
 import { supportApi } from '../api'
 import { isValidVietnamesePhone, normalizeVietnamesePhone } from '../utils/phone'
+import { useAuthStore } from '../stores/auth'
 
 const form = ref({ name: '', phone: '', type: 'consulting', carInfo: '', content: '' })
+const auth = useAuthStore()
 const msg = ref('')
 const ok = ref(false)
 const submitting = ref(false)
@@ -116,6 +118,11 @@ function validateForm() {
 }
 
 async function submit() {
+  if (auth.isAdmin) {
+    ok.value = false
+    msg.value = 'Tài khoản quản trị không thể gửi yêu cầu hỗ trợ.'
+    return
+  }
   msg.value = validateForm()
   ok.value = false
   if (msg.value) return

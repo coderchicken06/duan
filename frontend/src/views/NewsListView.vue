@@ -5,9 +5,10 @@
         </header>
         <div v-if="loading" class="text-center py-5">Đang tải...</div>
         <div v-else class="news-grid">
-            <article v-for="item in articles" :key="item.id" class="news-card"><img v-if="item.thumbnail"
-                    :src="carImageUrl(item.thumbnail)" :alt="item.title">
-                <div><small>{{ formatDate(item.createdAt) }}</small>
+            <article v-for="item in articles" :key="item.id" class="news-card">
+                <div class="news-image-wrapper"><img class="news-thumb"
+                        :src="newsImageUrl(item)" :alt="item.title" @error="useNewsFallback"></div>
+                <div class="news-card-body"><small>{{ formatDate(item.createdAt) }}</small>
                     <h2>{{ item.title }}</h2>
                     <p>{{ item.summary }}</p><router-link :to="`/news/${item.slug}`">Đọc chi tiết</router-link>
                 </div>
@@ -24,6 +25,12 @@ import { useAutoRefresh } from '../composables/useAutoRefresh'
 const articles = ref([])
 const loading = ref(true)
 const formatDate = value => value ? new Date(value).toLocaleDateString('vi-VN') : ''
+const newsImageUrl = item => carImageUrl(item?.image || item?.thumbnail || 'Wildtrak2025.png')
+
+function useNewsFallback(event) {
+  event.target.onerror = null
+  event.target.src = '/images/Wildtrak2025.png'
+}
 
 async function loadNews() {
   try {
@@ -54,17 +61,47 @@ useAutoRefresh(loadNews)
         overflow: hidden;
         border: 1px solid #e5e7eb;
         border-radius: 14px;
-        background: #fff
+        background: #fff;
+        padding: 0 !important;
+        display: flex;
+        flex-direction: column;
+        transition: transform .2s ease, box-shadow .2s ease
     }
 
-    .news-card img {
+    .news-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 10px 15px -3px rgb(0 0 0 / 10%)
+    }
+
+    .news-image-wrapper {
         width: 100%;
-        height: 210px;
-        object-fit: cover
+        height: 220px;
+        overflow: hidden;
+        border-radius: 12px 12px 0 0;
+        background: #f3f4f6;
+        display: flex;
+        align-items: center;
+        justify-content: center
     }
 
-    .news-card div {
-        padding: 20px
+    .news-thumb {
+        width: 100%;
+        height: 100%;
+        display: block;
+        object-fit: cover;
+        object-position: center;
+        transition: transform .3s ease
+    }
+
+    .news-card:hover .news-thumb {
+        transform: scale(1.04)
+    }
+
+    .news-card-body {
+        padding: 20px;
+        display: flex;
+        flex: 1;
+        flex-direction: column
     }
 
     .news-card small {

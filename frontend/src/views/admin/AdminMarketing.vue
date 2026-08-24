@@ -58,6 +58,7 @@ import { onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { adminApi, promotionApi, newsApi, uploadApi } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
+import { notifyDataUpdated, useAutoRefresh } from '../../composables/useAutoRefresh'
 import DatePickerInput from '../../components/DatePickerInput.vue'
 
 const promotions = ref([]), articles = ref([]), cars = ref([])
@@ -107,7 +108,10 @@ async function action(fn, success) {
             showCartToast(response.data.message || 'Không thể thực hiện', 'error')
             return false
         }
-        await load(); showCartToast(success); return true
+        await load()
+        notifyDataUpdated()
+        showCartToast(success)
+        return true
     }
     catch (e) { showCartToast(e.response?.data?.message || e.message || 'Không thể thực hiện', 'error'); return false }
     finally { submitting.value = false }
@@ -165,6 +169,7 @@ async function saveNews() {
 }
 async function removeNews(id) { if (confirm('Xóa tin tức này?')) await action(() => newsApi.delete(id), 'Đã xóa tin tức') }
 onMounted(load)
+useAutoRefresh(load, 0)
 watch(() => route.path, load)
 </script>
 <style scoped>

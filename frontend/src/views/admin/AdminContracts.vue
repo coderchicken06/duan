@@ -7,19 +7,17 @@
           <tr>
             <th>Mã</th>
             <th>Khách hàng</th>
-            <th>Order</th>
-            <th>Báo giá</th>
+            <th>Sản phẩm</th>
             <th>Giá trị</th>
             <th>Trạng thái</th>
-            <th></th>
+            <th>Thao tác</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="item in contracts" :key="item.id">
-            <td>{{ item.contractNo || `HD-${item.id}` }}</td>
+            <td>{{ item.contractNo || `HD-${String(item.id).padStart(3, '0')}` }}</td>
             <td>{{ item.customerUsername }}</td>
-            <td>#{{ item.orderId }}</td>
-            <td>{{ item.quotationId ? `#${item.quotationId}` : '-' }}</td>
+            <td>{{ item.carName || item.productName || 'Xe chưa xác định' }}</td>
             <td>{{ formatPrice(item.total) }}</td>
             <td><select v-model="item.status" class="form-select form-select-sm" :disabled="isSaving(item.id)">
                 <option>Chờ ký</option>
@@ -39,6 +37,7 @@
 import { onMounted, ref } from 'vue'
 import { contractApi, formatPrice } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
+import { notifyDataUpdated, useAutoRefresh } from '../../composables/useAutoRefresh'
 
 const contracts = ref([])
 const savingId = ref(null)
@@ -62,6 +61,7 @@ async function save(item) {
       pdfPath: item.pdfPath,
     })
     Object.assign(item, data.data)
+    notifyDataUpdated()
     showCartToast('Đã cập nhật hợp đồng')
   } catch (e) {
     showCartToast(e.response?.data?.message || 'Không thể cập nhật hợp đồng', 'error')
@@ -73,4 +73,5 @@ async function save(item) {
 const isSaving = (contractId) => savingId.value === contractId
 
 onMounted(load)
+useAutoRefresh(load, 0)
 </script>

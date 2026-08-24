@@ -4,6 +4,7 @@ import com.example.carstore.entity.Car;
 import com.example.carstore.entity.CartItem;
 import com.example.carstore.entity.OrderDetail;
 import com.example.carstore.entity.Orders;
+import com.example.carstore.dto.OrderResponseDto;
 import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.repository.CarRepository;
@@ -16,6 +17,7 @@ import org.springframework.util.StringUtils;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.ArrayList;
 
 @Service
 public class OrderService {
@@ -59,6 +61,9 @@ public class OrderService {
         }
         if (cart == null || cart.isEmpty()) {
             throw new IllegalArgumentException("Cart is empty");
+        }
+        if (cart.size() != 1) {
+            throw new IllegalArgumentException("Mỗi phiếu đặt cọc chỉ áp dụng cho một xe.");
         }
 
         Orders order = new Orders();
@@ -149,6 +154,9 @@ public class OrderService {
                 throw new IllegalArgumentException("Không thể hủy đơn đã thanh toán cọc.");
             }
             restoreStock(detailRepo.findByOrderId(orderId));
+            if (contractService != null) {
+                contractService.cancelForOrder(orderId);
+            }
         } else if (OrderStatus.CONFIRMED.equals(targetStatus)
                 && !OrderStatus.PENDING.equals(current)) {
             throw new IllegalArgumentException("Chỉ đơn đang chờ mới được xác nhận.");
@@ -192,6 +200,9 @@ public class OrderService {
             lockedOrder.setDepositStatus(OrderStatus.DEPOSIT_UNPAID);
             orderRepo.save(lockedOrder);
             restoreStock(detailRepo.findByOrderId(lockedOrder.getId()));
+            if (contractService != null) {
+                contractService.cancelForOrder(lockedOrder.getId());
+            }
         }
     }
 
@@ -237,5 +248,49 @@ public class OrderService {
     public double getRevenue() {
         Double revenue = detailRepo.getRevenue();
         return revenue == null ? 0D : revenue;
+    }
+
+    public List<OrderResponseDto> toOrderResponses(List<Orders> orders) {
+        List<OrderResponseDto> responses = new ArrayList<>();
+        for (Orders order : orders) {
+            OrderResponseDto response = new OrderResponseDto();
+            response.setId(order.getId());
+            response.setUsername(order.getUsername());
+            response.setCreateDate(order.getCreateDate());
+            response.setAddress(order.getAddress());
+            response.setRegistrationAddress(order.getRegistrationAddress());
+            response.setPaymentMethod(order.getPaymentMethod());
+            response.setStatus(order.getStatus());
+            response.setDepositStatus(order.getDepositStatus());
+            response.setDepositAmount(order.getDepositAmount());
+            response.setDepositMethod(order.getDepositMethod());
+            Date depositPaidAt = resolveDepositPaidAt(order);
+            response.setPaidAt(depositPaidAt);
+            response.setPaymentTime(depositPaidAt);
+
+            List<OrderDetail> details = detailRepo.findByOrderIdWithCar(order.getId());
+            for (OrderDetail detail : details) {
+                Car car = detail.getCar();
+                if (car != null && StringUtils.hasText(car.getName())) {
+                    response.setCarName(car.getName());
+                    response.setProductName(car.getName());
+                    response.setCarImage(car.getImageUrl());
+                    break;
+                }
+            }
+            responses.add(response);
+        }
+        return responses;
+    }
+
+    private Date resolveDepositPaidAt(Orders order) {
+        if (order.getDepositPaidAt() != null) {
+            return order.getDepositPaidAt();
+        }
+        String status = order.getStatus();
+        if (OrderStatus.PROCESSING.equals(status) || OrderStatus.DELIVERED.equals(status)) {
+            return order.getCreateDate();
+        }
+        return null;
     }
 }
