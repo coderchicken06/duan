@@ -85,14 +85,15 @@ public class OrderService {
         Orders savedOrder = orderRepo.save(order);
 
         for (CartItem item : cart.values()) {
+            if (item == null || item.getQuantity() != 1) {
+                throw new IllegalArgumentException("Mỗi giao dịch đặt cọc chỉ áp dụng cho 01 xe duy nhất");
+            }
+            item.setQuantity(1);
             java.util.Optional<Car> carOpt = carRepo.findForUpdateById(item.getId());
             if (carOpt.isEmpty()) {
                 throw new IllegalArgumentException("Car not found: " + item.getId());
             }
             Car car = carOpt.get();
-            if (item.getQuantity() <= 0) {
-                throw new IllegalArgumentException("Invalid quantity for car: " + item.getId());
-            }
             if (!"AVAILABLE".equalsIgnoreCase(car.getStatus())) {
                 throw new IllegalArgumentException("Xe " + car.getName() + " hiện không khả dụng để đặt cọc.");
             }
@@ -100,14 +101,8 @@ public class OrderService {
             if (car.getStock() <= 0) {
                 throw new RuntimeException("Xe " + car.getName() + " đã hết hàng.");
             }
-            if (car.getStock() < item.getQuantity()) {
-                throw new RuntimeException(
-                        "Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock()
-                                + ", yêu cầu: " + item.getQuantity());
-            }
-
-            // Xe đã được khóa ghi; trừ đúng số lượng đặt để ngăn hai khách mua cùng tồn kho.
-            car.setStock(car.getStock() - item.getQuantity());
+            // Mỗi phiếu cọc chỉ giữ chỗ một xe; xe đã được khóa ghi trong transaction.
+            car.setStock(car.getStock() - 1);
             car.setStatus(car.getStock() == 0 ? "DEPOSITED" : "AVAILABLE");
             carRepo.save(car);
 
@@ -118,7 +113,7 @@ public class OrderService {
             // Không tin giá do client gửi lên; giá đơn hàng phải lấy từ database.
             detail.setPrice(promotionService == null ? car.getPrice()
                     : promotionService.priceAfterPromotion(car.getId(), car.getPrice()));
-            detail.setQuantity(item.getQuantity());
+            detail.setQuantity(1);
             detailRepo.save(detail);
         }
 

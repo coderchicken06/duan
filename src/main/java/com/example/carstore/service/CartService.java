@@ -66,7 +66,7 @@ public class CartService {
     public double getTotal(HttpSession session) {
         return getCart(session).values()
                 .stream()
-                .mapToDouble(item -> item.getPrice() * item.getQuantity())
+                .mapToDouble(item -> item.getFinalPrice() * item.getQuantity())
                 .sum();
     }
 

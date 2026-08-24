@@ -4,7 +4,12 @@ public class CartItem {
 
     private Integer id;
     private String name;
+    private double listPrice;
+    private double discountAmount;
     private double price;
+    private double discountPercent;
+    private double finalPrice;
+    private double depositAmount;
     private int quantity;
     private String image;
     private Integer year;
@@ -18,6 +23,8 @@ public class CartItem {
         this.id = id;
         this.name = name;
         this.price = price;
+        this.listPrice = price;
+        this.finalPrice = price;
         this.quantity = quantity;
     }
 
@@ -53,6 +60,46 @@ public class CartItem {
 
     public void setPrice(double price) {
         this.price = price;
+    }
+
+    public double getListPrice() {
+        return listPrice;
+    }
+
+    public void setListPrice(double listPrice) {
+        this.listPrice = listPrice;
+    }
+
+    public double getDiscountAmount() {
+        return discountAmount;
+    }
+
+    public void setDiscountAmount(double discountAmount) {
+        this.discountAmount = discountAmount;
+    }
+
+    public double getDiscountPercent() {
+        return discountPercent;
+    }
+
+    public void setDiscountPercent(double discountPercent) {
+        this.discountPercent = discountPercent;
+    }
+
+    public double getFinalPrice() {
+        return finalPrice;
+    }
+
+    public void setFinalPrice(double finalPrice) {
+        this.finalPrice = finalPrice;
+    }
+
+    public double getDepositAmount() {
+        return depositAmount;
+    }
+
+    public void setDepositAmount(double depositAmount) {
+        this.depositAmount = depositAmount;
     }
 
     public int getQuantity() {

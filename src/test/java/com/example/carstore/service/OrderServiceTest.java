@@ -91,19 +91,13 @@ class OrderServiceTest {
     }
 
     @Test
-    void checkoutRejectsQuantityGreaterThanStock() {
-        Car car = car(1, 500_000_000D, 1);
+    void checkoutRejectsQuantityDifferentFromOne() {
         CartItem item = new CartItem(1, "Xe", 1D, 2);
-        Orders savedOrder = new Orders();
-        savedOrder.setId(11);
-
-        when(orderRepo.save(any(Orders.class))).thenReturn(savedOrder);
-        when(carRepo.findForUpdateById(1)).thenReturn(Optional.of(car));
 
         RuntimeException error = assertThrows(RuntimeException.class,
                 () -> orderService.checkout("user1", "Hà Nội", Map.of(1, item)));
 
-        assertTrue(error.getMessage().contains("không đủ tồn kho"));
+        assertTrue(error.getMessage().contains("01 xe duy nhất"));
         verify(detailRepo, never()).save(any());
     }
 

@@ -32,7 +32,7 @@
     </Transition>
 
     <!-- Thêm thẻ Chatbot ở đây để nó hiển thị trôi nổi trên toàn bộ website -->
-    <Chatbot />
+    <Chatbot v-if="!isHideChatbot" />
   </div>
 </template>
 
@@ -48,6 +48,8 @@ import { useAuthStore } from './stores/auth'
 const route = useRoute()
 const auth = useAuthStore()
 const isAdminArea = computed(() => auth.isAdmin && route.path.startsWith('/admin/'))
+const isAdminRoute = computed(() => route.path.startsWith('/admin'))
+const isHideChatbot = computed(() => isAdminRoute.value || auth.isAdmin)
 
 const toastVisible = ref(false)
 const toastMessage = ref('')
@@ -70,7 +72,7 @@ function onToastEvent(event) {
     showToast(detail)
     return
   }
-  showToast(detail?.message || 'Thêm vào giỏ hàng thành công!', detail?.type)
+  showToast(detail?.message || 'Thêm vào đặt cọc xe thành công!', detail?.type)
 }
 
 onMounted(() => {

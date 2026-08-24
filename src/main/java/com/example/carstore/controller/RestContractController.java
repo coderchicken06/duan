@@ -36,23 +36,9 @@ public class RestContractController {
         return contractData(order);
     }
 
-    @GetMapping("/public/order/{orderId}")
-    public Map<String, Object> getPublicByOrder(@PathVariable Integer orderId) {
-        Orders order = orderRepo.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
-        return contractData(order);
-    }
-
     private Map<String, Object> contractData(Orders order) {
         Integer orderId = order.getId();
-        Contract contract;
-        try {
-            contract = contractService.getByOrderId(orderId);
-        } catch (IllegalArgumentException missing) {
-            double total = detailRepo.findByOrderId(orderId).stream()
-                    .mapToDouble(d -> d.getPrice() * d.getQuantity()).sum();
-            contract = contractService.createForOrder(order, total);
-        }
+        Contract contract = contractService.getByOrderId(orderId);
         Map<String, Object> data = new LinkedHashMap<>();
         data.put("contract", contract);
         data.put("order", order);

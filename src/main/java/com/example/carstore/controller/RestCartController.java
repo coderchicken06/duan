@@ -77,9 +77,7 @@ public class RestCartController {
             return ResponseUtils.fail("Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock());
         }
 
-        cartService.add(new CartItem(
-                car.getId(), car.getName(), effectivePrice(car), safeQuantity,
-                car.getImageUrl(), car.getYear(), car.getBodyType(), car.getColor(), car.getStock()), session);
+        cartService.add(toCartItem(car, safeQuantity), session);
         refreshCartItems(session);
         return Map.of(
                 "success", true,
@@ -222,7 +220,8 @@ public class RestCartController {
         cart.values().forEach(item ->
                 carService.findById(item.getId()).ifPresent(car -> {
                     item.setName(car.getName());
-                    item.setPrice(effectivePrice(car));
+                    double finalPrice = effectivePrice(car);
+                    applyPricing(item, car.getPrice(), finalPrice);
                     item.setImage(car.getImageUrl());
                     item.setYear(car.getYear());
                     item.setBodyType(car.getBodyType());
@@ -237,5 +236,24 @@ public class RestCartController {
 
     private double effectivePrice(Car car) {
         return promotionService.priceAfterPromotion(car.getId(), car.getPrice());
+    }
+
+    private CartItem toCartItem(Car car, int quantity) {
+        double finalPrice = effectivePrice(car);
+        CartItem item = new CartItem(
+                car.getId(), car.getName(), car.getPrice(), quantity,
+                car.getImageUrl(), car.getYear(), car.getBodyType(), car.getColor(), car.getStock());
+        applyPricing(item, car.getPrice(), finalPrice);
+        return item;
+    }
+
+    private void applyPricing(CartItem item, double listPrice, double finalPrice) {
+        double discountAmount = Math.max(0D, listPrice - finalPrice);
+        item.setPrice(listPrice);
+        item.setListPrice(listPrice);
+        item.setDiscountAmount(discountAmount);
+        item.setDiscountPercent(listPrice <= 0D ? 0D : discountAmount * 100D / listPrice);
+        item.setFinalPrice(finalPrice);
+        item.setDepositAmount(finalPrice * 0.10D);
     }
 }

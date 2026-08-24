@@ -25,43 +25,136 @@
           </div>
         </section>
         <section class="amounts">
-          <p><span>Số lượng</span><strong>{{ quote.items?.[0]?.quantity || 1 }}</strong></p>
-          <p><span>Đơn giá</span><strong>{{ formatPrice(quote.carPrice) }} VNĐ</strong></p>
-          <p><span>Giảm giá được duyệt</span><strong>-{{ formatPrice(quote.discount) }} VNĐ</strong></p>
-          <p class="total"><span>Tổng báo giá</span><strong>{{ formatPrice(quote.totalPrice) }} VNĐ</strong></p>
+          <p><span>Đơn giá niêm yết</span><strong>{{ formatPrice(quote.carPrice) }} VNĐ</strong></p>
+          <p :class="{ 'approved-discount': Number(quote.discount) > 0 }"><span>Giảm giá được duyệt</span><strong>-{{ formatPrice(quote.discount) }} VNĐ</strong></p>
+          <p class="total"><span>Tổng giá trị xe sau ưu đãi</span><strong>{{ formatPrice(quote.totalPrice) }} VNĐ</strong></p>
+        </section>
+        <section class="quote-validity">
+          <h2>Thời hạn hiệu lực</h2>
+          <p><span>Ngày phát hành / duyệt</span><strong>{{ formatDate(issuedAt) }}</strong></p>
+          <p><span>Hiệu lực đến hết ngày</span><strong>{{ formatDate(expiryDate) }}</strong></p>
+          <p class="price-lock-term">Ưu đãi và mức giá được đại lý bảo lưu đến hết ngày {{ formatDate(expiryDate) }}. Sau thời gian này, báo giá sẽ tự động hết hiệu lực.</p>
         </section>
         <section>
-          <h2>Trạng thái</h2><span class="status">{{ quote.status }}</span>
-          <p v-if="quote.note" class="mt-3 mb-0">{{ quote.note }}</p>
+          <h2>Trạng thái</h2><span class="status" :class="{ expired: isExpired }">{{ isExpired ? 'Đã hết hạn' : quote.status }}</span>
+          <p v-if="isExpired" class="quote-expired-message">Báo giá đã hết hạn hiệu lực (quá 07 ngày). Vui lòng yêu cầu báo giá mới.</p>
+          <p class="mt-3 mb-0"><strong>Ghi chú từ đại lý:</strong> {{ dealerNote }}</p>
         </section>
-        <section v-if="quote.status === 'Khách đã xác nhận'" class="order-form">
+        <section v-if="!isAdmin && isConfirmed && !isExpired" class="order-form">
           <h2>Thông tin tạo đơn hàng</h2><input v-model.trim="orderForm.address" class="form-control" maxlength="500"
             placeholder="Địa chỉ nhận xe" required><input v-model.trim="orderForm.registrationAddress"
             class="form-control" maxlength="500" placeholder="Địa chỉ đăng ký xe (nếu khác)">
           <div class="form-control">Thanh toán QR SePay</div>
         </section>
         <footer><button class="btn btn-outline-secondary" @click="$router.back()">Quay lại</button><button
-            class="btn btn-dark" @click="printQuote">In / Lưu PDF</button><button v-if="quote.status === 'Đã duyệt'"
-            class="btn btn-danger" :disabled="submitting" @click="confirmQuote">Xác nhận báo giá</button><button
-            v-if="quote.status === 'Khách đã xác nhận'" class="btn btn-danger"
+            class="btn btn-dark" @click="printQuote">In / Lưu PDF</button><button v-if="!isAdmin && isApproved && !isExpired"
+            class="btn btn-danger" :disabled="submitting" @click="handleDepositFromQuotation">Đặt cọc theo báo giá này</button><template
+            v-if="isAdmin && isPending"><button class="btn btn-success" :disabled="submitting" @click="updateQuoteStatus('Đã duyệt')">Duyệt báo giá</button><button
+            class="btn btn-outline-danger" :disabled="submitting" @click="updateQuoteStatus('Từ chối')">Từ chối</button></template><button
+            v-if="!isAdmin && isConfirmed && !isExpired" class="btn btn-danger"
             :disabled="submitting || !orderForm.address" @click="convertToOrder">Tạo đơn hàng</button><router-link
-            v-if="quote.orderId" class="btn btn-danger" :to="`/order/detail/${quote.orderId}`">Xem đơn
+            v-if="!isAdmin && quote.orderId" class="btn btn-danger" :to="`/order/detail/${quote.orderId}`">Xem đơn
             hàng</router-link></footer>
       </article>
     </div>
   </main>
 </template>
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { carApi, carImageUrl, formatPrice, quotationApi, useDefaultCarImage } from '../api'
+import { carApi, carImageUrl, cartApi, formatPrice, quotationApi, useDefaultCarImage } from '../api'
 import { useAutoRefresh } from '../composables/useAutoRefresh'
+import { useCartStore } from '../stores/cart'
+import { useAuthStore } from '../stores/auth'
 const route = useRoute(), router = useRouter(), quote = ref({}), car = ref(null), loading = ref(true), submitting = ref(false), error = ref('')
+const cart = useCartStore()
+const auth = useAuthStore()
 const orderForm = ref({ address: '', registrationAddress: '', paymentMethod: 'SePay' })
+const normalizedStatus = computed(() => String(quote.value.status || '').trim().toUpperCase())
+const isAdmin = computed(() => auth.isAdmin)
+const isPending = computed(() => ['PENDING', 'CHỜ XÁC NHẬN'].includes(normalizedStatus.value))
+const isApproved = computed(() => ['APPROVED', 'ĐÃ DUYỆT'].includes(normalizedStatus.value))
+const isConfirmed = computed(() => ['CONFIRMED', 'KHÁCH ĐÃ XÁC NHẬN'].includes(normalizedStatus.value))
+const issuedAt = computed(() => quote.value.quotationDate)
+const expiryDate = computed(() => {
+  if (!issuedAt.value) return null
+  const date = new Date(issuedAt.value)
+  if (Number.isNaN(date.getTime())) return null
+  date.setDate(date.getDate() + 7)
+  date.setHours(23, 59, 59, 999)
+  return date
+})
+const isExpired = computed(() =>
+  (isApproved.value || isConfirmed.value) && expiryDate.value && Date.now() > expiryDate.value.getTime())
+const dealerNote = computed(() => {
+  const note = String(quote.value.promotionName || quote.value.note || '').trim()
+  return note || 'Áp dụng theo chính sách ưu đãi hiện hành của đại lý.'
+})
 const formatDate = v => v ? new Date(v).toLocaleDateString('vi-VN') : ''
 const printQuote = () => window.print()
 async function load() { try { const { data } = await quotationApi.getById(route.params.id); quote.value = data.data; const response = await carApi.getById(quote.value.carId); car.value = response.data.data || response.data } catch (e) { error.value = e.response?.data?.message || 'Không thể tải báo giá' } finally { loading.value = false } }
-async function confirmQuote() { submitting.value = true; try { const { data } = await quotationApi.confirm(quote.value.id); quote.value = data.data } catch (e) { error.value = e.response?.data?.message || 'Không thể xác nhận báo giá' } finally { submitting.value = false } }
+async function handleDepositFromQuotation() {
+  if (!quote.value?.id || !car.value) return
+  if (isExpired.value) {
+    error.value = 'Báo giá đã hết hạn hiệu lực (quá 07 ngày). Vui lòng yêu cầu báo giá mới.'
+    return
+  }
+  submitting.value = true
+  error.value = ''
+  try {
+    const { data } = await quotationApi.confirm(quote.value.id)
+    if (!data?.success || !data.data) {
+      throw new Error(data?.message || 'Không thể xác nhận báo giá')
+    }
+    quote.value = data.data
+
+    const price = Number(quote.value.carPrice ?? car.value.price ?? 0)
+    const discountAmount = Math.max(0, Number(quote.value.discount ?? 0))
+    const finalPrice = Math.max(0, Number(quote.value.totalPrice ?? price - discountAmount))
+    const discountPercent = price > 0 ? discountAmount * 100 / price : 0
+
+    await cartApi.clear()
+    cart.setDepositItem({
+      id: quote.value.carId ?? car.value.id,
+      name: car.value.name,
+      year: car.value.year,
+      color: car.value.color,
+      bodyType: car.value.bodyType,
+      image: car.value.image,
+      price,
+      listPrice: price,
+      discountAmount,
+      discountPercent,
+      finalPrice,
+      depositAmount: finalPrice * 0.1,
+      quotationId: quote.value.id,
+    })
+    router.push('/cart/view')
+  } catch (e) {
+    error.value = e.response?.data?.message || e.message || 'Không thể chuẩn bị phiếu đặt cọc theo báo giá'
+  } finally {
+    submitting.value = false
+  }
+}
+async function updateQuoteStatus(status) {
+  submitting.value = true
+  error.value = ''
+  try {
+    const { data } = await quotationApi.update(quote.value.id, {
+      discount: quote.value.discount || 0,
+      note: quote.value.note,
+      status,
+    })
+    if (!data?.success || !data.data) {
+      throw new Error(data?.message || 'Không thể cập nhật trạng thái báo giá')
+    }
+    quote.value = data.data
+  } catch (e) {
+    error.value = e.response?.data?.message || e.message || 'Không thể cập nhật trạng thái báo giá'
+  } finally {
+    submitting.value = false
+  }
+}
 async function convertToOrder() { submitting.value = true; error.value = ''; try { const { data } = await quotationApi.convertToOrder(quote.value.id, orderForm.value); router.push(`/order/detail/${data.data.id}`) } catch (e) { error.value = e.response?.data?.message || 'Không thể tạo đơn hàng' } finally { submitting.value = false } }
 onMounted(load)
 useAutoRefresh(load)
@@ -140,6 +233,11 @@ useAutoRefresh(load)
   font-size: 1.15rem
 }
 
+.approved-discount {
+  color: #15803d;
+  font-weight: 700
+}
+
 .status {
   display: inline-block;
   background: #fef3c7;
@@ -147,6 +245,31 @@ useAutoRefresh(load)
   border-radius: 999px;
   padding: 6px 12px;
   font-weight: 700
+}
+
+.status.expired {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.quote-validity p {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+.quote-expired-message {
+  color: #b91c1c;
+  font-weight: 700;
+  margin-top: 12px;
+}
+
+.price-lock-term {
+  color: #6b7280;
+  font-size: .85rem;
+  line-height: 1.55;
+  margin: 14px 0 0;
 }
 
 .order-form {

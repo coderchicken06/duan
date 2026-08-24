@@ -102,7 +102,11 @@ public class RestOrderController {
             return fail("Not authenticated");
         }
         if (cartPayload == null || cartPayload.isEmpty()) {
-            return fail("Cart is empty");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Phiếu đặt cọc chưa có xe được chọn.");
+        }
+        if (cartPayload.size() != 1) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Mỗi giao dịch đặt cọc chỉ áp dụng cho 01 xe duy nhất");
         }
 
         try {
@@ -112,13 +116,17 @@ public class RestOrderController {
                 double price = Double.parseDouble(item.get("price").toString());
                 Object qtyValue = item.containsKey("qty") ? item.get("qty") : item.get("quantity");
                 int quantity = Integer.parseInt(qtyValue.toString());
+                if (quantity != 1) {
+                    throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                            "Mỗi giao dịch đặt cọc chỉ áp dụng cho 01 xe duy nhất");
+                }
                 cart.put(carId, new com.example.carstore.entity.CartItem(carId, null, price, quantity));
             }
 
             Orders order = orderService.checkout(auth.getName(), "Đặt hàng từ API /api/orders", cart);
             return Map.of("success", true, "data", order, "orderId", order.getId());
         } catch (IllegalArgumentException e) {
-            return fail(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         } catch (Exception e) {
             return fail("Error creating order: " + e.getMessage());
         }
@@ -151,7 +159,7 @@ public class RestOrderController {
                     "orderId", order.getId(),
                     "message", "Order placed successfully");
         } catch (IllegalArgumentException e) {
-            return fail(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         } catch (Exception e) {
             return fail("Error placing order: " + e.getMessage());
         }

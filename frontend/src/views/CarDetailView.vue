@@ -166,11 +166,13 @@ import { showCartToast } from '../composables/useCartToast'
 import { useAutoRefresh } from '../composables/useAutoRefresh'
 import { useCartStore } from '../stores/cart'
 import { useAuthStore } from '../stores/auth'
+import { useCatalogStore } from '../stores/catalog'
 
 const route = useRoute()
 const router = useRouter()
 const cart = useCartStore()
 const auth = useAuthStore()
+const catalog = useCatalogStore()
 const car = ref(null)
 const reviews = ref([])
 const reviewAverage = ref(0)
@@ -253,7 +255,7 @@ const detailRows = computed(() => [
 ].filter((item) => hasData(item.raw))
   .map((item) => ({ label: item.label, value: item.format ? item.format(item.raw) : item.raw })))
 
-async function loadData(silent = false) {
+async function loadData(silent = false, force = false) {
   const currentVersion = ++loadVersion
   const carId = String(route.params.id)
   if (!silent) {
@@ -268,12 +270,9 @@ async function loadData(silent = false) {
   }
 
   try {
-    const detailResponse = await carApi.getById(carId)
+    const detail = await catalog.loadCarDetail(carId, force)
     if (currentVersion !== loadVersion) return
-    if (!detailResponse.data?.success || !detailResponse.data?.data) {
-      throw new Error(detailResponse.data?.message || 'Không tìm thấy xe')
-    }
-    car.value = detailResponse.data.data
+    car.value = detail
 
     const [similarResult, imagesResult, reviewsResult, promotionResult] = await Promise.allSettled([
       carApi.getSimilar(carId),
@@ -332,7 +331,7 @@ async function loadData(silent = false) {
 
 onMounted(loadData)
 watch(() => route.params.id, () => loadData())
-useAutoRefresh(() => loadData(true))
+useAutoRefresh(() => loadData(true, true), 0)
 
 function toggleCurrent() {
   if (!has(car.value.id) && count.value >= 3) {

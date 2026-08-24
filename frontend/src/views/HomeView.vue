@@ -48,14 +48,16 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { carApi, cartApi } from '../api'
+import { cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
 import { showCartToast } from '../composables/useCartToast'
 import { useAutoRefresh } from '../composables/useAutoRefresh'
 import { useCartStore } from '../stores/cart'
+import { useCatalogStore } from '../stores/catalog'
 
 const route = useRoute()
 const cart = useCartStore()
+const catalog = useCatalogStore()
 const cars = ref([])
 const loading = ref(true)
 const loadError = ref('')
@@ -63,22 +65,27 @@ const alert = ref('')
 const q = ref(route.query.q || '')
 
 onMounted(loadCars)
-useAutoRefresh(() => loadCars(true))
+useAutoRefresh(() => loadCars(true, true), 0)
 
 watch(() => route.fullPath, () => {
   q.value = String(route.query.q || '')
   loadCars(true)
 })
 
-async function loadCars(silent = false) {
+async function loadCars(silent = false, force = false) {
   if (!silent) {
     loading.value = true
     loadError.value = ''
   }
   try {
-    const { data } = await carApi.getAll(String(q.value || '') || undefined)
-    const result = Array.isArray(data) ? data : data.data || []
-    cars.value = result.filter((car) => String(car.status || '').toUpperCase() === 'AVAILABLE')
+    const result = await catalog.loadCars(force)
+    const keyword = String(q.value || '').trim().toLowerCase()
+    cars.value = result.filter((car) => {
+      const name = String(car.name || '').toLowerCase()
+      const brandName = String(car.brandName || '').toLowerCase()
+      return String(car.status || '').toUpperCase() === 'AVAILABLE'
+        && (!keyword || name.includes(keyword) || brandName.includes(keyword))
+    })
   } catch (error) {
     if (!silent) {
       cars.value = []
@@ -94,10 +101,10 @@ async function addToCart(id) {
   const { data } = await cartApi.add(id)
   if (data.success) {
     await cart.refresh()
-    showCartToast('Thêm vào giỏ hàng thành công!')
+    showCartToast('Thêm vào đặt cọc xe thành công!')
     alert.value = ''
   } else {
-    alert.value = data.message || 'Không thể thêm vào giỏ'
+    alert.value = data.message || 'Không thể thêm vào đặt cọc xe'
   }
 }
 </script>

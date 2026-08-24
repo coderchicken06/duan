@@ -56,18 +56,35 @@ class SupportRequestServiceTest {
                         "Bảo dưỡng định kỳ", LocalDate.now().minusDays(1).toString(),
                         "09:00", null));
 
-        assertEquals("Ngày hẹn không được ở trong quá khứ.", error.getMessage());
+        assertEquals("Thời gian hẹn không thể ở trong quá khứ!", error.getMessage());
     }
 
     @Test
-    void rejectsPastTimeToday() {
+    void rejectsAppointmentsOutsideShowroomHours() {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> service.createServiceBooking(
                         "Nguyễn Văn A", "+84912345678", "Xe của khách",
-                        "Bảo dưỡng định kỳ", LocalDate.now().toString(),
-                        "00:00", null));
+                        "Bảo dưỡng định kỳ", LocalDate.now().plusDays(1).toString(),
+                        "04:23", null));
 
-        assertEquals("Giờ hẹn phải sau thời điểm hiện tại.", error.getMessage());
+        assertEquals("Showroom chỉ tiếp nhận lịch hẹn trong khung giờ từ 07:30 đến 18:30!", error.getMessage());
+    }
+
+    @Test
+    void acceptsTomorrowAppointmentWithinShowroomHours() {
+        Authentication auth = mock(Authentication.class);
+        when(auth.isAuthenticated()).thenReturn(true);
+        when(auth.getName()).thenReturn("user1");
+        when(repository.save(any(SupportRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        SupportRequest saved = service.createServiceBooking(
+                "Nguyễn Văn A", "+84912345678", "Toyota Camry",
+                "Bảo dưỡng định kỳ", LocalDate.now().plusDays(1).toString(),
+                "09:00", auth);
+
+        assertEquals(LocalDate.now().plusDays(1), saved.getAppointmentDate());
+        assertEquals(java.time.LocalTime.of(9, 0), saved.getAppointmentTime());
+        verify(repository).save(any(SupportRequest.class));
     }
 
     @Test

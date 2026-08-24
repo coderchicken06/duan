@@ -53,7 +53,8 @@ public class ContractService {
 
     public Contract getByOrderId(Integer orderId) {
         return contractRepo.findByOrderId(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy hợp đồng."));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "Hợp đồng chưa được tạo cho đơn hàng này."));
     }
 
     public void assertCurrentUserCanAccess(Orders order, Authentication authentication) {

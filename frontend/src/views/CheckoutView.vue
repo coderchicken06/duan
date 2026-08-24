@@ -32,7 +32,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { cartApi, orderApi, formatPrice } from '../api'
+import { cartApi, orderApi, quotationApi, formatPrice } from '../api'
 import { useCartStore } from '../stores/cart'
 
 const router = useRouter()
@@ -46,6 +46,10 @@ const orderId = ref(null)
 const submitting = ref(false)
 
 onMounted(async () => {
+  if (cart.depositItem?.quotationId) {
+    total.value = Number(cart.depositItem.finalPrice || 0)
+    return
+  }
   const { data } = await cartApi.get()
   total.value = data.total || 0
   if (!data.items?.length) router.push('/cart/view')
@@ -56,12 +60,18 @@ async function submit() {
   submitting.value = true
   error.value = ''
   try {
-    const { data } = await orderApi.checkout(address.value, paymentMethod)
+    const isQuotationDeposit = Boolean(cart.depositItem?.quotationId)
+    const { data } = isQuotationDeposit
+      ? await quotationApi.convertToOrder(cart.depositItem.quotationId, {
+        address: address.value,
+        paymentMethod,
+      })
+      : await orderApi.checkout(address.value, paymentMethod)
     if (data.success) {
-      cart.reset()
+      await clearDepositCart()
       success.value = true
-      orderId.value = data.orderId
-      router.push({ path: `/orders/${data.orderId}/payment`, query: { method: 'sepay' } })
+      orderId.value = isQuotationDeposit ? data.data.id : data.orderId
+      router.push({ path: `/orders/${orderId.value}/payment`, query: { method: 'sepay' } })
     } else {
       error.value = data.message
     }
@@ -69,6 +79,15 @@ async function submit() {
     error.value = e.response?.data?.message || 'Lỗi đặt hàng'
   } finally {
     submitting.value = false
+  }
+}
+
+async function clearDepositCart() {
+  cart.clearCart()
+  try {
+    await cartApi.clear()
+  } catch {
+    // State trên giao diện vẫn phải được dọn sau khi đơn cọc đã tạo thành công.
   }
 }
 </script>

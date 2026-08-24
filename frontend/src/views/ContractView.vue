@@ -67,6 +67,10 @@
         <p class="total"><span>Còn lại</span><strong>{{ formatPrice(remaining) }} VNĐ</strong></p>
       </section>
 
+      <div v-if="isDepositPaid" class="alert alert-success contract-payment-confirmed" role="status">
+        Đã thanh toán tiền cọc thành công.
+      </div>
+
       <section class="contract-section terms">
         <h2>Điều khoản</h2>
         <ol>
@@ -83,7 +87,7 @@
       </section>
       <footer class="contract-actions">
         <button class="btn btn-outline-secondary" @click="$router.back()">Quay lại</button>
-        <router-link class="btn btn-danger" :to="`/orders/${order.id}/payment`">Thanh toán</router-link>
+        <router-link v-if="!isDepositPaid" class="btn btn-danger" :to="`/orders/${order.id}/payment`">Thanh toán</router-link>
         <button class="btn btn-dark" @click="printContract">In / Xuất PDF</button>
       </footer>
     </article>
@@ -99,6 +103,12 @@ import { useAutoRefresh } from '../composables/useAutoRefresh'
 const route = useRoute(), loading = ref(true), error = ref(''), data = ref({})
 const contract = computed(() => data.value.contract || {}), order = computed(() => data.value.order || {})
 const customer = computed(() => data.value.customer || {}), details = computed(() => data.value.details || []), payments = computed(() => data.value.payments || [])
+const isDepositPaid = computed(() => {
+  const depositStatuses = [contract.value.depositStatus, order.value.depositStatus]
+  const contractStatus = String(contract.value.status || '').toUpperCase()
+  return depositStatuses.some((status) => String(status || '').toUpperCase() === 'PAID')
+    || ['PAID', 'PROCESSING'].includes(contractStatus)
+})
 const paidAmount = computed(() => {
   const historyTotal = payments.value.filter(p => p.status === 'SUCCESS').reduce((sum, p) => sum + Number(p.amount || 0), 0)
   return historyTotal || (contract.value.depositStatus === 'PAID' ? Number(contract.value.depositAmount || 0) : 0)
@@ -108,7 +118,7 @@ const formatDate = value => value ? new Date(value).toLocaleString('vi-VN') : 'C
 const printContract = () => window.print()
 async function loadContract() {
   try {
-    const response = await api.get(`/api/contracts/public/order/${route.params.id}`, { params: { _ts: Date.now() } })
+    const response = await api.get(`/api/contracts/${route.params.id}`, { params: { _ts: Date.now() } })
     data.value = response.data.data
     error.value = ''
   } catch (e) {
@@ -255,6 +265,10 @@ useAutoRefresh(loadContract)
   display: flex;
   justify-content: flex-end;
   gap: 10px
+}
+
+.contract-payment-confirmed {
+  margin: 24px 0;
 }
 
 @media(max-width:700px) {

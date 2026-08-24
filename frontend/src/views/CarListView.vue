@@ -85,14 +85,16 @@
 <script setup>
 import { ref, watch, onMounted, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { brandApi, carApi, cartApi } from '../api'
+import { cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
 import { showCartToast } from '../composables/useCartToast'
 import { useAutoRefresh } from '../composables/useAutoRefresh'
 import { useCartStore } from '../stores/cart'
+import { useCatalogStore } from '../stores/catalog'
 
 const route = useRoute()
 const cart = useCartStore()
+const catalog = useCatalogStore()
 const allCars = ref([])
 const brands = ref([])
 const loading = ref(true)
@@ -140,22 +142,20 @@ watch(() => route.fullPath, () => {
 })
 
 onMounted(loadCars)
-useAutoRefresh(() => loadCars(true), 0)
+useAutoRefresh(() => loadCars(true, true), 0)
 
-async function loadCars(silent = false) {
+async function loadCars(silent = false, force = false) {
   if (!silent) {
     loading.value = true
     loadError.value = ''
   }
   try {
-    const [carsResponse, brandsResponse] = await Promise.all([
-      carApi.getAll(),
-      brandApi.getAll(),
+    const [carData, brandData] = await Promise.all([
+      catalog.loadCars(force),
+      catalog.loadBrands(force),
     ])
-    const carData = carsResponse.data
-    const brandData = brandsResponse.data
-    allCars.value = Array.isArray(carData) ? carData : carData.data || []
-    brands.value = Array.isArray(brandData) ? brandData : brandData.data || []
+    allCars.value = carData
+    brands.value = brandData
   } catch {
     if (!silent) {
       allCars.value = []
@@ -179,14 +179,14 @@ function resetFilters() {
 async function addToCart(id) {
   const car = allCars.value.find((item) => item.id === id)
   if (!car || Number(car.stock || 0) <= 0) {
-    message.value = 'Xe đã hết hàng, không thể thêm vào giỏ'
+    message.value = 'Xe đã hết hàng, không thể thêm vào đặt cọc xe'
     return
   }
   try {
     const { data } = await cartApi.add(id)
     if (data.success) {
       await cart.refresh()
-      showCartToast('Thêm vào giỏ hàng thành công!')
+      showCartToast('Thêm vào đặt cọc xe thành công!')
       message.value = ''
     } else {
       message.value = data.message || 'Lỗi'

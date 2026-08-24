@@ -54,7 +54,6 @@ class PaymentTransactionServiceTest {
                 accountRepo, mailService, new ObjectMapper());
         ReflectionTestUtils.setField(service, "merchantId", "SP-TEST");
         ReflectionTestUtils.setField(service, "secretKey", "checkout-secret");
-        ReflectionTestUtils.setField(service, "apiKey", "webhook-api-key");
         ReflectionTestUtils.setField(service, "checkoutUrl",
                 "https://pay-sandbox.sepay.vn/v1/checkout/init");
     }
@@ -74,68 +73,28 @@ class PaymentTransactionServiceTest {
     }
 
     @Test
-    void webhookAuthenticationRejectsWrongSecretAndAuthorization() {
-        assertFalse(service.isValidWebhookSecret("wrong-secret", null));
-        assertFalse(service.isValidWebhookSecret(null, "Apikey wrong-secret"));
-        assertFalse(service.isValidWebhookSecret(null, null));
-        assertTrue(service.isValidWebhookSecret("checkout-secret", null));
-        assertTrue(service.isValidWebhookSecret(null, "Apikey webhook-api-key"));
-    }
-
-    @Test
-    void webhookAuthorizationUsesApiKeyWhenSecretIsNotConfigured() {
-        ReflectionTestUtils.setField(service, "secretKey", "");
-
-        assertFalse(service.isValidWebhookSecret("", null));
-        assertTrue(service.isValidWebhookSecret(null, "Apikey webhook-api-key"));
-    }
-
-    @Test
-    void webhookAuthenticationRejectsAuthorizationWhenApiKeyIsNotConfigured() {
-        ReflectionTestUtils.setField(service, "apiKey", "");
-
-        assertFalse(service.isValidWebhookSecret(null, "Apikey webhook-api-key"));
-    }
-
-    @Test
-    void webhookControllerIgnoresInvalidAuthenticationHeaders() {
-        PaymentTransactionService paymentService = mock(PaymentTransactionService.class);
-        RestPaymentTransactionController controller =
-                new RestPaymentTransactionController(paymentService, orderRepo);
-        Map<String, Object> payload = Map.of("referenceCode", "TX-UNAUTHORIZED");
-        ResponseEntity<?> response = controller.sePayWebhook(
-                payload, null, "wrong-secret");
-
-        assertEquals(200, response.getStatusCodeValue());
-        verify(paymentService).processSePayWebhook(payload);
-        verify(paymentService, never()).isValidWebhookSecret(any(), any());
-    }
-
-    @Test
     void webhookControllerAcceptsPayloadWithoutAuthenticationHeaders() {
         PaymentTransactionService paymentService = mock(PaymentTransactionService.class);
         RestPaymentTransactionController controller =
                 new RestPaymentTransactionController(paymentService, orderRepo);
-        Map<String, Object> payload = Map.of("referenceCode", "TX-MISSING-AUTH");
-        ResponseEntity<?> response = controller.sePayWebhook(
-                payload, null, null);
+        Map<String, Object> payload = Map.of("referenceCode", "TX-WEBHOOK");
+
+        ResponseEntity<?> response = controller.sePayWebhook(payload);
 
         assertEquals(200, response.getStatusCodeValue());
         verify(paymentService).processSePayWebhook(payload);
-        verify(paymentService, never()).isValidWebhookSecret(any(), any());
     }
 
     @Test
-    void webhookControllerAcceptsEmptySePayProbeWithoutAuthentication() {
+    void webhookControllerAcceptsEmptySePayProbe() {
         PaymentTransactionService paymentService = mock(PaymentTransactionService.class);
         RestPaymentTransactionController controller =
                 new RestPaymentTransactionController(paymentService, orderRepo);
-        ResponseEntity<?> response = controller.sePayWebhook(
-                null, null, null);
+
+        ResponseEntity<?> response = controller.sePayWebhook(null);
 
         assertEquals(200, response.getStatusCodeValue());
         verify(paymentService, never()).processSePayWebhook(anyMap());
-        verify(paymentService, never()).isValidWebhookSecret(any(), any());
     }
 
     @Test

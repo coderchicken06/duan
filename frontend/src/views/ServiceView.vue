@@ -61,14 +61,19 @@
           </div>
           <div class="field">
             <label for="service-date">Ngày hẹn *</label>
-            <DatePickerInput id="service-date" v-model="form.appointmentDate" :min="today"
+            <DatePickerInput id="service-date" v-model="form.appointmentDate" :min="minimumAppointmentDate"
               aria-label="Ngày hẹn" title="Ngày hẹn (dd/mm/yyyy)" />
           </div>
           <div class="field">
             <label for="service-time">Giờ hẹn *</label>
-            <input id="service-time" v-model="form.appointmentTime" :min="minimumAppointmentTime" max="18:30" type="time"
-              class="form-control" />
-            <small>Showroom nhận lịch từ 07:30 đến 18:30.</small>
+            <input id="service-time" v-model="form.appointmentTime" :min="minimumAppointmentTime" :max="showroomCloseTime"
+              type="time" class="form-control" :disabled="!form.appointmentDate"
+              :class="{ 'is-invalid': appointmentTimeError }" />
+            <small :class="{ 'text-danger': appointmentTimeError }">
+              {{ !form.appointmentDate
+                ? 'Vui lòng chọn ngày hẹn trước khi chọn giờ hẹn.'
+                : appointmentTimeError || 'Showroom nhận lịch từ 07:30 đến 18:30.' }}
+            </small>
           </div>
 
           <div class="booking-actions">
@@ -85,7 +90,7 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, supportApi } from '../api'
 import DatePickerInput from '../components/DatePickerInput.vue'
@@ -100,7 +105,6 @@ const toLocalDate = (value) => {
   const day = String(value.getDate()).padStart(2, '0')
   return `${year}-${month}-${day}`
 }
-const today = toLocalDate(new Date())
 const toApiDate = (value) => /^\d{4}-\d{2}-\d{2}$/.test(String(value || '')) ? String(value) : ''
 const services = [
   { icon: '🔧', title: 'Bảo dưỡng định kỳ', desc: 'Kiểm tra và bảo dưỡng xe theo tiêu chuẩn hãng.' },
@@ -124,14 +128,54 @@ const submitting = ref(false)
 const selectedFromCatalog = ref(false)
 const showroomOpenTime = '07:30'
 const showroomCloseTime = '18:30'
+const currentTime = ref(new Date())
+let clockTimer
+
+const today = computed(() => toLocalDate(currentTime.value))
+const tomorrow = computed(() => {
+  const date = new Date(currentTime.value)
+  date.setDate(date.getDate() + 1)
+  return toLocalDate(date)
+})
+
+function getTodayMinimumTime() {
+  const minimum = new Date(currentTime.value.getTime() + 30 * 60 * 1000)
+  if (minimum.getSeconds() || minimum.getMilliseconds()) {
+    minimum.setMinutes(minimum.getMinutes() + 1)
+  }
+  minimum.setSeconds(0, 0)
+
+  const candidate = `${String(minimum.getHours()).padStart(2, '0')}:${String(minimum.getMinutes()).padStart(2, '0')}`
+  return candidate > showroomOpenTime ? candidate : showroomOpenTime
+}
+
+const canBookToday = computed(() => getTodayMinimumTime() <= showroomCloseTime)
+const minimumAppointmentDate = computed(() => canBookToday.value ? today.value : tomorrow.value)
 const minimumAppointmentTime = computed(() => {
-  if (form.value.appointmentDate !== today) return showroomOpenTime
-  const nextMinute = new Date(Date.now() + 60_000)
-  const nextTime = `${String(nextMinute.getHours()).padStart(2, '0')}:${String(nextMinute.getMinutes()).padStart(2, '0')}`
-  return nextTime > showroomOpenTime ? nextTime : showroomOpenTime
+  if (form.value.appointmentDate !== today.value) return showroomOpenTime
+  return getTodayMinimumTime()
+})
+
+const appointmentTimeError = computed(() => {
+  const { appointmentDate, appointmentTime } = form.value
+  if (!appointmentDate || !appointmentTime) return ''
+  if (appointmentTime < showroomOpenTime || appointmentTime > showroomCloseTime) {
+    return 'Showroom chỉ nhận lịch hẹn từ 07:30 đến 18:30 hàng ngày.'
+  }
+  if (appointmentDate === today.value && !canBookToday.value) {
+    return 'Hôm nay đã hết khung giờ nhận lịch, vui lòng chọn từ ngày mai.'
+  }
+  if (appointmentDate === today.value && appointmentTime < minimumAppointmentTime.value) {
+    return 'Không thể đặt lịch vào khung giờ đã qua trong ngày.'
+  }
+  return ''
 })
 
 onMounted(async () => {
+  clockTimer = window.setInterval(() => {
+    currentTime.value = new Date()
+  }, 60_000)
+
   if (!route.query.carId) return
   try {
     const { data } = await carApi.getById(String(route.query.carId))
@@ -145,20 +189,42 @@ onMounted(async () => {
   }
 })
 
+onBeforeUnmount(() => {
+  window.clearInterval(clockTimer)
+})
+
+watch(() => form.value.appointmentDate, (appointmentDate) => {
+  form.value.appointmentTime = ''
+  if (!appointmentDate) return
+
+  if (appointmentDate < minimumAppointmentDate.value) {
+    form.value.appointmentDate = tomorrow.value
+    form.value.appointmentTime = ''
+    ok.value = false
+    msg.value = 'Hôm nay đã hết khung giờ nhận lịch, vui lòng chọn từ ngày mai.'
+    return
+  }
+
+})
+
 function validateForm() {
-  if (!form.value.name || !form.value.phone || !form.value.carInfo || !form.value.serviceType
-    || !form.value.appointmentDate || !form.value.appointmentTime) {
+  if (!form.value.name || !form.value.phone || !form.value.carInfo || !form.value.serviceType) {
     return 'Vui lòng điền đầy đủ các trường bắt buộc.'
   }
+  if (!form.value.appointmentDate) return 'Vui lòng chọn ngày hẹn.'
+  if (!form.value.appointmentTime) return 'Vui lòng chọn giờ hẹn từ 07:30 đến 18:30.'
   if (!isValidVietnamesePhone(form.value.phone)) {
     return 'Số điện thoại phải có 9 chữ số, 10 chữ số bắt đầu bằng 0, hoặc bắt đầu bằng +84/84.'
   }
-  if (form.value.appointmentTime < showroomOpenTime || form.value.appointmentTime > showroomCloseTime) {
-    return 'Showroom chỉ tiếp nhận xe từ 07:30 đến 18:30.'
+  if (form.value.appointmentDate < minimumAppointmentDate.value) {
+    return 'Hôm nay đã hết khung giờ nhận lịch, vui lòng chọn từ ngày mai.'
+  }
+  if (appointmentTimeError.value) {
+    return appointmentTimeError.value
   }
   const appointment = new Date(`${form.value.appointmentDate}T${form.value.appointmentTime}`)
-  if (Number.isNaN(appointment.getTime()) || appointment.getTime() <= Date.now()) {
-    return 'Thời gian hẹn phải sau thời điểm hiện tại.'
+  if (Number.isNaN(appointment.getTime()) || appointment.getTime() <= currentTime.value.getTime()) {
+    return 'Thời gian hẹn không thể ở trong quá khứ!'
   }
   return ''
 }
@@ -321,6 +387,25 @@ async function submit() {
 
 .field small {
   color: #6b7280
+}
+
+.field .form-control:disabled {
+  background: #f3f4f6;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+:deep(.date-picker-input__display) {
+  display: flex;
+  align-items: center;
+  height: 46px;
+  line-height: normal;
+}
+
+:deep(.date-picker-input__icon) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .booking-actions {

@@ -5,6 +5,8 @@ import com.example.carstore.dto.SupportRequestCreateDto;
 import com.example.carstore.service.SupportRequestService;
 import com.example.carstore.util.ResponseUtils;
 import com.example.carstore.util.SecurityUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -47,28 +49,28 @@ public class RestServiceController {
     }
 
     @PostMapping
-    public Map<String, Object> createSupportRequest(
+    public ResponseEntity<?> createSupportRequest(
             @RequestBody SupportRequestCreateDto request,
             Authentication auth) {
 
         if (!SecurityUtils.isLoggedIn(auth)) {
-            return ResponseUtils.fail("Not authenticated");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ResponseUtils.fail("Not authenticated"));
         }
 
         if (request == null) {
-            return ResponseUtils.fail("Support request is required");
+            return ResponseEntity.badRequest().body(ResponseUtils.fail("Support request is required"));
         }
 
         if (!hasText(request.getName())) {
-            return ResponseUtils.fail("Name is required");
+            return ResponseEntity.badRequest().body(ResponseUtils.fail("Name is required"));
         }
 
         if (!hasText(request.getPhone())) {
-            return ResponseUtils.fail("Phone is required");
+            return ResponseEntity.badRequest().body(ResponseUtils.fail("Phone is required"));
         }
 
         if (!hasText(request.getContent())) {
-            return ResponseUtils.fail("Content is required");
+            return ResponseEntity.badRequest().body(ResponseUtils.fail("Content is required"));
         }
         if (!hasText(request.getType())) {
             request.setType("chat");
@@ -91,14 +93,14 @@ public class RestServiceController {
                 saved = supportRequestService.createFromRequest(entity, auth);
             }
 
-            return Map.of(
+            return ResponseEntity.ok(Map.of(
                     "success", true,
                     "message", "service".equalsIgnoreCase(saved.getType())
                             ? "Đặt lịch dịch vụ thành công" : "Gửi yêu cầu hỗ trợ thành công",
                     "id", saved.getId()
-            );
+            ));
         } catch (IllegalArgumentException ex) {
-            return ResponseUtils.fail(ex.getMessage());
+            return ResponseEntity.badRequest().body(ResponseUtils.fail(ex.getMessage()));
         }
     }
 

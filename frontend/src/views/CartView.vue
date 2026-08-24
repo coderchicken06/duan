@@ -46,18 +46,18 @@
 
               <div class="cart-price-row">
                 <div>
-                  <span class="cart-label">Đơn giá</span>
-                  <strong>{{ formatPrice(item.price) }} VNĐ</strong>
+                  <span class="cart-label">Giá niêm yết</span>
+                  <strong>{{ formatPrice(itemListPrice(item)) }} VNĐ</strong>
                 </div>
 
-                <div class="cart-quantity">
-                  <span class="cart-label">Số lượng</span>
-                  <strong>1 xe</strong>
+                <div class="cart-discount">
+                  <span class="cart-label">Ưu đãi áp dụng</span>
+                  <strong class="discount-value">{{ formatDiscount(item) }}</strong>
                 </div>
 
                 <div class="cart-line-total">
-                  <span class="cart-label">Thành tiền</span>
-                  <strong>{{ formatPrice(item.price * item.quantity) }} VNĐ</strong>
+                  <span class="cart-label">Giá bán sau ưu đãi</span>
+                  <strong>{{ formatPrice(itemFinalPrice(item)) }} VNĐ</strong>
                 </div>
               </div>
             </div>
@@ -66,12 +66,16 @@
 
         <aside class="cs-card cart-summary">
           <h2>Tóm tắt phiếu đặt cọc</h2>
-          <div class="summary-row"><span>Số lượng</span><strong>{{ totalQuantity }} xe</strong></div>
-          <div class="summary-total"><span>Tổng tiền</span><strong>{{ formatPrice(total) }} VNĐ</strong></div>
+          <div class="summary-row"><span>Giá niêm yết xe</span><strong>{{ formatPrice(listPrice) }} VNĐ</strong></div>
+          <div class="summary-row summary-discount"><span>Ưu đãi / khuyến mãi</span><strong>-{{ formatPrice(discountAmount) }} VNĐ</strong></div>
+          <div class="summary-row"><span>Tổng giá trị xe sau ưu đãi</span><strong>{{ formatPrice(total) }} VNĐ</strong></div>
+          <div class="summary-total"><span>Tiền cọc giữ chỗ (10%)</span><strong>{{ formatPrice(depositAmount) }} VNĐ</strong></div>
+          <div class="summary-row"><span>Thanh toán khi nhận xe</span><strong>{{ formatPrice(remainingAmount) }} VNĐ</strong></div>
           <router-link class="btn cs-btn cs-btn-primary w-100" to="/checkout">Tiến hành đặt cọc</router-link>
           <button class="btn cs-btn cs-btn-ghost w-100" type="button" :disabled="clearing" @click="clearCart">
             {{ clearing ? 'Đang xóa...' : 'Xóa toàn bộ xe đã chọn' }}
           </button>
+          <p class="cart-hold-note">Phiếu cọc có hiệu lực giữ chỗ trong 07 ngày làm việc.</p>
           <router-link class="cart-continue" to="/car/list">← Tiếp tục xem xe</router-link>
         </aside>
       </div>
@@ -95,7 +99,30 @@ const busyId = ref(null)
 const message = ref('')
 const loadError = ref('')
 
-const totalQuantity = computed(() => items.value.reduce((sum, item) => sum + item.quantity, 0))
+const itemListPrice = item => Number(item.listPrice ?? item.originalPrice ?? item.price ?? 0)
+const itemFinalPrice = item => Number(item.finalPrice ?? item.price ?? 0)
+const itemDiscount = item => Number(item.discountAmount ?? Math.max(0, itemListPrice(item) - itemFinalPrice(item)))
+const itemDiscountPercent = item => {
+  const explicitPercent = Number(item.discountPercent)
+  if (Number.isFinite(explicitPercent) && explicitPercent > 0) return explicitPercent
+  const list = itemListPrice(item)
+  return list > 0 ? itemDiscount(item) * 100 / list : 0
+}
+const listPrice = computed(() => items.value.reduce((sum, item) => sum + itemListPrice(item), 0))
+const discountAmount = computed(() => items.value.reduce((sum, item) => sum + itemDiscount(item), 0))
+const depositAmount = computed(() => items.value.reduce(
+  (sum, item) => sum + Number(item.depositAmount ?? itemFinalPrice(item) * 0.1),
+  0,
+))
+const remainingAmount = computed(() => Math.max(0, total.value - depositAmount.value))
+
+function formatDiscount(item) {
+  const amount = itemDiscount(item)
+  const percent = itemDiscountPercent(item)
+  if (amount <= 0 || percent <= 0) return '-0 VNĐ'
+  const percentText = percent % 1 === 0 ? percent : percent.toFixed(2)
+  return `-${percentText}% (-${formatPrice(amount)} VNĐ)`
+}
 
 onMounted(loadCart)
 
@@ -103,6 +130,12 @@ async function loadCart() {
   loading.value = true
   loadError.value = ''
   try {
+    if (cart.depositItem) {
+      items.value = [cart.depositItem]
+      total.value = itemFinalPrice(cart.depositItem)
+      cart.setItems(items.value)
+      return
+    }
     const { data } = await cartApi.get()
     items.value = data.items || []
     cart.setItems(items.value)
@@ -131,7 +164,13 @@ async function updateQuantity(id, action) {
   }
 }
 
-function remove(id) {
+async function remove(id) {
+  if (cart.depositItem?.id === id) {
+    cart.clearDepositItem()
+    items.value = []
+    total.value = 0
+    return
+  }
   return updateQuantity(id, () => cartApi.remove(id))
 }
 
@@ -139,6 +178,12 @@ async function clearCart() {
   clearing.value = true
   message.value = ''
   try {
+    if (cart.depositItem) {
+      cart.clearDepositItem()
+      items.value = []
+      total.value = 0
+      return
+    }
     await cartApi.clear()
     await loadCart()
   } catch {
@@ -344,6 +389,18 @@ async function clearCart() {
 .summary-total strong {
   color: #b91c1c;
   font-size: 1.2rem
+}
+
+.summary-discount strong,
+.discount-value {
+  color: #15803d
+}
+
+.cart-hold-note {
+  color: #6b7280;
+  font-size: .8rem;
+  line-height: 1.5;
+  margin: 4px 0 14px
 }
 
 .cart-summary .btn {

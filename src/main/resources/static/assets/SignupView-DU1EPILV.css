@@ -1,0 +1,33 @@
+
+.cs-card[data-v-fe7bfa24] {
+  box-shadow: 0 16px 40px rgba(31, 41, 55, .1)
+}
+.form-header[data-v-fe7bfa24] {
+  background: #fffafa;
+  border-bottom: 1px solid #fee2e2
+}
+.eyebrow[data-v-fe7bfa24] {
+  color: #dc2626;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .08em
+}
+.form-label[data-v-fe7bfa24] {
+  font-weight: 600;
+  color: #374151
+}
+.form-control[data-v-fe7bfa24] {
+  min-height: 46px;
+  background: #fff;
+  color: #111827;
+  border-color: #d1d5db
+}
+.password-toggle[data-v-fe7bfa24] {
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #4b5563
+}
+.cs-btn[data-v-fe7bfa24] {
+  min-height: 44px;
+  font-weight: 600
+}

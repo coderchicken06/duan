@@ -30,6 +30,8 @@ public class SupportRequestService {
     private static final Set<String> VALID_TYPES = Set.of(
             "chat", "consulting", "warranty", "service"
     );
+    private static final LocalTime SHOWROOM_OPENING_TIME = LocalTime.of(7, 30);
+    private static final LocalTime SHOWROOM_CLOSING_TIME = LocalTime.of(18, 30);
 
     private final SupportRequestRepository supportRepo;
 
@@ -91,21 +93,21 @@ public class SupportRequestService {
         if (appointmentDate == null) {
             throw new IllegalArgumentException("Ngày hẹn không được để trống.");
         }
-        if (appointmentDate.isBefore(now.toLocalDate())) {
-            throw new IllegalArgumentException("Ngày hẹn không được ở trong quá khứ.");
-        }
-
         LocalTime appointmentTime = parseTime(time);
         if (appointmentTime == null) {
             throw new IllegalArgumentException("Giờ hẹn không được để trống.");
         }
-        if (!LocalDateTime.of(appointmentDate, appointmentTime).isAfter(now)) {
-            throw new IllegalArgumentException("Giờ hẹn phải sau thời điểm hiện tại.");
+        if (appointmentTime.isBefore(SHOWROOM_OPENING_TIME) || appointmentTime.isAfter(SHOWROOM_CLOSING_TIME)) {
+            throw new IllegalArgumentException(
+                    "Showroom chỉ tiếp nhận lịch hẹn trong khung giờ từ 07:30 đến 18:30!");
         }
-        LocalTime openingTime = LocalTime.of(7, 30);
-        LocalTime closingTime = LocalTime.of(18, 30);
-        if (appointmentTime.isBefore(openingTime) || appointmentTime.isAfter(closingTime)) {
-            throw new IllegalArgumentException("Showroom chỉ tiếp nhận xe từ 07:30 đến 18:30.");
+
+        LocalDateTime appointmentDateTime = LocalDateTime.of(appointmentDate, appointmentTime);
+        if (!appointmentDateTime.isAfter(now)) {
+            throw new IllegalArgumentException("Thời gian hẹn không thể ở trong quá khứ!");
+        }
+        if (appointmentDate.equals(now.toLocalDate()) && appointmentDateTime.isBefore(now.plusMinutes(30))) {
+            throw new IllegalArgumentException("Thời gian hẹn cần cách thời điểm hiện tại ít nhất 30 phút.");
         }
 
         String username = SecurityUtils.username(auth);

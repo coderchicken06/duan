@@ -28,7 +28,7 @@ class RestCartControllerTest {
     }
 
     @Test
-    void getCartUsesTheSamePromotionalPriceAsCheckout() {
+    void getCartExposesListAndPromotionalPricesSeparately() {
         Car car = new Car();
         car.setId(7);
         car.setName("BMW X5");
@@ -44,7 +44,11 @@ class RestCartControllerTest {
         Map<String, Object> response = controller.getCart(session);
 
         CartItem item = cartService.getCart(session).get(7);
-        assertEquals(900_000_000D, item.getPrice());
+        assertEquals(1_000_000_000D, item.getPrice());
+        assertEquals(100_000_000D, item.getDiscountAmount());
+        assertEquals(10D, item.getDiscountPercent());
+        assertEquals(900_000_000D, item.getFinalPrice());
+        assertEquals(90_000_000D, item.getDepositAmount());
         assertEquals(900_000_000D, (double) response.get("total"));
     }
 }

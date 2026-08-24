@@ -58,9 +58,6 @@ public class PaymentTransactionService {
     @Value("${sepay.secret-key:}")
     private String secretKey;
 
-    @Value("${sepay.api-key:}")
-    private String apiKey;
-
     @Value("${sepay.checkout-url:https://pay-sandbox.sepay.vn/v1/checkout/init}")
     private String checkoutUrl;
 
@@ -138,31 +135,6 @@ public class PaymentTransactionService {
         } catch (Exception exception) {
             throw new IllegalStateException("Không thể tạo mã VietQR.", exception);
         }
-    }
-
-    public boolean isValidWebhookSecret(String secret, String authorization) {
-        boolean validAuthorization = false;
-        if (authorization != null && !authorization.isBlank()) {
-            String value = authorization.trim();
-            String prefix = "Apikey ";
-            validAuthorization = value.regionMatches(true, 0, prefix, 0, prefix.length())
-                    && apiKey != null
-                    && !apiKey.isBlank()
-                    && apiKey.equals(value.substring(prefix.length()).trim());
-        }
-
-        boolean validSecret = secret != null
-                && !secret.isBlank()
-                && secretKey != null
-                && !secretKey.isBlank()
-                && secretKey.equals(secret.trim());
-
-        return validAuthorization || validSecret;
-    }
-
-    public boolean isWebhookAuthenticationConfigured() {
-        return (secretKey != null && !secretKey.isBlank())
-                || (apiKey != null && !apiKey.isBlank());
     }
 
     public boolean isSePayConfigured() {

@@ -86,10 +86,12 @@
 <script setup>
 import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { contractApi, paymentTransactionApi, formatPrice } from '../api'
+import { cartApi, contractApi, paymentTransactionApi, formatPrice } from '../api'
+import { useCartStore } from '../stores/cart'
 
 const route = useRoute()
 const router = useRouter()
+const cart = useCartStore()
 const loading = ref(true), submitting = ref(false), error = ref(''), contract = ref({}), payments = ref([])
 const order = ref({})
 // Thêm biến lưu URL ảnh QR
@@ -99,6 +101,7 @@ let pollInterval = null
 let countdownInterval = null
 let reconciliationTimeout = null
 let wasDepositPaid = false
+let cartCleared = false
 
 // Đồng bộ thời hạn thanh toán 3 phút với Backend Scheduler
 const timeLeft = ref(3 * 60)
@@ -154,6 +157,7 @@ async function checkPaymentStatus() {
         }));
         wasDepositPaid = true;
         stopAllTimers();
+        await clearDepositCart();
         window.setTimeout(() => router.replace(`/orders/${route.params.id}/contract`), 400);
       }
     }
@@ -166,6 +170,17 @@ async function checkPaymentStatus() {
     }
   } catch (e) {
     // Bỏ qua lỗi ngầm trong lúc polling
+  }
+}
+
+async function clearDepositCart() {
+  if (cartCleared) return
+  cartCleared = true
+  cart.clearCart()
+  try {
+    await cartApi.clear()
+  } catch {
+    // Đơn đã thanh toán không được giữ lại trong state cọc dù session cart không phản hồi.
   }
 }
 
@@ -264,6 +279,7 @@ async function payDeposit() {
 onMounted(async () => {
   await load();
   wasDepositPaid = contract.value.depositStatus === 'PAID';
+  if (wasDepositPaid) await clearDepositCart();
   if (route.query.method === 'sepay' && contract.value.depositStatus !== 'PAID' && !isTimeout.value) {
     await payDeposit();
   } else if (contract.value.depositStatus !== 'PAID') {

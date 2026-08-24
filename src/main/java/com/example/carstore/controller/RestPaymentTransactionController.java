@@ -55,10 +55,7 @@ public class RestPaymentTransactionController {
     }
 
     @PostMapping("/sepay/webhook")
-    public ResponseEntity<?> sePayWebhook(
-            @RequestBody(required = false) Map<String, Object> payload,
-            @RequestHeader(value = "Authorization", required = false) String authorization,
-            @RequestHeader(value = "X-Secret-Key", required = false) String secret) {
+    public ResponseEntity<?> sePayWebhook(@RequestBody(required = false) Map<String, Object> payload) {
         try {
             // Nếu SePay chỉ gửi request kiểm tra mà không có body
             if (payload == null) {
@@ -77,4 +74,5 @@ public class RestPaymentTransactionController {
                     "error", e.getMessage()));
         }
     }
+
 }

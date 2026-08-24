@@ -29,6 +29,7 @@ class QuotationServiceTest {
     @Mock private OrderRepository orderRepository;
     @Mock private OrderDetailRepository orderDetailRepository;
     @Mock private ContractService contractService;
+    @Mock private PromotionService promotionService;
 
     private QuotationService service;
 
@@ -40,7 +41,8 @@ class QuotationServiceTest {
                 quotationItemRepository,
                 orderRepository,
                 orderDetailRepository,
-                contractService);
+                contractService,
+                promotionService);
     }
 
     @Test
