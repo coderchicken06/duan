@@ -44,7 +44,7 @@
           <div class="role-menu-panel">
             <router-link to="/my-orders" @click="closeUserMenu">📦 Lịch sử đơn hàng</router-link>
             <router-link to="/quotation-history" @click="closeUserMenu">📋 Xem Lịch sử yêu cầu báo giá</router-link>
-            <router-link to="/history" @click="closeUserMenu">📋 Lịch sử yêu cầu</router-link>
+            <router-link to="/history" @click="closeUserMenu">📋 Lịch sử yêu cầu hỗ trợ</router-link>
           </div>
         </details>
 
