@@ -39,6 +39,7 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { authApi } from '../api'
+import { notifyDataUpdated } from '../composables/useAutoRefresh'
 
 const router = useRouter()
 const loading = ref(false)
@@ -53,6 +54,7 @@ async function submit() {
   try {
     const { data } = await authApi.signup(form.value)
     if (data.success) {
+      notifyDataUpdated()
       router.push({ path: '/verify-email', query: { username: data.username, email: data.email } })
     } else {
       error.value = data.message

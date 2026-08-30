@@ -34,6 +34,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { adminApi } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
+import { notifyDataUpdated } from '../../composables/useAutoRefresh'
 import { useAuthStore } from '../../stores/auth'
 
 const route = useRoute()
@@ -66,6 +67,7 @@ async function submit() {
       email: form.value.email,
       role: form.value.role,
     })
+    notifyDataUpdated()
     showCartToast(res.data.message || (isEdit.value ? 'Đã cập nhật người dùng' : 'Đã thêm người dùng'))
     await router.push('/admin/users')
   } catch (error) {

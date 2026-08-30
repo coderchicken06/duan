@@ -140,13 +140,13 @@ async function loadDashboard(silent = false) {
 onMounted(() => {
   loadDashboard()
 })
-useAutoRefresh(() => loadDashboard(true), 0)
+useAutoRefresh(() => loadDashboard(true))
 
 async function setQuotationStatus(quote, status) {
   try {
     await quotationApi.update(quote.id, { discount: quote.discount || 0, status })
-    await loadDashboard()
     notifyDataUpdated()
+    await loadDashboard()
     showCartToast(status === 'Đã duyệt' ? 'Đã duyệt báo giá' : 'Đã từ chối báo giá')
   } catch (error) {
     showCartToast(error.response?.data?.message || 'Không thể cập nhật báo giá.', 'error')

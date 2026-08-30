@@ -21,16 +21,13 @@ public class CartService {
             cart = new HashMap<>();
             session.setAttribute("cart", cart);
         }
+        cart.values().forEach(item -> item.setQuantity(1));
 
         return cart;
     }
 
     public void add(CartItem item, HttpSession session) {
         Map<Integer, CartItem> cart = getCart(session);
-
-        if (item.getQuantity() <= 0) {
-            item.setQuantity(1);
-        }
 
         if (cart.containsKey(item.getId())) {
             throw new IllegalArgumentException("Xe này đã có trong phiếu đặt cọc xe của bạn.");
@@ -52,11 +49,7 @@ public class CartService {
         if (item == null) {
             return;
         }
-        if (item.getQuantity() > 1) {
-            item.setQuantity(item.getQuantity() - 1);
-        } else {
-            cart.remove(id);
-        }
+        cart.remove(id);
     }
 
     public void clear(HttpSession session) {

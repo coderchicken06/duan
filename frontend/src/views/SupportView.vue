@@ -98,6 +98,7 @@
 <script setup>
 import { ref } from 'vue'
 import { supportApi } from '../api'
+import { notifyDataUpdated } from '../composables/useAutoRefresh'
 import { isValidVietnamesePhone, normalizeVietnamesePhone } from '../utils/phone'
 import { useAuthStore } from '../stores/auth'
 
@@ -138,6 +139,7 @@ async function submit() {
     if (data.success) {
       form.value.carInfo = ''
       form.value.content = ''
+      notifyDataUpdated()
     }
   } catch (error) {
     ok.value = false

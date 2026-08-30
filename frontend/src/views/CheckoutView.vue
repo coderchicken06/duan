@@ -34,6 +34,7 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { cartApi, orderApi, quotationApi, formatPrice } from '../api'
 import { useCartStore } from '../stores/cart'
+import { notifyDataUpdated } from '../composables/useAutoRefresh'
 
 const router = useRouter()
 const cart = useCartStore()
@@ -69,6 +70,7 @@ async function submit() {
       : await orderApi.checkout(address.value, paymentMethod)
     if (data.success) {
       await clearDepositCart()
+      notifyDataUpdated()
       success.value = true
       orderId.value = isQuotationDeposit ? data.data.id : data.orderId
       router.push({ path: `/orders/${orderId.value}/payment`, query: { method: 'sepay' } })

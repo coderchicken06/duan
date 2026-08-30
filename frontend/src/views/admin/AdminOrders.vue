@@ -95,9 +95,9 @@ function availableStatuses(order) {
 onMounted(() => {
   load()
 })
-useAutoRefresh(loadSilent, 0)
+useAutoRefresh(loadSilent)
 
-watch(() => route.path, load)
+watch(() => route.fullPath, load)
 
 async function load() {
   try {

@@ -48,10 +48,10 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue'
 import { useRoute } from 'vue-router'
-import { cartApi } from '../api'
+import { cartApi, promotionApi } from '../api'
 import CarCard from '../components/CarCard.vue'
 import { showCartToast } from '../composables/useCartToast'
-import { useAutoRefresh } from '../composables/useAutoRefresh'
+import { notifyDataUpdated, useAutoRefresh } from '../composables/useAutoRefresh'
 import { useCartStore } from '../stores/cart'
 import { useCatalogStore } from '../stores/catalog'
 
@@ -65,7 +65,10 @@ const alert = ref('')
 const q = ref(route.query.q || '')
 
 onMounted(loadCars)
-useAutoRefresh(() => loadCars(true, true), 0)
+useAutoRefresh(() => {
+  console.log('[HOME] Đang tự động làm mới dữ liệu từ Broadcast...')
+  return loadCars(true, true)
+})
 
 watch(() => route.fullPath, () => {
   q.value = String(route.query.q || '')
@@ -80,12 +83,13 @@ async function loadCars(silent = false, force = false) {
   try {
     const result = await catalog.loadCars(force)
     const keyword = String(q.value || '').trim().toLowerCase()
-    cars.value = result.filter((car) => {
+    const availableCars = result.filter((car) => {
       const name = String(car.name || '').toLowerCase()
       const brandName = String(car.brandName || '').toLowerCase()
       return String(car.status || '').toUpperCase() === 'AVAILABLE'
         && (!keyword || name.includes(keyword) || brandName.includes(keyword))
     })
+    cars.value = await Promise.all(availableCars.map(withActivePromotion))
   } catch (error) {
     if (!silent) {
       cars.value = []
@@ -97,10 +101,35 @@ async function loadCars(silent = false, force = false) {
   }
 }
 
+async function withActivePromotion(car) {
+  try {
+    const { data } = await promotionApi.getForCar(car.id)
+    const promotion = data.data?.[0] || null
+    if (!promotion) return { ...car, promotion: null }
+
+    const price = Number(car.price || 0)
+    const discountAmount = promotion.type === 'PERCENT'
+      ? price * Number(promotion.value || 0) / 100
+      : Number(promotion.value || 0)
+    const safeDiscount = Math.max(0, Math.min(price, discountAmount))
+    return {
+      ...car,
+      promotion,
+      promotionTitle: promotion.name,
+      discountPercent: promotion.type === 'PERCENT' ? Number(promotion.value || 0) : null,
+      discountAmount: safeDiscount,
+      discountedPrice: Math.max(0, price - safeDiscount),
+    }
+  } catch {
+    return { ...car, promotion: null }
+  }
+}
+
 async function addToCart(id) {
   const { data } = await cartApi.add(id)
   if (data.success) {
     await cart.refresh()
+    notifyDataUpdated()
     showCartToast('Thêm vào phiếu đặt cọc xe thành công!')
     alert.value = ''
   } else {

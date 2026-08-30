@@ -12,6 +12,8 @@ public interface QuotationRepository extends JpaRepository<Quotation, Integer> {
     List<Quotation> findByCustomerUsernameOrderByQuotationDateDesc(String username);
     List<Quotation> findByStatus(String status);
     boolean existsByCustomerUsernameAndCarIdAndStatus(String username, Integer carId, String status);
+    boolean existsByCarId(Integer carId);
+    boolean existsByCustomerUsername(String customerUsername);
     java.util.Optional<Quotation> findByOrderId(Integer orderId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)

@@ -7,6 +7,8 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.example.carstore.entity.Account;
@@ -19,6 +21,13 @@ import com.example.carstore.repository.BrandRepository;
 import com.example.carstore.repository.CarRepository;
 import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
+import com.example.carstore.repository.ReviewRepository;
+import com.example.carstore.repository.QuotationRepository;
+import com.example.carstore.repository.QuotationItemRepository;
+import com.example.carstore.repository.PromotionCarRepository;
+import com.example.carstore.repository.SupportRequestRepository;
+import com.example.carstore.repository.ContractRepository;
+import com.example.carstore.repository.NewsRepository;
 import com.example.carstore.service.OrderService;
 import com.example.carstore.service.CarImageService;
 import com.example.carstore.util.ImagePathUtils;
@@ -41,6 +50,13 @@ public class RestAdminController {
     private final PasswordEncoder passwordEncoder;
     private final OrderService orderService;
     private final CarImageService carImageService;
+    private final ReviewRepository reviewRepo;
+    private final QuotationRepository quotationRepo;
+    private final QuotationItemRepository quotationItemRepo;
+    private final PromotionCarRepository promotionCarRepo;
+    private final SupportRequestRepository supportRequestRepo;
+    private final ContractRepository contractRepo;
+    private final NewsRepository newsRepo;
 
     public RestAdminController(AccountRepository accountRepo,
                                OrderRepository orderRepo,
@@ -49,7 +65,14 @@ public class RestAdminController {
                                BrandRepository brandRepo,
                                PasswordEncoder passwordEncoder,
                                OrderService orderService,
-                               CarImageService carImageService) {
+                               CarImageService carImageService,
+                               ReviewRepository reviewRepo,
+                               QuotationRepository quotationRepo,
+                               QuotationItemRepository quotationItemRepo,
+                               PromotionCarRepository promotionCarRepo,
+                               SupportRequestRepository supportRequestRepo,
+                               ContractRepository contractRepo,
+                               NewsRepository newsRepo) {
         this.accountRepo = accountRepo;
         this.orderRepo = orderRepo;
         this.detailRepo = detailRepo;
@@ -58,6 +81,13 @@ public class RestAdminController {
         this.passwordEncoder = passwordEncoder;
         this.orderService = orderService;
         this.carImageService = carImageService;
+        this.reviewRepo = reviewRepo;
+        this.quotationRepo = quotationRepo;
+        this.quotationItemRepo = quotationItemRepo;
+        this.promotionCarRepo = promotionCarRepo;
+        this.supportRequestRepo = supportRequestRepo;
+        this.contractRepo = contractRepo;
+        this.newsRepo = newsRepo;
     }
 
     // ===== USERS MANAGEMENT =====
@@ -173,31 +203,31 @@ public class RestAdminController {
     }
 
     @DeleteMapping("/users/{username}")
-    public Map<String, Object> deleteUser(@PathVariable String username, Authentication authentication) {
+    public ResponseEntity<Map<String, Object>> deleteUser(@PathVariable String username, Authentication authentication) {
         try {
             java.util.Optional<Account> accountOpt = accountRepo.findById(username);
             if (accountOpt.isEmpty()) {
-                return Map.of("success", false, "message", "User not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("success", false, "message", "Không tìm thấy tài khoản."));
             }
             if (authentication != null && username.equals(authentication.getName())) {
-                return Map.of("success", false, "message", "You cannot delete your own account.");
+                return invalidDelete("Không thể xóa tài khoản đang đăng nhập.");
             }
             if ("ROLE_ADMIN".equals(accountOpt.get().getRole())
                     && accountRepo.countByRole("ROLE_ADMIN") <= 1) {
-                return Map.of("success", false, "message", "Cannot delete the last administrator.");
+                return invalidDelete("Không thể xóa tài khoản quản trị viên cuối cùng.");
             }
 
-            if (orderRepo.existsByUsername(username)) {
-                return Map.of(
-                        "success", false,
-                        "message", "Cannot delete this user because the user already has orders. Keep the user to preserve order history.");
+            if (hasLinkedUserData(username)) {
+                return invalidDelete(
+                        "Tài khoản đã có đơn hàng, báo giá, đánh giá, yêu cầu hỗ trợ, hợp đồng hoặc tin tức liên kết; không thể xóa để bảo toàn lịch sử dữ liệu.");
             }
 
             accountRepo.deleteById(username);
 
-            return Map.of("success", true, "message", "User deleted successfully");
+            return ResponseEntity.ok(Map.of("success", true, "message", "Đã xóa tài khoản thành công."));
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error deleting user: " + e.getMessage());
+            return invalidDelete("Không thể xóa tài khoản vì dữ liệu còn liên kết. Vui lòng kiểm tra lịch sử giao dịch.");
         }
     }
 
@@ -320,24 +350,45 @@ public class RestAdminController {
     }
 
     @DeleteMapping("/cars/{id}")
-    public Map<String, Object> deleteCar(@PathVariable int id) {
+    public ResponseEntity<Map<String, Object>> deleteCar(@PathVariable int id) {
         try {
             if (!carRepo.existsById(id)) {
-                return Map.of("success", false, "message", "Car not found");
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("success", false, "message", "Không tìm thấy xe."));
             }
 
-            if (detailRepo.existsByCar_Id(id)) {
-                return Map.of(
-                        "success", false,
-                        "message", "Cannot delete this car because it already appears in order details. Keep it to preserve order history.");
+            if (hasLinkedCarData(id)) {
+                return invalidDelete(
+                        "Xe đã có lịch sử giao dịch, báo giá, đánh giá hoặc khuyến mãi; không thể xóa trực tiếp. Vui lòng chuyển trạng thái xe sang INACTIVE.");
             }
 
             carRepo.deleteById(id);
 
-            return Map.of("success", true, "message", "Car deleted successfully");
+            return ResponseEntity.ok(Map.of("success", true, "message", "Đã xóa xe thành công."));
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error deleting car: " + e.getMessage());
+            return invalidDelete("Không thể xóa xe vì dữ liệu còn liên kết. Vui lòng chuyển trạng thái xe sang INACTIVE.");
         }
+    }
+
+    private boolean hasLinkedUserData(String username) {
+        return orderRepo.existsByUsername(username)
+                || reviewRepo.existsByUsername(username)
+                || quotationRepo.existsByCustomerUsername(username)
+                || supportRequestRepo.existsByUsername(username)
+                || contractRepo.existsByCustomerUsernameOrEmployeeUsername(username, username)
+                || newsRepo.existsByAuthor(username);
+    }
+
+    private boolean hasLinkedCarData(int carId) {
+        return detailRepo.existsByCar_Id(carId)
+                || reviewRepo.existsByCarId(carId)
+                || quotationRepo.existsByCarId(carId)
+                || quotationItemRepo.existsByCarId(carId)
+                || promotionCarRepo.existsByCarId(carId);
+    }
+
+    private ResponseEntity<Map<String, Object>> invalidDelete(String message) {
+        return ResponseEntity.badRequest().body(Map.of("success", false, "message", message));
     }
 
     // ===== BRANDS MANAGEMENT =====

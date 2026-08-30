@@ -1,6 +1,8 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { authApi } from '../api'
+import { useCartStore } from './cart'
+import { useCompare } from '../composables/useCompare'
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref(null)
@@ -47,6 +49,9 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       await authApi.logout()
     } finally {
+      useCartStore().reset()
+      useCompare().clear()
+      sessionStorage.removeItem('carstore.deposit-item')
       user.value = null
     }
   }

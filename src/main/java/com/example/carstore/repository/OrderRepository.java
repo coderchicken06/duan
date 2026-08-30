@@ -21,6 +21,12 @@ public interface OrderRepository extends JpaRepository<Orders, Integer> {
     boolean existsCompletedPurchase(@Param("username") String username,
             @Param("carId") Integer carId, @Param("status") String status);
 
+    @Query("SELECT d.orderId, d.car.name, d.car.image "
+            + "FROM OrderDetail d "
+            + "WHERE d.orderId IN :orderIds "
+            + "ORDER BY d.orderId, d.id")
+    List<Object[]> findProductSummariesByOrderIds(@Param("orderIds") List<Integer> orderIds);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Orders> findForUpdateById(Integer id);
 

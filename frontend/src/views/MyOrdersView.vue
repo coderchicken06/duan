@@ -80,12 +80,15 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { carImageUrl, formatPrice, orderApi, reviewApi, useDefaultCarImage } from '../api'
 import api from '../api/client'
 import { showCartToast } from '../composables/useCartToast'
+import { notifyDataUpdated, useAutoRefresh } from '../composables/useAutoRefresh'
 
 const orders = ref([])
+const route = useRoute()
 const reviewedCarIds = ref([])
 const pendingReviewCarIds = ref([])
 const orderCarIds = ref({})
@@ -106,9 +109,11 @@ const satisfactionLabel = computed(() => ({
   5: 'Rất hài lòng',
 }[rating.value]))
 
-let pollTimer = null
+let loadingOrders = false
 
 async function loadOrders() {
+  if (loadingOrders) return
+  loadingOrders = true
   try {
     const [ordersResponse, reviewedResponse] = await Promise.all([
       orderApi.getMyOrders(),
@@ -125,15 +130,14 @@ async function loadOrders() {
     orderCarIds.value = Object.fromEntries(details)
   } catch {
     // Giữ dữ liệu gần nhất nếu một lượt polling tạm thời mất kết nối.
+  } finally {
+    loadingOrders = false
   }
 }
 
-onMounted(() => {
-  loadOrders()
-  pollTimer = window.setInterval(loadOrders, 2000)
-})
-
-onBeforeUnmount(() => window.clearInterval(pollTimer))
+onMounted(loadOrders)
+useAutoRefresh(loadOrders)
+watch(() => route.fullPath, () => loadOrders())
 
 function formatDate(d) {
   return d ? new Date(d).toLocaleDateString('vi-VN') : ''
@@ -208,6 +212,7 @@ async function submitReview() {
   showCartToast('Cảm ơn bạn đã gửi đánh giá!')
   try {
     await reviewApi.create(carId, payload)
+    notifyDataUpdated()
   } catch (error) {
     pendingReviewCarIds.value = pendingReviewCarIds.value.filter((id) => id !== carId)
     reviewedCarIds.value = reviewedCarIds.value.filter((id) => id !== carId)

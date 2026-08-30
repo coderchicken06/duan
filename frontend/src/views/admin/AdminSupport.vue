@@ -18,7 +18,7 @@
           <tr v-for="r in requests" :key="r.id">
             <td>{{ r.id }}</td>
             <td>{{ r.name }} ({{ r.phone }})</td>
-            <td>{{ r.type }}</td>
+            <td>{{ typeLabel(r.type) }}</td>
             <td>
               <div>{{ r.content }}</div>
               <small v-if="r.carInfo">Xe: {{ r.carInfo }}</small>
@@ -50,14 +50,22 @@
 import { ref, onMounted } from 'vue'
 import { supportApi } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
+import { notifyDataUpdated, useAutoRefresh } from '../../composables/useAutoRefresh'
 
 const requests = ref([])
+const typeLabel = (type) => ({
+  service: 'Đặt lịch dịch vụ',
+  consulting: 'Tư vấn mua xe',
+  chat: 'Tư vấn trực tuyến',
+  warranty: 'Bảo hành / phản hồi',
+}[String(type || '').toLowerCase()] || 'Yêu cầu khác')
 const formatAppointment = (request) => {
   const date = new Date(`${request.appointmentDate}T00:00:00`).toLocaleDateString('vi-VN')
   return `${date}${request.appointmentTime ? ` ${String(request.appointmentTime).slice(0, 5)}` : ''}`
 }
 
 onMounted(load)
+useAutoRefresh(load)
 
 async function load() {
   const { data } = await supportApi.getAll()
@@ -68,6 +76,7 @@ async function updateStatus(r) {
   try {
     await supportApi.updateStatus(r.id, r.status)
     await load()
+    notifyDataUpdated()
     showCartToast('Đã cập nhật trạng thái yêu cầu')
   } catch (error) {
     await load()
@@ -80,6 +89,7 @@ async function remove(id) {
   try {
     await supportApi.delete(id)
     await load()
+    notifyDataUpdated()
     showCartToast('Đã xóa yêu cầu hỗ trợ')
   } catch (error) {
     showCartToast(error.response?.data?.message || 'Không thể xóa yêu cầu hỗ trợ', 'error')

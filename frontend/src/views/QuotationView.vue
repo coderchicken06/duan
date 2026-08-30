@@ -63,7 +63,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { carApi, carImageUrl, cartApi, formatPrice, quotationApi, useDefaultCarImage } from '../api'
-import { useAutoRefresh } from '../composables/useAutoRefresh'
+import { notifyDataUpdated, useAutoRefresh } from '../composables/useAutoRefresh'
 import { useCartStore } from '../stores/cart'
 import { useAuthStore } from '../stores/auth'
 const route = useRoute(), router = useRouter(), quote = ref({}), car = ref(null), loading = ref(true), submitting = ref(false), error = ref('')
@@ -129,6 +129,7 @@ async function handleDepositFromQuotation() {
       depositAmount: finalPrice * 0.1,
       quotationId: quote.value.id,
     })
+    notifyDataUpdated()
     router.push('/cart/view')
   } catch (e) {
     error.value = e.response?.data?.message || e.message || 'Không thể chuẩn bị phiếu đặt cọc theo báo giá'
@@ -149,13 +150,14 @@ async function updateQuoteStatus(status) {
       throw new Error(data?.message || 'Không thể cập nhật trạng thái báo giá')
     }
     quote.value = data.data
+    notifyDataUpdated()
   } catch (e) {
     error.value = e.response?.data?.message || e.message || 'Không thể cập nhật trạng thái báo giá'
   } finally {
     submitting.value = false
   }
 }
-async function convertToOrder() { submitting.value = true; error.value = ''; try { const { data } = await quotationApi.convertToOrder(quote.value.id, orderForm.value); router.push(`/order/detail/${data.data.id}`) } catch (e) { error.value = e.response?.data?.message || 'Không thể tạo đơn hàng' } finally { submitting.value = false } }
+async function convertToOrder() { submitting.value = true; error.value = ''; try { const { data } = await quotationApi.convertToOrder(quote.value.id, orderForm.value); if (!data?.success || !data.data) throw new Error(data?.message || 'Không thể tạo đơn hàng'); notifyDataUpdated(); router.push(`/order/detail/${data.data.id}`) } catch (e) { error.value = e.response?.data?.message || e.message || 'Không thể tạo đơn hàng' } finally { submitting.value = false } }
 onMounted(load)
 useAutoRefresh(load)
 </script>

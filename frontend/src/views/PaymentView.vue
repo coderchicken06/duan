@@ -88,6 +88,7 @@ import { onMounted, onUnmounted, ref, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { cartApi, contractApi, paymentTransactionApi, formatPrice } from '../api'
 import { useCartStore } from '../stores/cart'
+import { notifyDataUpdated } from '../composables/useAutoRefresh'
 
 const route = useRoute()
 const router = useRouter()
@@ -158,6 +159,7 @@ async function checkPaymentStatus() {
         wasDepositPaid = true;
         stopAllTimers();
         await clearDepositCart();
+        notifyDataUpdated();
         window.setTimeout(() => router.replace(`/orders/${route.params.id}/contract`), 400);
       }
     }

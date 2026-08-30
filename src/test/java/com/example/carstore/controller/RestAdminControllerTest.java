@@ -6,6 +6,13 @@ import com.example.carstore.repository.BrandRepository;
 import com.example.carstore.repository.CarRepository;
 import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
+import com.example.carstore.repository.ReviewRepository;
+import com.example.carstore.repository.QuotationRepository;
+import com.example.carstore.repository.QuotationItemRepository;
+import com.example.carstore.repository.PromotionCarRepository;
+import com.example.carstore.repository.SupportRequestRepository;
+import com.example.carstore.repository.ContractRepository;
+import com.example.carstore.repository.NewsRepository;
 import com.example.carstore.service.CarImageService;
 import com.example.carstore.service.OrderService;
 import org.junit.jupiter.api.AfterEach;
@@ -19,6 +26,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.ResponseEntity;
 
 import java.util.List;
 import java.util.Map;
@@ -44,6 +52,13 @@ class RestAdminControllerTest {
     @Mock private PasswordEncoder passwordEncoder;
     @Mock private OrderService orderService;
     @Mock private CarImageService carImageService;
+    @Mock private ReviewRepository reviewRepo;
+    @Mock private QuotationRepository quotationRepo;
+    @Mock private QuotationItemRepository quotationItemRepo;
+    @Mock private PromotionCarRepository promotionCarRepo;
+    @Mock private SupportRequestRepository supportRequestRepo;
+    @Mock private ContractRepository contractRepo;
+    @Mock private NewsRepository newsRepo;
 
     private RestAdminController controller;
 
@@ -51,7 +66,9 @@ class RestAdminControllerTest {
     void setUp() {
         controller = new RestAdminController(
                 accountRepo, orderRepo, detailRepo, carRepo, brandRepo,
-                passwordEncoder, orderService, carImageService);
+                passwordEncoder, orderService, carImageService,
+                reviewRepo, quotationRepo, quotationItemRepo, promotionCarRepo,
+                supportRequestRepo, contractRepo, newsRepo);
     }
 
     @AfterEach
@@ -101,8 +118,10 @@ class RestAdminControllerTest {
         when(accountRepo.findById("admin")).thenReturn(Optional.of(existing));
         Authentication authentication = authentication("admin", "ROLE_ADMIN");
 
-        Map<String, Object> result = controller.deleteUser("admin", authentication);
+        ResponseEntity<Map<String, Object>> response = controller.deleteUser("admin", authentication);
+        Map<String, Object> result = response.getBody();
 
+        assertEquals(400, response.getStatusCodeValue());
         assertEquals(false, result.get("success"));
         verify(accountRepo, never()).deleteById(anyString());
     }
@@ -114,8 +133,10 @@ class RestAdminControllerTest {
         when(accountRepo.countByRole("ROLE_ADMIN")).thenReturn(1L);
         Authentication authentication = authentication("admin", "ROLE_ADMIN");
 
-        Map<String, Object> result = controller.deleteUser("other-admin", authentication);
+        ResponseEntity<Map<String, Object>> response = controller.deleteUser("other-admin", authentication);
+        Map<String, Object> result = response.getBody();
 
+        assertEquals(400, response.getStatusCodeValue());
         assertEquals(false, result.get("success"));
         verify(accountRepo, never()).deleteById(anyString());
     }

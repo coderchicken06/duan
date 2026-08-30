@@ -94,6 +94,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, supportApi } from '../api'
 import DatePickerInput from '../components/DatePickerInput.vue'
+import { notifyDataUpdated } from '../composables/useAutoRefresh'
 import { isValidVietnamesePhone, normalizeVietnamesePhone } from '../utils/phone'
 import { useAuthStore } from '../stores/auth'
 
@@ -255,6 +256,7 @@ async function submit() {
       form.value.carInfo = ''
       form.value.serviceType = ''
       selectedFromCatalog.value = false
+      notifyDataUpdated()
     }
   } catch (error) {
     ok.value = false

@@ -38,6 +38,7 @@
 import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { profileApi } from '../api'
+import { notifyDataUpdated } from '../composables/useAutoRefresh'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
@@ -56,6 +57,7 @@ onMounted(async () => {
 async function updateProfile() {
   const { data } = await profileApi.update(profile.value)
   msg.value = data.message || 'Cập nhật thành công'
+  if (data.success !== false) notifyDataUpdated()
   if (data.requiresVerification) {
     auth.user = null
     router.push({ path: '/verify-email', query: { username: data.username, email: data.email } })
@@ -66,6 +68,7 @@ async function changePassword() {
   const { data } = await profileApi.changePassword(pwd.value)
   pwdOk.value = data.success !== false
   pwdMsg.value = data.message
+  if (pwdOk.value) notifyDataUpdated()
 }
 </script>
 <style

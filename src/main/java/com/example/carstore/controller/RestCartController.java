@@ -61,7 +61,10 @@ public class RestCartController {
         if (!isAvailable(car)) {
             return ResponseUtils.fail("Xe " + car.getName() + " hiện không khả dụng.");
         }
-        int safeQuantity = quantity == null || quantity < 1 ? 1 : quantity;
+        if (quantity != null && quantity > 1) {
+            return ResponseUtils.fail("Mỗi đơn đặt cọc chỉ được giữ chỗ một xe.");
+        }
+        int safeQuantity = 1;
 
         CartItem existing = cartService.getCart(session).get(id);
         if (existing != null) {
@@ -70,10 +73,7 @@ public class RestCartController {
         if (!cartService.getCart(session).isEmpty()) {
             return ResponseUtils.fail("Phiếu đặt cọc xe chỉ cho phép giữ chỗ một xe. Vui lòng xóa xe hiện tại trước.");
         }
-        int currentQuantity = existing == null ? 0 : existing.getQuantity();
-        int requestedQuantity = currentQuantity + safeQuantity;
-
-        if (car.getStock() == null || requestedQuantity > car.getStock()) {
+        if (car.getStock() == null || car.getStock() < safeQuantity) {
             return ResponseUtils.fail("Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock());
         }
 
@@ -127,11 +127,11 @@ public class RestCartController {
             return ResponseUtils.fail("Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock());
         }
 
-        item.setQuantity(quantity);
+        item.setQuantity(1);
         return Map.of(
                 "success", true,
                 "message", "Cart item updated",
-                "quantity", quantity,
+                "quantity", 1,
                 "items", cartService.getCart(session).values(),
                 "total", cartService.getTotal(session));
     }
@@ -168,24 +168,8 @@ public class RestCartController {
             return ResponseUtils.fail("Item not in cart");
         }
 
-        if (item.getQuantity() >= 1) {
-            return ResponseUtils.fail("Mỗi đơn đặt cọc chỉ được giữ chỗ một xe.");
-        }
-        java.util.Optional<Car> carOpt = carService.findById(id);
-        if (carOpt.isEmpty()) {
-            return ResponseUtils.fail("Car not found");
-        }
-        Car car = carOpt.get();
-        if (!isAvailable(car)) {
-            return ResponseUtils.fail("Xe " + car.getName() + " hiện không khả dụng.");
-        }
-        int newQuantity = item.getQuantity() + 1;
-        if (car.getStock() == null || newQuantity > car.getStock()) {
-            return ResponseUtils.fail("Xe " + car.getName() + " không đủ tồn kho. Còn lại: " + car.getStock());
-        }
-
-        item.setQuantity(newQuantity);
-        return quantityResponse(item, session);
+        item.setQuantity(1);
+        return ResponseUtils.fail("Mỗi đơn đặt cọc chỉ được giữ chỗ một xe.");
     }
 
     @PostMapping("/decrement/{id}")
@@ -200,14 +184,6 @@ public class RestCartController {
                 "quantity", cartService.getCart(session).containsKey(id)
                         ? cartService.getCart(session).get(id).getQuantity()
                         : 0,
-                "items", cartService.getCart(session).values(),
-                "total", cartService.getTotal(session));
-    }
-
-    private Map<String, Object> quantityResponse(CartItem item, HttpSession session) {
-        return Map.of(
-                "success", true,
-                "quantity", item.getQuantity(),
                 "items", cartService.getCart(session).values(),
                 "total", cartService.getTotal(session));
     }

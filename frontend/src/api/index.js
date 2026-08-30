@@ -146,7 +146,7 @@ export function formatPrice(price) {
 }
 
 export function carImageUrl(image) {
-  if (!image) return '/images/default-car.jpg'
+  if (!image) return '/images/car-placeholder.svg'
   const value = String(image).trim().replaceAll('\\', '/')
   if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value
   if (value.startsWith('/images/')) return value
@@ -157,7 +157,7 @@ export function carImageUrl(image) {
 export function useDefaultCarImage(event) {
   const image = event?.target
   if (!image) return
-  const fallback = '/images/default-car.jpg'
+  const fallback = '/images/car-placeholder.svg'
   if (new URL(image.src, window.location.origin).pathname === fallback) return
   image.src = fallback
 }

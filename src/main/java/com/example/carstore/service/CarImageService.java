@@ -6,8 +6,10 @@ import com.example.carstore.repository.CarImageRepository;
 import com.example.carstore.repository.CarRepository;
 import com.example.carstore.util.ImagePathUtils;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -21,17 +23,16 @@ public class CarImageService {
         this.carRepo = carRepo;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<CarImage> getImages(Integer carId) {
         requireCar(carId);
-        reconcilePrimary(carId, null);
         return imageRepo.findImagesByCarId(carId);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public void synchronizeCarImage(Integer carId) {
-        Car car = requireCar(carId);
-        List<CarImage> images = imageRepo.findImagesByCarId(carId);
+        Car car = requireCarForUpdate(carId);
+        List<CarImage> images = new ArrayList<>(imageRepo.findImagesByCarId(carId));
         String carImage = ImagePathUtils.normalizeForStorage(car.getImage());
         if (images.isEmpty() && carImage != null) {
             CarImage image = new CarImage();
@@ -39,18 +40,19 @@ public class CarImageService {
             image.setImageUrl(carImage);
             image.setSortOrder(0);
             image.setPrimaryImage(false);
-            image = imageRepo.saveAndFlush(image);
-            reconcilePrimary(carId, image.getId());
-            return;
+            image = imageRepo.save(image);
+            images.add(image);
+            reconcilePrimary(car, images, image.getId());
+        } else {
+            reconcilePrimary(car, images, null);
         }
-        reconcilePrimary(carId, null);
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public CarImage addImage(Integer carId, CarImage payload) {
-        requireCar(carId);
+        Car car = requireCarForUpdate(carId);
         String imageUrl = requireImageUrl(payload == null ? null : payload.getImageUrl());
-        List<CarImage> current = imageRepo.findImagesByCarId(carId);
+        List<CarImage> current = new ArrayList<>(imageRepo.findImagesByCarId(carId));
         rejectDuplicate(current, imageUrl, null);
 
         Integer currentPrimaryId = current.stream()
@@ -64,19 +66,23 @@ public class CarImageService {
         image.setImageUrl(imageUrl);
         image.setSortOrder(payload.getSortOrder());
         image.setPrimaryImage(false);
-        image = imageRepo.saveAndFlush(image);
+        image = imageRepo.save(image);
+        current.add(image);
 
         Integer preferredId = Boolean.TRUE.equals(payload.getPrimaryImage()) || currentPrimaryId == null
                 ? image.getId() : currentPrimaryId;
-        reconcilePrimary(carId, preferredId);
-        return imageRepo.findById(image.getId()).orElseThrow();
+        reconcilePrimary(car, current, preferredId);
+        return image;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public CarImage updateImage(Integer carId, Integer imageId, CarImage payload) {
-        requireCar(carId);
-        CarImage existing = requireImage(carId, imageId);
-        List<CarImage> current = imageRepo.findImagesByCarId(carId);
+        Car car = requireCarForUpdate(carId);
+        List<CarImage> current = new ArrayList<>(imageRepo.findImagesByCarId(carId));
+        CarImage existing = current.stream()
+                .filter(image -> imageId.equals(image.getId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ảnh"));
         Integer currentPrimaryId = current.stream()
                 .filter(image -> Boolean.TRUE.equals(image.getPrimaryImage()))
                 .map(CarImage::getId)
@@ -88,7 +94,6 @@ public class CarImageService {
         existing.setImageUrl(imageUrl);
         existing.setSortOrder(payload.getSortOrder());
         existing.setPrimaryImage(false);
-        imageRepo.saveAndFlush(existing);
 
         Integer preferredId;
         if (Boolean.TRUE.equals(payload.getPrimaryImage())) {
@@ -103,23 +108,26 @@ public class CarImageService {
                     .orElse(imageId);
         }
 
-        reconcilePrimary(carId, preferredId);
-        return imageRepo.findById(imageId).orElseThrow();
+        reconcilePrimary(car, current, preferredId);
+        return existing;
     }
 
-    @Transactional
+    @Transactional(isolation = Isolation.READ_COMMITTED, rollbackFor = Exception.class)
     public void deleteImage(Integer carId, Integer imageId) {
-        requireCar(carId);
-        CarImage image = requireImage(carId, imageId);
+        Car car = requireCarForUpdate(carId);
+        List<CarImage> images = new ArrayList<>(imageRepo.findImagesByCarId(carId));
+        CarImage image = images.stream()
+                .filter(candidate -> imageId.equals(candidate.getId()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ảnh"));
         imageRepo.delete(image);
-        imageRepo.flush();
-        reconcilePrimary(carId, null);
+        images.remove(image);
+        reconcilePrimary(car, images, null);
     }
 
-    private void reconcilePrimary(Integer carId, Integer preferredId) {
-        List<CarImage> images = imageRepo.findImagesByCarId(carId);
+    private void reconcilePrimary(Car car, List<CarImage> images, Integer preferredId) {
         if (images.isEmpty()) {
-            syncCarImage(carId, null);
+            car.setImage(null);
             return;
         }
 
@@ -134,19 +142,10 @@ public class CarImageService {
                     .orElse(images.get(0));
         }
 
-        Integer primaryId = primary.getId();
-        String primaryUrl = primary.getImageUrl();
-        imageRepo.clearPrimaryByCarId(carId);
-        CarImage selected = imageRepo.findById(primaryId).orElseThrow();
-        selected.setPrimaryImage(true);
-        imageRepo.saveAndFlush(selected);
-        syncCarImage(carId, primaryUrl);
-    }
-
-    private void syncCarImage(Integer carId, String imageUrl) {
-        Car car = requireCar(carId);
-        car.setImage(imageUrl);
-        carRepo.save(car);
+        for (CarImage image : images) {
+            image.setPrimaryImage(primary.getId().equals(image.getId()));
+        }
+        car.setImage(primary.getImageUrl());
     }
 
     private Car requireCar(Integer carId) {
@@ -154,10 +153,9 @@ public class CarImageService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy xe"));
     }
 
-    private CarImage requireImage(Integer carId, Integer imageId) {
-        return imageRepo.findById(imageId)
-                .filter(image -> image.getCarId().equals(carId))
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy ảnh"));
+    private Car requireCarForUpdate(Integer carId) {
+        return carRepo.findForUpdateById(carId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy xe"));
     }
 
     private String requireImageUrl(String imageUrl) {

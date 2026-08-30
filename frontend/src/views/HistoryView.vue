@@ -27,11 +27,11 @@
         <tbody>
           <tr v-for="r in requests" :key="r.id">
             <td>{{ r.id }}</td>
-            <td>{{ r.type }}</td>
+            <td>{{ typeLabel(r.type) }}</td>
             <td>
               <div>{{ r.content }}</div>
-              <small v-if="r.carInfo">Xe: {{ r.carInfo }}</small>
-              <small v-if="r.serviceType">Dịch vụ: {{ r.serviceType }}</small>
+              <small v-if="r.carInfo" class="detail-line">Xe: {{ r.carInfo }}</small>
+              <small v-if="r.serviceType" class="detail-line">Dịch vụ: {{ r.serviceType }}</small>
             </td>
             <td>{{ r.status }}</td>
             <td>{{ formatAppointment(r) }}</td>
@@ -51,6 +51,12 @@ import { useAutoRefresh } from '../composables/useAutoRefresh'
 const requests = ref([])
 const loading = ref(true)
 const error = ref('')
+const typeLabel = (type) => ({
+  service: 'Đặt lịch dịch vụ',
+  consulting: 'Tư vấn mua xe',
+  chat: 'Tư vấn trực tuyến',
+  warranty: 'Bảo hành / phản hồi',
+}[String(type || '').toLowerCase()] || 'Yêu cầu khác')
 
 const formatAppointment = (request) => {
   if (!request.appointmentDate) return '-'
@@ -72,3 +78,11 @@ async function loadRequests() {
 onMounted(loadRequests)
 useAutoRefresh(loadRequests)
 </script>
+
+<style scoped>
+.detail-line {
+  color: #6b7280;
+  display: block;
+  margin-top: 3px;
+}
+</style>

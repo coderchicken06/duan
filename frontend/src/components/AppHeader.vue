@@ -204,8 +204,7 @@ function handleSearchInput() {
 
 async function handleLogout() {
   await auth.logout()
-  cart.reset()
-  router.push('/')
+  router.push('/login')
 }
 
 function doSearch() {

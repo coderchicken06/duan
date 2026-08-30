@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface QuotationItemRepository extends JpaRepository<QuotationItem, Integer> {
     List<QuotationItem> findByQuotationIdOrderByIdAsc(Integer quotationId);
+    boolean existsByCarId(Integer carId);
 }

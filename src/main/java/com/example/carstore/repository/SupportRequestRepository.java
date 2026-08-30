@@ -9,4 +9,5 @@ public interface SupportRequestRepository extends JpaRepository<SupportRequest, 
     List<SupportRequest> findByUsernameIgnoreCase(String username);
     List<SupportRequest> findByUsernameIgnoreCaseAndTypeIgnoreCase(String username, String type);
     long countByStatusIgnoreCase(String status);
+    boolean existsByUsername(String username);
 }
