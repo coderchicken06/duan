@@ -1,0 +1,29 @@
+
+.page-home > .ford-hero-panel[data-v-c3f7709f] {
+    margin-top: 24px;
+    margin-bottom: 8px;
+}
+.ford-api-error[data-v-c3f7709f] {
+    margin: 24px 0;
+    padding: 14px 16px;
+    border: 1px solid #fecaca;
+    border-radius: 12px;
+    background: #fef2f2;
+    color: #991b1b;
+    text-align: center
+}
+.ford-api-error button[data-v-c3f7709f] {
+    margin-left: 12px;
+    border: 0;
+    border-radius: 999px;
+    padding: 7px 14px;
+    background: #991b1b;
+    color: #fff;
+    font-weight: 700
+}
+@media (max-width: 768px) {
+.page-home > .ford-hero-panel[data-v-c3f7709f] {
+      margin-top: 20px;
+      margin-bottom: 8px;
+}
+}

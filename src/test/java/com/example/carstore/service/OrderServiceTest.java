@@ -233,6 +233,7 @@ class OrderServiceTest {
     @Test
     void cancelOrderRestoresStockExactlyOnce() {
         Orders order = confirmedOrder();
+        order.setStatus(OrderStatus.PENDING);
         Car car = car(1, 500_000_000D, 2);
         OrderDetail detail = new OrderDetail();
         detail.setCar(car);
@@ -248,6 +249,19 @@ class OrderServiceTest {
         assertEquals(OrderStatus.CANCELLED, result.getStatus());
         assertEquals(3, car.getStock());
         verify(carRepo).save(car);
+    }
+
+    @Test
+    void manualCancellationRejectsConfirmedUnpaidOrder() {
+        Orders order = confirmedOrder();
+        when(orderRepo.findForUpdateById(20)).thenReturn(Optional.of(order));
+
+        IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
+                () -> orderService.updateStatus(20, OrderStatus.CANCELLED));
+
+        assertTrue(error.getMessage().contains("chờ thanh toán cọc"));
+        verify(detailRepo, never()).findByOrderId(anyInt());
+        verify(orderRepo, never()).save(any());
     }
 
     @Test

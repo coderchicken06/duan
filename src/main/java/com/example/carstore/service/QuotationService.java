@@ -103,6 +103,7 @@ public class QuotationService {
         if (request.getStatus() != null && !request.getStatus().equals(q.getStatus())) {
             validateAdminStatusTransition(q.getStatus(), request.getStatus(), q.getOrderId());
         }
+        String previousStatus = q.getStatus();
         double discount = request.getDiscount() == null ? 0D : request.getDiscount();
         if (discount < 0 || discount > q.getCarPrice()) {
             throw new IllegalArgumentException("Giảm giá không hợp lệ.");
@@ -112,6 +113,11 @@ public class QuotationService {
             q.setNote(request.getNote());
         }
         if (request.getStatus() != null) {
+            if (APPROVED.equals(request.getStatus()) && !APPROVED.equals(previousStatus)) {
+                // quotationDate is the issued-at value used by the seven-day price lock.
+                // It is reset exactly once when the dealer approves the quotation.
+                q.setQuotationDate(now);
+            }
             q.setStatus(request.getStatus());
         }
         q.setUpdatedAt(now);
@@ -249,11 +255,11 @@ public class QuotationService {
     }
 
     public List<Quotation> mine(String username) {
-        return repo.findByCustomerUsernameOrderByQuotationDateDesc(username);
+        return repo.findByCustomerUsernameWithItems(username);
     }
 
     public List<Quotation> all() {
-        return repo.findAll();
+        return repo.findAllWithItems();
     }
 
     public List<Quotation> getAll() {

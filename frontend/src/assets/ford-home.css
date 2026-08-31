@@ -873,28 +873,6 @@ body.page-home .ford-btn-primary:hover {
 }
 
 @media (max-width: 991px) {
-  .ford-header-inner {
-    grid-template-columns: 1fr;
-    height: auto;
-    padding: 12px 16px;
-    gap: 12px;
-  }
-
-  .ford-nav-left {
-    justify-self: center;
-    flex-wrap: wrap;
-    justify-content: center;
-    gap: 16px;
-  }
-
-  .ford-logo {
-    order: -1;
-  }
-
-  .ford-nav-right {
-    justify-self: center;
-  }
-
   .ford-hero-copy {
     left: 24px;
     right: 24px;

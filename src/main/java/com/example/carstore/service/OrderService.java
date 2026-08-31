@@ -158,6 +158,9 @@ public class OrderService {
             if (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
                 throw new IllegalArgumentException("Không thể hủy đơn đã thanh toán cọc.");
             }
+            if (!OrderStatus.PENDING.equals(current)) {
+                throw new IllegalArgumentException("Chỉ đơn đang chờ thanh toán cọc mới được hủy thủ công.");
+            }
             restoreStock(detailRepo.findByOrderId(orderId));
             if (contractService != null) {
                 contractService.cancelForOrder(orderId);

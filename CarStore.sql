@@ -471,7 +471,13 @@ INSERT INTO dbo.Quotation
 (customer_username, car_id, car_price, discount, total_price, note, status, quotation_no)
 VALUES
 ('user1', 1, 1200000000, 20000000, 1180000000, N'Khách muốn trả góp', N'Đã duyệt', N'BG-001'),
-('user1', 2, 3500000000, 50000000, 3450000000, N'Ưu đãi tháng 7', N'Đã duyệt', N'BG-002');
+('user1', 2, 3500000000, 50000000, 3450000000, N'Áp dụng chính sách ưu đãi của đại lý', N'Đã duyệt', N'BG-002');
+GO
+
+-- Đồng bộ dữ liệu mẫu cũ nếu script được chạy trên cơ sở dữ liệu đã tồn tại.
+UPDATE dbo.Quotation
+SET note = N'Áp dụng chính sách ưu đãi của đại lý'
+WHERE note = N'Ưu đãi tháng 7';
 GO
 
 INSERT INTO dbo.QuotationItem
@@ -518,8 +524,17 @@ GO
 INSERT INTO dbo.Promotion
 (title, type, value, description, start_date, end_date, status)
 VALUES
-(N'Khuyến mãi tháng 7', 'PERCENT', 10, N'Giảm giá cho các xe áp dụng', '2026-07-01', '2026-07-31', 1),
-(N'Ưu đãi khai trương', 'PERCENT', 15, N'Tặng bảo hiểm thân vỏ', '2026-08-01', '2026-08-31', 1);
+(N'Ưu đãi mùa thu 2026', 'PERCENT', 10, N'Giảm giá cho các xe áp dụng', '2026-08-01', '2026-12-31', 1),
+(N'Ưu đãi khai trương', 'PERCENT', 15, N'Tặng bảo hiểm thân vỏ', '2026-08-01', '2026-12-31', 1);
+GO
+
+UPDATE dbo.Promotion
+SET title = N'Ưu đãi mùa thu 2026', start_date = '2026-08-01', end_date = '2026-12-31'
+WHERE title = N'Khuyến mãi tháng 7';
+
+UPDATE dbo.Promotion
+SET start_date = '2026-08-01', end_date = '2026-12-31'
+WHERE title = N'Ưu đãi khai trương';
 GO
 
 -- =============================================================

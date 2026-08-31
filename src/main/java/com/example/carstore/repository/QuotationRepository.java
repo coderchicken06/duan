@@ -6,6 +6,8 @@ import org.springframework.data.jpa.repository.Lock;
 import javax.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 public interface QuotationRepository extends JpaRepository<Quotation, Integer> {
     List<Quotation> findByCustomerUsername(String customerUsername);
@@ -15,6 +17,14 @@ public interface QuotationRepository extends JpaRepository<Quotation, Integer> {
     boolean existsByCarId(Integer carId);
     boolean existsByCustomerUsername(String customerUsername);
     java.util.Optional<Quotation> findByOrderId(Integer orderId);
+
+    @Query("SELECT DISTINCT q FROM Quotation q LEFT JOIN FETCH q.items "
+            + "ORDER BY q.quotationDate DESC")
+    List<Quotation> findAllWithItems();
+
+    @Query("SELECT DISTINCT q FROM Quotation q LEFT JOIN FETCH q.items "
+            + "WHERE q.customerUsername = :username ORDER BY q.quotationDate DESC")
+    List<Quotation> findByCustomerUsernameWithItems(@Param("username") String username);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     Optional<Quotation> findForUpdateById(Integer id);

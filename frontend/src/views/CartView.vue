@@ -75,7 +75,7 @@
           <button class="btn cs-btn cs-btn-ghost w-100" type="button" :disabled="clearing" @click="clearCart">
             {{ clearing ? 'Đang xóa...' : 'Xóa toàn bộ xe đã chọn' }}
           </button>
-          <p class="cart-hold-note">Phiếu cọc có hiệu lực giữ chỗ trong 07 ngày làm việc.</p>
+          <p class="cart-hold-note">Thời gian giữ chỗ thanh toán cọc: 03 phút (Quá hạn hệ thống tự động hoàn xe về kho)</p>
           <router-link class="cart-continue" to="/car/list">← Tiếp tục xem xe</router-link>
         </aside>
       </div>

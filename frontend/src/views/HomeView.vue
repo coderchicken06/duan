@@ -139,6 +139,11 @@ async function addToCart(id) {
 </script>
 <style
   scoped>
+  .page-home > .ford-hero-panel {
+    margin-top: 24px;
+    margin-bottom: 8px;
+  }
+
   .ford-api-error {
     margin: 24px 0;
     padding: 14px 16px;
@@ -157,5 +162,12 @@ async function addToCart(id) {
     background: #991b1b;
     color: #fff;
     font-weight: 700
+  }
+
+  @media (max-width: 768px) {
+    .page-home > .ford-hero-panel {
+      margin-top: 20px;
+      margin-bottom: 8px;
+    }
   }
 </style>

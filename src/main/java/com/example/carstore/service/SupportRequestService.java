@@ -6,6 +6,9 @@ import com.example.carstore.util.SecurityUtils;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -39,7 +42,7 @@ public class SupportRequestService {
         this.supportRepo = supportRepo;
     }
 
-    public boolean isValidStatus(String status) {
+    private boolean isValidStatus(String status) {
         return StringUtils.hasText(status) && VALID_STATUSES.contains(status.trim());
     }
 
@@ -167,15 +170,12 @@ public class SupportRequestService {
     }
 
     private String normalizePhone(String phone) {
-        String normalized = phone.trim().replaceAll("\\s+", "");
-        if (normalized.matches("^0[0-9]{9}$")) {
-            return "+84" + normalized.substring(1);
+        String normalized = phone.trim().replaceAll("[\\s.()\\-]", "");
+        if (normalized.startsWith("+84")) {
+            return "0" + normalized.substring(3);
         }
-        if (normalized.matches("^[1-9][0-9]{8}$")) {
-            return "+84" + normalized;
-        }
-        if (normalized.matches("^84[0-9]{9}$")) {
-            return "+" + normalized;
+        if (normalized.startsWith("84")) {
+            return "0" + normalized.substring(2);
         }
         return normalized;
     }
@@ -188,9 +188,9 @@ public class SupportRequestService {
             throw new IllegalArgumentException("Số điện thoại không được để trống.");
         }
         String normalizedPhone = normalizePhone(phone);
-        if (!normalizedPhone.matches("^\\+84[0-9]{9}$")) {
+        if (!normalizedPhone.matches("^0[35789][0-9]{8}$")) {
             throw new IllegalArgumentException(
-                    "Số điện thoại phải có 9 chữ số, 10 chữ số bắt đầu bằng 0, hoặc bắt đầu bằng +84/84.");
+                    "Số điện thoại không hợp lệ, vui lòng nhập 10 chữ số bắt đầu bằng số 0.");
         }
         if (!StringUtils.hasText(content)) {
             throw new IllegalArgumentException("Nội dung không được để trống.");
@@ -219,13 +219,30 @@ public class SupportRequestService {
         return supportRepo.findById(id);
     }
 
+    @Transactional
     public boolean updateStatus(Integer id, String status) {
         if (!isValidStatus(status)) {
-            return false;
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trạng thái yêu cầu không hợp lệ.");
         }
 
         return supportRepo.findById(id).map(request -> {
-            request.setStatus(status.trim());
+            String current = StringUtils.hasText(request.getStatus())
+                    ? request.getStatus().trim() : STATUS_PENDING;
+            String target = status.trim();
+            if ((STATUS_DONE.equals(current) || STATUS_CANCELLED.equals(current))
+                    && !current.equals(target)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Yêu cầu đã kết thúc, không thể thay đổi trạng thái.");
+            }
+            if (STATUS_PROCESSING.equals(current)
+                    && (STATUS_PENDING.equals(target) || STATUS_CANCELLED.equals(target))) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Yêu cầu đang được xử lý, không thể hủy hoặc quay lại trạng thái chờ.");
+            }
+            if (current.equals(target)) {
+                return true;
+            }
+            request.setStatus(target);
             supportRepo.save(request);
             return true;
         }).orElse(false);
@@ -279,11 +296,4 @@ public class SupportRequestService {
         }
     }
 
-    public boolean markDone(Integer id) {
-        return supportRepo.findById(id).map(request -> {
-            request.setStatus(STATUS_DONE);
-            supportRepo.save(request);
-            return true;
-        }).orElse(false);
-    }
 }

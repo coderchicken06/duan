@@ -35,7 +35,7 @@
               </select>
             </td>
             <td>
-              <button v-if="!['CANCELLED', 'DELIVERED'].includes(o.status)" class="btn btn-sm cs-btn-danger"
+              <button v-if="canCancel(o)" class="btn btn-sm cs-btn-danger"
                 :disabled="isSubmitting(o.id)" @click="cancel(o)">{{ isSubmitting(o.id) ? 'Đang xử lý...' : 'Hủy đơn'
                 }}</button>
             </td>
@@ -86,10 +86,14 @@ function availableStatuses(order) {
   if (order.status === 'CONFIRMED') {
     return order.depositStatus === 'PAID'
       ? ['CONFIRMED', 'PROCESSING']
-      : ['CONFIRMED', 'CANCELLED']
+      : ['CONFIRMED']
   }
   if (order.status === 'PROCESSING') return ['PROCESSING', 'DELIVERED']
   return [order.status]
+}
+
+function canCancel(order) {
+  return order.status === 'PENDING' && order.depositStatus !== 'PAID'
 }
 
 onMounted(() => {

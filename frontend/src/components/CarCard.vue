@@ -11,12 +11,17 @@
       <h3>{{ car.name }}</h3>
       <p class="ford-car-description">{{ car.mileage != null ? Number(car.mileage).toLocaleString('vi-VN') + ' km' :
         'ODO chưa cập nhật' }} · {{ car.transmission || 'Hộp số chưa cập nhật' }}</p>
-      <div v-if="promotion" class="promotion-price">
-        <span class="original-price">{{ formatPrice(car.price) }} VNĐ</span>
-        <strong>{{ formatPrice(discountedPrice) }} <small>VNĐ</small></strong>
+      <div class="car-price-block" :class="{ 'has-promotion': promotion }">
+        <span v-if="promotion" class="original-price">{{ formatPrice(car.price) }} VNĐ</span>
+        <span v-else class="price-slot" aria-hidden="true"></span>
+
+        <strong class="current-price">{{ formatPrice(promotion ? discountedPrice : car.price) }} <small>VNĐ</small></strong>
+
+        <span v-if="promotion" class="promotion-badge" :title="`${promotionTitle} - ${promotionLabel}`">
+          {{ promotionTitle }} - {{ promotionLabel }}
+        </span>
+        <span v-else class="price-slot promotion-slot" aria-hidden="true"></span>
       </div>
-      <div v-else class="ford-price-tag">{{ formatPrice(car.price) }} <small>VNĐ</small></div>
-      <div v-if="promotion" class="promotion-badge">{{ promotionTitle }} - {{ promotionLabel }}</div>
       <label class="compare-check"><input type="checkbox" :checked="has(car.id)" @change="onCompare" /> So sánh
         xe</label>
       <div class="ford-car-actions">
@@ -89,32 +94,51 @@ watch(() => props.car, async () => {
     accent-color: #d71920
   }
 
+  .car-price-block {
+    display: grid;
+    grid-template-rows: 18px 28px 28px;
+    min-height: 74px;
+  }
+
+  .price-slot {
+    display: block;
+  }
+
+  .promotion-slot {
+    margin-top: 4px;
+  }
+
   .promotion-badge {
+    align-self: start;
     background: #fee2e2;
     border-radius: 4px;
     color: #b91c1c;
-    font-size: .8rem;
+    display: block;
+    font-size: .6875rem;
     font-weight: 800;
-    margin-top: 8px;
-    padding: 4px 7px;
+    line-height: 1.25;
+    margin-top: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 2px 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     width: fit-content
   }
 
-  .promotion-price {
-    align-items: baseline;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-  }
-
-  .promotion-price strong {
-    color: #b91c1c;
-    font-size: 1.1rem;
+  .current-price {
+    align-self: start;
+    color: #dc2626;
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.35;
   }
 
   .original-price {
-    color: #6b7280;
-    font-size: .88rem;
+    color: #94a3b8;
+    font-size: .875rem;
+    line-height: 18px;
     text-decoration: line-through;
   }
+
 </style>

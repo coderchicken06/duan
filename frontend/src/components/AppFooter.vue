@@ -15,7 +15,7 @@
         <nav aria-label="Dịch vụ khách hàng">
           <h4>Dịch vụ khách hàng</h4>
           <router-link v-if="!auth.isAdmin" to="/service">Đặt lịch dịch vụ</router-link>
-          <router-link v-if="!auth.isAdmin" to="/support">Hỗ trợ</router-link>
+          <router-link v-if="!auth.isAdmin" to="/support">Đặt lịch hỗ trợ</router-link>
           <router-link v-if="auth.isUser" to="/my-orders">Đơn của tôi</router-link>
           <router-link v-if="auth.isUser" to="/quotation-history">Báo giá</router-link>
         </nav>

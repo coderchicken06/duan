@@ -1,0 +1,56 @@
+
+.compare-check[data-v-8cee6305] {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0;
+    font-weight: 700;
+    color: #333
+}
+.compare-check input[data-v-8cee6305] {
+    width: 18px;
+    height: 18px;
+    accent-color: #d71920
+}
+.car-price-block[data-v-8cee6305] {
+    display: grid;
+    grid-template-rows: 18px 28px 28px;
+    min-height: 74px;
+}
+.price-slot[data-v-8cee6305] {
+    display: block;
+}
+.promotion-slot[data-v-8cee6305] {
+    margin-top: 4px;
+}
+.promotion-badge[data-v-8cee6305] {
+    align-self: start;
+    background: #fee2e2;
+    border-radius: 4px;
+    color: #b91c1c;
+    display: block;
+    font-size: .6875rem;
+    font-weight: 800;
+    line-height: 1.25;
+    margin-top: 4px;
+    max-width: 100%;
+    overflow: hidden;
+    padding: 2px 7px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    width: fit-content
+}
+.current-price[data-v-8cee6305] {
+    align-self: start;
+    color: #dc2626;
+    font-size: 1.125rem;
+    font-weight: 700;
+    line-height: 1.35;
+}
+.original-price[data-v-8cee6305] {
+    color: #94a3b8;
+    font-size: .875rem;
+    line-height: 18px;
+    text-decoration: line-through;
+}
+

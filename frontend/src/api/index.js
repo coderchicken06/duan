@@ -47,6 +47,7 @@ export const orderApi = {
   getById: (id) => api.get(`/api/orders/${id}`),
   getDetails: (id) => api.get(`/api/orders/${id}/details`),
   checkout: (address, paymentMethod) => api.post('/api/orders/checkout', { address, paymentMethod }),
+  updateStatus: (id, status) => api.put(`/api/orders/${id}/status`, { status }),
 }
 
 export const contractApi = {

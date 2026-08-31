@@ -29,6 +29,11 @@
             <td>{{ o.depositAmount != null ? `${formatPrice(o.depositAmount)} VNĐ` : 'Chưa xác định' }}</td>
             <td>
               <router-link :to="`/order/detail/${o.id}`">Chi tiết</router-link>
+              <button v-if="canCancel(o)" class="btn btn-outline-danger btn-sm ms-2" type="button"
+                :disabled="cancellingOrderId === o.id" @click="cancelOrder(o)">
+                <span v-if="cancellingOrderId === o.id" class="spinner-border spinner-border-sm me-1"></span>
+                {{ cancellingOrderId === o.id ? 'Đang hủy...' : 'Hủy đơn hàng' }}
+              </button>
               <span v-if="isCompleted(o) && isOrderReviewed(o)" class="badge bg-secondary ms-2">Đã đánh giá</span>
               <button v-else-if="isCompleted(o)" class="btn btn-danger btn-sm ms-2" type="button" @click="openReview(o)">
                 Đánh giá xe
@@ -100,6 +105,7 @@ const rating = ref(0)
 const hoverRating = ref(0)
 const reviewError = ref('')
 const reviewSubmitting = ref(false)
+const cancellingOrderId = ref(null)
 const satisfactionLabel = computed(() => ({
   0: 'Vui lòng chọn mức độ hài lòng',
   1: 'Rất không hài lòng',
@@ -159,6 +165,32 @@ function formatDepositPaidAt(order) {
 
 function isCompleted(order) {
   return ['COMPLETED', 'DELIVERED'].includes(order.status)
+}
+
+function canCancel(order) {
+  return String(order.status || '').toUpperCase() === 'PENDING'
+    && String(order.depositStatus || '').toUpperCase() !== 'PAID'
+}
+
+async function cancelOrder(order) {
+  if (!canCancel(order) || cancellingOrderId.value || !window.confirm('Bạn có chắc chắn muốn hủy yêu cầu đặt cọc này không?')) {
+    return
+  }
+
+  cancellingOrderId.value = order.id
+  try {
+    const { data } = await orderApi.updateStatus(order.id, 'CANCELLED')
+    if (!data?.success) {
+      throw new Error(data?.message || 'Không thể hủy đơn hàng.')
+    }
+    order.status = 'CANCELLED'
+    notifyDataUpdated()
+    showCartToast('Đã hủy đơn hàng và hoàn trả xe về kho thành công!')
+  } catch (error) {
+    showCartToast(error.response?.data?.message || error.message || 'Không thể hủy đơn hàng. Vui lòng thử lại.', 'error')
+  } finally {
+    cancellingOrderId.value = null
+  }
 }
 
 function isOrderReviewed(order) {
