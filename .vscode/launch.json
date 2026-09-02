@@ -3,6 +3,14 @@
   "configurations": [
     {
       "type": "java",
+      "name": "Run CarStoreApplication (Direct)",
+      "request": "launch",
+      "mainClass": "com.example.carstore.CarStoreApplication",
+      "projectName": "carstore",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "java",
       "name": "CarStore Backend + SePay ngrok",
       "request": "launch",
       "mainClass": "com.example.carstore.CarStoreApplication",

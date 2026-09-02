@@ -75,7 +75,7 @@
           <div v-if="showDropdown && suggestions.length" class="search-suggestions" role="listbox">
             <button v-for="item in suggestions" :key="item.id" class="search-suggestion" type="button" role="option"
               @click="selectSuggestion(item)">
-              <img :src="item.mainImageUrl || '/images/default-car.jpg'" alt="" @error="useDefaultCarImage" />
+              <img :src="carImageUrl(item.mainImageUrl)" alt="" @error="useDefaultCarImage" />
               <span class="search-suggestion-info"><strong>{{ item.carName }}</strong><small>{{ item.brandName
                   }}</small><small v-if="item.fuelType || item.seatCapacity" class="search-suggestion-tags">{{
                     item.fuelType || 'N/A' }}<template v-if="item.seatCapacity"> · {{ item.seatCapacity }}
@@ -94,7 +94,7 @@
 import { computed, ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import api from '../api/client'
-import { brandApi, useDefaultCarImage } from '../api'
+import { brandApi, carImageUrl, useDefaultCarImage } from '../api'
 import { useAuthStore } from '../stores/auth'
 import { useCartStore } from '../stores/cart'
 

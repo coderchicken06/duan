@@ -26,4 +26,16 @@ class ImagePathUtilsTest {
         assertEquals("/images/demo.jpg", ImagePathUtils.resolve("demo.jpg"));
         assertEquals("/images/demo.jpg", ImagePathUtils.resolve("/images/demo.jpg"));
     }
+
+        @Test
+        void resolvesLegacyGalleryNamesToExistingStaticAssets() {
+        assertEquals("/images/bmw3series-gallery1.png",
+            ImagePathUtils.resolve("bmw3-gallery1.jpg"));
+        assertEquals("/images/bmw3series-gallery3.png",
+            ImagePathUtils.resolve("/images/bmw3-gallery3.jpg"));
+        assertEquals("/images/mercedesC300-gallery2.png",
+            ImagePathUtils.resolve("c300-gallery2.jpg"));
+        assertEquals("/images/camry-gallery1.jpg",
+            ImagePathUtils.resolve("camry-gallery1.png"));
+        }
 }

@@ -145,13 +145,82 @@ export function formatPrice(price) {
   return Number(price).toLocaleString('vi-VN')
 }
 
+const imageAliases = {
+  'x5.jpg': 'bmwx5.png',
+  'x5.png': 'bmwx5.png',
+  'x5-gallery1.jpg': 'bmwx5-gallery1.png',
+  'x5-gallery2.jpg': 'bmwx5-gallery2.png',
+  'x5-gallery3.jpg': 'bmwx5-gallery3.png',
+  'x5-gallery4.jpg': 'bmwx5-gallery4.png',
+  'x5-gallery5.jpg': 'bmwx5-gallery5.png',
+  'c300.jpg': 'mercedesC300.png',
+  'c300.png': 'mercedesC300.png',
+  'c300-gallery1.jpg': 'mercedesC300-gallery1.png',
+  'c300-gallery2.jpg': 'mercedesC300-gallery2.png',
+  'c300-gallery3.jpg': 'mercedesC300-gallery3.png',
+  'c300-gallery4.jpg': 'mercedesC300-gallery4.png',
+  'c300-gallery5.jpg': 'mercedesC300-gallery5.png',
+  'bmw3.jpg': 'bmw3series.png',
+  'bmw3series.jpg': 'bmw3series.png',
+  'bmw3-gallery1.jpg': 'bmw3series-gallery1.png',
+  'bmw3-gallery2.jpg': 'bmw3series-gallery2.png',
+  'bmw3-gallery3.jpg': 'bmw3series-gallery3.png',
+  'bmw3-gallery4.jpg': 'bmw3series-gallery4.png',
+  'bmw3series-gallery1.jpg': 'bmw3series-gallery1.png',
+  'bmw3series-gallery2.jpg': 'bmw3series-gallery2.png',
+  'bmw3series-gallery3.jpg': 'bmw3series-gallery3.png',
+  'bmw3series-gallery4.jpg': 'bmw3series-gallery4.png',
+  'civic-gallery1.jpg': 'civic-gallery1.png',
+  'civic-gallery2.jpg': 'civic-gallery2.png',
+  'civic-gallery3.jpg': 'civic-gallery3.png',
+  'civic-gallery4.jpg': 'civic-gallery4.png',
+  'civic-gallery5.jpg': 'civic-gallery5.png',
+  'corolla-gallery1.jpg': 'Corolla-gallery1.png',
+  'corolla-gallery2.jpg': 'Corolla-gallery2.png',
+  'corolla-gallery3.jpg': 'Corolla-gallery3.png',
+  'corolla-gallery4.jpg': 'Corolla-gallery4.png',
+  'corolla-gallery5.jpg': 'Corolla-gallery5.png',
+  'camry-gallery1.png': 'camry-gallery1.jpg',
+  'camry-gallery2.jpg': 'camry-gallery2.png',
+  'camry-gallery3.jpg': 'camry-gallery3.png',
+  'camry-gallery4.jpg': 'camry-gallery4.png',
+  'camry-gallery5.jpg': 'camry-gallery5.png',
+  'wildtrak2025-gallery1.jpg': 'Wildtrak2025-gallery1.png',
+  'wildtrak2025-gallery2.jpg': 'Wildtrak2025-gallery2.png',
+  'wildtrak2025-gallery3.jpg': 'Wildtrak2025-gallery3.png',
+  'wildtrak2025-gallery4.jpg': 'Wildtrak2025-gallery4.png',
+  'wildtrak2025-gallery5.jpg': 'Wildtrak2025-gallery5.png',
+  'vf8-gallery1.jpg': 'VF8-gallery1.png',
+  'vf8-gallery2.jpg': 'VF8-gallery2.png',
+  'vf8-gallery3.jpg': 'VF8-gallery3.png',
+  'vf8-gallery4.jpg': 'VF8-gallery4.png',
+  'vf8-gallery5.jpg': 'VF8-gallery5.png',
+  'tucson-gallery1.jpg': 'Tucson-gallery1.png',
+  'tucson-gallery2.jpg': 'Tucson-gallery2.png',
+  'tucson-gallery3.jpg': 'Tucson-gallery3.png',
+  'tucson-gallery4.jpg': 'Tucson-gallery4.png',
+  'tucson-gallery5.jpg': 'Tucson-gallery5.png',
+  'wildtrak2025.jpg': 'Wildtrak2025.png',
+  'wildtrak2025.png': 'Wildtrak2025.png',
+  'vf8.jpg': 'VF8.png',
+  'vf8.png': 'VF8.png',
+  'tucson.jpg': 'Tucson.png',
+  'tucson.png': 'Tucson.png',
+  'corolla.jpg': 'Corolla.png',
+  'corolla.png': 'Corolla.png',
+  'civic.jpg': 'civic.png',
+}
+
 export function carImageUrl(image) {
   if (!image) return '/images/default-car.jpg'
   const value = String(image).trim().replaceAll('\\', '/')
   if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value
-  if (value.startsWith('/images/')) return value
-  if (value.startsWith('images/')) return `/${value}`
-  return `/images/${value.replace(/^\/+/, '')}`
+
+  const normalized = value.replace(/^\/+/, '').replace(/^images\//i, '')
+  const resolved = imageAliases[normalized.toLowerCase()] || normalized
+  if (resolved.startsWith('/images/')) return resolved
+  if (resolved.startsWith('images/')) return `/${resolved}`
+  return `/images/${resolved.replace(/^\/+/, '')}`
 }
 
 export function useDefaultCarImage(event) {

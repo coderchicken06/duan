@@ -31,11 +31,13 @@ if ($null -ne $tunnel) {
 
 $ngrokCommand = Get-Command ngrok -ErrorAction SilentlyContinue
 if ($null -eq $ngrokCommand) {
-    throw "Khong tim thay ngrok trong PATH. Hay cai Ngrok va dang nhap bang 'ngrok config add-authtoken ...'."
+    Write-Host "[WARNING] Khong tim thay ngrok trong PATH. Bo qua Ngrok va chay local..." -ForegroundColor Yellow
+    return $null
 }
 
 if (Get-Process ngrok -ErrorAction SilentlyContinue) {
-    throw "Ngrok dang chay nhung khong co tunnel HTTPS cho cong $Port. Hay dong phien Ngrok cu roi chay lai."
+    Write-Host "[WARNING] Ngrok dang chay nhung khong co tunnel HTTPS cho cong $Port. Bo qua Ngrok va chay local..." -ForegroundColor Yellow
+    return $null
 }
 
 $ngrokProcess = Start-Process -FilePath $ngrokCommand.Source `
@@ -46,7 +48,8 @@ $ngrokProcess = Start-Process -FilePath $ngrokCommand.Source `
 for ($attempt = 0; $attempt -lt 40; $attempt++) {
     Start-Sleep -Milliseconds 500
     if ($ngrokProcess.HasExited) {
-        throw "Ngrok ket thuc som. Hay kiem tra authtoken va ket noi Internet."
+        Write-Host "[WARNING] Ngrok ket thuc som (chua dang nhap authtoken hoac loi mang). Bo qua Ngrok va chay local..." -ForegroundColor Yellow
+        return $null
     }
     $tunnel = Get-CarStoreNgrokTunnel
     if ($null -ne $tunnel) {
@@ -56,7 +59,8 @@ for ($attempt = 0; $attempt -lt 40; $attempt++) {
 
 if ($null -eq $tunnel) {
     Stop-Process -Id $ngrokProcess.Id -Force -ErrorAction SilentlyContinue
-    throw "Khong lay duoc Forwarding URL tu Ngrok sau 20 giay."
+    Write-Host "[WARNING] Khong lay duoc Forwarding URL tu Ngrok sau 20 giay. Bo qua Ngrok va chay local..." -ForegroundColor Yellow
+    return $null
 }
 
 Write-Host "Forwarding URL: $($tunnel.public_url)" -ForegroundColor Green
@@ -67,3 +71,4 @@ return [pscustomobject]@{
     ProcessId = $ngrokProcess.Id
     Started   = $true
 }
+
