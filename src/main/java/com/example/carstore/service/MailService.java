@@ -111,8 +111,7 @@ public class MailService {
                     + "<h3 style='margin:24px 0 8px; color:#1f2937;'>Chi tiết xe</h3>"
                     + "<table style='width:100%; border-collapse:collapse;'><thead><tr style='background:#f3f4f6;'><th style='padding:10px; border:1px solid #e5e7eb; text-align:left;'>Tên xe</th><th style='padding:10px; border:1px solid #e5e7eb; text-align:left;'>Hãng xe</th><th style='padding:10px; border:1px solid #e5e7eb; text-align:right;'>Số tiền</th></tr></thead><tbody>"
                     + carRows + "</tbody></table>"
-                    + "<h3 style='margin:24px 0 8px; color:#1f2937;'>Hợp đồng &amp; nhận xe</h3>"
-                    + "<p>Hợp đồng mua bán điện tử của bạn đã được kích hoạt trên hệ thống CarStore. Quý khách có thể xem và quản lý hợp đồng trực tiếp tại mục Hợp đồng trên website khi đăng nhập tài khoản.</p>"
+                    + "<h3 style='margin:24px 0 8px; color:#1f2937;'> Hướng dẫn chuẩn bị giấy tờ nhận xe</h3>"
                     + "<p>Chuẩn bị khi nhận xe: CCCD/CMND, giấy tờ theo thông tin đăng ký xe, biên nhận thanh toán và email xác nhận này.</p>"
                     + "<p style='margin-top: 18px;'>Cảm ơn bạn đã tin tưởng CarStore.</p>"
                     + "</div></body></html>";
