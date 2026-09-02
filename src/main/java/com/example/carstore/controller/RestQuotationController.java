@@ -25,9 +25,21 @@ public class RestQuotationController {
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
     }
 
+    private void requireCustomer(Authentication auth) {
+        if (auth == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
+        if (admin(auth)) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN,
+                    "Tài khoản Quản trị viên không được thực hiện luồng đặt cọc.");
+        }
+    }
+
     @PostMapping
     public Map<String, Object> create(@RequestBody QuotationRequestDto request, Authentication auth) {
-        if (auth == null) return fail("Not authenticated");
+        requireCustomer(auth);
         return Map.of("success", true, "message", "Tạo yêu cầu báo giá thành công",
                 "data", service.create(auth.getName(), request));
     }
@@ -67,15 +79,15 @@ public class RestQuotationController {
 
     @PostMapping("/{id}/confirm")
     public Map<String, Object> confirm(@PathVariable Integer id, Authentication auth) {
-        if (auth == null) return fail("Not authenticated");
+        requireCustomer(auth);
         return Map.of("success", true, "data", service.confirm(id, auth.getName()));
     }
 
     @PostMapping("/{id}/convert-to-order")
     public Map<String, Object> convertToOrder(@PathVariable Integer id,
-                                              @RequestBody QuotationRequestDto request,
-                                              Authentication auth) {
-        if (auth == null) return fail("Not authenticated");
+                                               @RequestBody QuotationRequestDto request,
+                                               Authentication auth) {
+        requireCustomer(auth);
         Orders order = service.convertToOrder(id, auth.getName(), request);
         return Map.of("success", true, "message", "Đã chuyển báo giá thành đơn hàng",
                 "data", order);

@@ -47,6 +47,7 @@ export const orderApi = {
   getById: (id) => api.get(`/api/orders/${id}`),
   getDetails: (id) => api.get(`/api/orders/${id}/details`),
   checkout: (address, paymentMethod) => api.post('/api/orders/checkout', { address, paymentMethod }),
+  updateStatus: (id, status) => api.put(`/api/orders/${id}/status`, { status }),
 }
 
 export const contractApi = {
@@ -212,7 +213,7 @@ const imageAliases = {
 }
 
 export function carImageUrl(image) {
-  if (!image) return '/images/default-car.jpg'
+  if (!image) return '/images/car-placeholder.svg'
   const value = String(image).trim().replaceAll('\\', '/')
   if (/^(https?:)?\/\//i.test(value) || value.startsWith('data:')) return value
 
@@ -226,7 +227,7 @@ export function carImageUrl(image) {
 export function useDefaultCarImage(event) {
   const image = event?.target
   if (!image) return
-  const fallback = '/images/default-car.jpg'
+  const fallback = '/images/car-placeholder.svg'
   if (new URL(image.src, window.location.origin).pathname === fallback) return
   image.src = fallback
 }

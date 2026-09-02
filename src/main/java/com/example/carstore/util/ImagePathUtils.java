@@ -90,7 +90,7 @@ public final class ImagePathUtils {
 
     public static String resolve(String image) {
         String value = normalizeForStorage(image);
-        if (value == null) return "/images/default-car.jpg";
+        if (value == null) return "/images/car-placeholder.svg";
         if (value.matches("(?i)^(https?:)?//.*") || value.startsWith("data:")) return value;
         return "/images/" + value;
     }

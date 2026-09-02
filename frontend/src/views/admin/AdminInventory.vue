@@ -36,7 +36,8 @@
           <tr v-for="car in cars" v-else :key="car.id">
             <td>
               <div class="car-cell">
-                <img :src="carImageUrl(car.image)" :alt="car.name" @error="useDefaultCarImage" />
+                <img :src="carImageUrl(car.image)" :alt="car.name" loading="lazy" decoding="async"
+                  @error="useDefaultCarImage" />
                 <div><strong>{{ car.name }}</strong><small>ID: {{ car.id }}</small></div>
               </div>
             </td>
@@ -54,32 +55,26 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { adminApi, carImageUrl, useDefaultCarImage } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
+import { useAutoRefresh } from '../../composables/useAutoRefresh'
 
 const cars = ref([])
 const brands = ref([])
 const loading = ref(false)
-let pollTimer = null
+let loadingRequest = false
 const brandMap = computed(() => new Map(brands.value.map((brand) => [Number(brand.id), brand.name])))
 const totalStock = computed(() => cars.value.reduce((total, car) => total + Number(car.stock || 0), 0))
 const lowStockCount = computed(() => cars.value.filter((car) => Number(car.stock) > 0 && Number(car.stock) <= 3).length)
 const outOfStockCount = computed(() => cars.value.filter((car) => Number(car.stock || 0) === 0).length)
 
-onMounted(() => {
-  load()
-  pollTimer = window.setInterval(() => load(true), 2000)
-})
-
-onBeforeUnmount(() => {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
-  }
-})
+onMounted(load)
+useAutoRefresh(() => load(true))
 
 async function load(silent = false) {
+  if (loadingRequest) return
+  loadingRequest = true
   if (!silent) {
     loading.value = true
   }
@@ -105,6 +100,7 @@ async function load(silent = false) {
       )
     }
   } finally {
+    loadingRequest = false
     if (!silent) {
       loading.value = false
     }

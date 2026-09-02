@@ -6,6 +6,7 @@ import com.example.carstore.entity.Orders;
 import com.example.carstore.entity.PaymentTransaction;
 import com.example.carstore.repository.ContractRepository;
 import com.example.carstore.repository.OrderDetailRepository;
+import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.repository.PaymentTransactionRepository;
 import com.example.carstore.repository.QuotationRepository;
 import org.springframework.http.HttpStatus;
@@ -22,14 +23,17 @@ public class ContractService {
     private final OrderDetailRepository orderDetailRepo;
     private final PaymentTransactionRepository paymentTransactionRepo;
     private final QuotationRepository quotationRepo;
+    private final OrderRepository orderRepo;
 
     public ContractService(ContractRepository contractRepo, OrderDetailRepository orderDetailRepo,
             PaymentTransactionRepository paymentTransactionRepo,
-            QuotationRepository quotationRepo) {
+            QuotationRepository quotationRepo,
+            OrderRepository orderRepo) {
         this.contractRepo = contractRepo;
         this.orderDetailRepo = orderDetailRepo;
         this.paymentTransactionRepo = paymentTransactionRepo;
         this.quotationRepo = quotationRepo;
+        this.orderRepo = orderRepo;
     }
 
     @Transactional
@@ -81,10 +85,25 @@ public class ContractService {
     }
 
     public List<ContractResponseDto> toResponses(List<Contract> contracts) {
-        return contracts.stream().map(this::toResponse).toList();
+        if (contracts.isEmpty()) {
+            return List.of();
+        }
+
+        List<Integer> orderIds = contracts.stream().map(Contract::getOrderId).toList();
+        java.util.Map<Integer, String> carNamesByOrderId = new java.util.HashMap<>();
+        for (var detail : orderDetailRepo.findByOrderIdInWithCar(orderIds)) {
+            if (detail.getCar() != null && detail.getCar().getName() != null && !detail.getCar().getName().isBlank()) {
+                carNamesByOrderId.putIfAbsent(detail.getOrderId(), detail.getCar().getName());
+            }
+        }
+        return contracts.stream().map(contract -> toResponse(contract, carNamesByOrderId)).toList();
     }
 
     public ContractResponseDto toResponse(Contract contract) {
+        return toResponse(contract, java.util.Map.of());
+    }
+
+    private ContractResponseDto toResponse(Contract contract, java.util.Map<Integer, String> carNamesByOrderId) {
         ContractResponseDto dto = new ContractResponseDto();
         dto.setId(contract.getId());
         dto.setContractNo(String.format("HD-%03d", contract.getId()));
@@ -96,11 +115,14 @@ public class ContractService {
         dto.setStatus(contract.getStatus());
         dto.setPdfPath(contract.getPdfPath());
 
-        String carName = orderDetailRepo.findByOrderIdWithCar(contract.getOrderId()).stream()
-                .map(detail -> detail.getCar() == null ? null : detail.getCar().getName())
-                .filter(name -> name != null && !name.isBlank())
-                .findFirst()
-                .orElse("Xe chưa xác định");
+        String carName = carNamesByOrderId.get(contract.getOrderId());
+        if (carName == null) {
+            carName = orderDetailRepo.findByOrderIdWithCar(contract.getOrderId()).stream()
+                    .map(detail -> detail.getCar() == null ? null : detail.getCar().getName())
+                    .filter(name -> name != null && !name.isBlank())
+                    .findFirst()
+                    .orElse("Xe chưa xác định");
+        }
         dto.setCarName(carName);
         dto.setProductName(carName);
         return dto;
@@ -120,9 +142,24 @@ public class ContractService {
             if (!List.of("Chờ ký", "Đã ký", "Hủy").contains(payload.getStatus())) {
                 throw new IllegalArgumentException("Trạng thái hợp đồng không hợp lệ.");
             }
-            contract.setStatus(payload.getStatus());
-            if ("Đã ký".equals(payload.getStatus()) && contract.getSignedAt() == null) {
-                contract.setSignedAt(new Date());
+            if (!payload.getStatus().equals(contract.getStatus())) {
+                if ("Đã ký".equals(contract.getStatus()) || "Hủy".equals(contract.getStatus())) {
+                    throw new IllegalArgumentException("Không thể thay đổi hợp đồng đã kết thúc.");
+                }
+                if (!"Chờ ký".equals(contract.getStatus())) {
+                    throw new IllegalArgumentException("Trạng thái hợp đồng hiện tại không cho phép chuyển đổi.");
+                }
+                if ("Đã ký".equals(payload.getStatus())) {
+                    Orders order = orderRepo.findById(contract.getOrderId())
+                            .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng liên kết với hợp đồng."));
+                    if (!"PAID".equalsIgnoreCase(order.getDepositStatus())) {
+                        throw new IllegalArgumentException("Không thể ký hợp đồng khi đơn hàng chưa thanh toán tiền cọc!");
+                    }
+                }
+                contract.setStatus(payload.getStatus());
+                if ("Đã ký".equals(payload.getStatus()) && contract.getSignedAt() == null) {
+                    contract.setSignedAt(new Date());
+                }
             }
         }
         return contractRepo.save(contract);

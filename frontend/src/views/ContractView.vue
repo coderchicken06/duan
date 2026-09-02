@@ -302,9 +302,19 @@ useAutoRefresh(loadContract)
 }
 
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 15mm;
+  }
+
   :global(.ford-header),
   :global(.ford-footer) {
     display: none !important
+  }
+
+  :global(body) {
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
 
   .contract-page {
@@ -312,11 +322,23 @@ useAutoRefresh(loadContract)
   }
 
   .contract-sheet {
-    box-shadow: none
+    width: 100% !important;
+    padding: 0 !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+  }
+
+  .contract-section,
+  .vehicle-row,
+  .payment-summary,
+  .signatures {
+    break-inside: avoid;
   }
 
   .contract-actions {
-    display: none
+    display: none !important
   }
 }
 </style>

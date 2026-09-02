@@ -73,5 +73,5 @@ async function save(item) {
 const isSaving = (contractId) => savingId.value === contractId
 
 onMounted(load)
-useAutoRefresh(load, 0)
+useAutoRefresh(load)
 </script>

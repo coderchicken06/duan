@@ -114,6 +114,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { carApi, adminApi, uploadApi, carImageUrl } from '../api'
+import { notifyDataUpdated } from '../composables/useAutoRefresh'
 
 const route = useRoute()
 const router = useRouter()
@@ -163,6 +164,7 @@ async function resolveBrandId() {
     throw new Error(response.data.message || 'Không thể thêm thương hiệu mới.')
   }
   brands.value.push(response.data.data)
+  notifyDataUpdated()
   return response.data.data.id
 }
 
@@ -224,6 +226,7 @@ async function submit() {
     const savedCar = res.data.data || res.data
     const carId = route.params.id || savedCar.id
     if (carId) await saveGallery(carId)
+    notifyDataUpdated()
     router.push('/admin/products')
   } catch (e) {
     error.value = e.response?.data?.message || e.message || 'Lỗi lưu xe'

@@ -4,7 +4,8 @@
       <div class="detail-hero">
         <section class="gallery-card">
           <div class="main-image-wrap">
-            <img class="main-image" :src="selectedImage" :alt="car.name" @error="useDefaultCarImage" />
+            <img class="main-image" :src="selectedImage" :alt="car.name" decoding="async" fetchpriority="high"
+              @error="useDefaultCarImage" />
             <button v-if="galleryImages.length > 1" class="gallery-arrow gallery-arrow-left" type="button"
               aria-label="Ảnh trước" @click="previousImage">‹</button>
             <button v-if="galleryImages.length > 1" class="gallery-arrow gallery-arrow-right" type="button"
@@ -15,7 +16,8 @@
             <button v-for="(image, index) in galleryImages" :key="`${image}-${index}`" type="button"
               :class="['thumbnail-button', { active: image === selectedImage }]"
               :aria-label="`Xem ảnh ${index + 1} của ${car.name}`" @click="selectedImage = image">
-              <img :src="image" :alt="`${car.name} - ảnh ${index + 1}`" @error="useDefaultCarImage" />
+              <img :src="image" :alt="`${car.name} - ảnh ${index + 1}`" loading="lazy" decoding="async"
+                @error="useDefaultCarImage" />
             </button>
           </div>
         </section>
@@ -163,7 +165,7 @@ import CarCard from '../components/CarCard.vue'
 import { useCompare } from '../composables/useCompare'
 import { reviewApi } from '../api'
 import { showCartToast } from '../composables/useCartToast'
-import { useAutoRefresh } from '../composables/useAutoRefresh'
+import { notifyDataUpdated, useAutoRefresh } from '../composables/useAutoRefresh'
 import { useCartStore } from '../stores/cart'
 import { useAuthStore } from '../stores/auth'
 import { useCatalogStore } from '../stores/catalog'
@@ -331,7 +333,7 @@ async function loadData(silent = false, force = false) {
 
 onMounted(loadData)
 watch(() => route.params.id, () => loadData())
-useAutoRefresh(() => loadData(true, true), 0)
+useAutoRefresh(() => loadData(true, true))
 
 function toggleCurrent() {
   if (!has(car.value.id) && count.value >= 3) {
@@ -366,6 +368,7 @@ async function addById(id) {
     const { data } = await cartApi.add(id)
     if (data.success) {
       void cart.refresh()
+      notifyDataUpdated()
     } else {
       cart.itemCount = previousItemCount
       success.value = false
@@ -385,7 +388,10 @@ const addToCart = () => addById(car.value.id)
 async function requestQuotation() {
   try {
     const { data } = await quotationApi.create({ carId: car.value.id })
-    if (data.success) router.push(`/quotations/${data.data.id}`)
+    if (data.success) {
+      notifyDataUpdated()
+      router.push(`/quotations/${data.data.id}`)
+    }
   } catch (error) {
     success.value = false
     message.value = error.response?.data?.message || 'Không thể tạo yêu cầu báo giá'

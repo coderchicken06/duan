@@ -46,6 +46,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { adminApi, carImageUrl, formatPrice, useDefaultCarImage } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
+import { notifyDataUpdated, useAutoRefresh } from '../../composables/useAutoRefresh'
 
 const cars = ref([])
 const brands = ref([])
@@ -55,7 +56,8 @@ const route = useRoute()
 const brandMap = computed(() => new Map(brands.value.map((brand) => [Number(brand.id), brand.name])))
 
 onMounted(load)
-watch(() => route.path, load)
+useAutoRefresh(load)
+watch(() => route.fullPath, load)
 
 async function load() {
   loading.value = true
@@ -83,6 +85,7 @@ async function remove(car) {
       showCartToast(data.message || 'Không thể xóa xe', 'error')
       return
     }
+    notifyDataUpdated()
     showCartToast(data.message || 'Đã xóa xe thành công')
   } catch (error) {
     cars.value = previousCars

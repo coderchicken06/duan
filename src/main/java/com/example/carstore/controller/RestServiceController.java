@@ -124,10 +124,6 @@ public class RestServiceController {
             return ResponseUtils.fail("Status is required");
         }
 
-        if (!supportRequestService.isValidStatus(status)) {
-            return ResponseUtils.fail("Invalid status");
-        }
-
         boolean updated = supportRequestService.updateStatus(id, status);
 
         if (!updated) {

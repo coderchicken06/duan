@@ -13,6 +13,9 @@ public interface OrderDetailRepository extends JpaRepository<OrderDetail, Intege
     @Query("SELECT d FROM OrderDetail d JOIN FETCH d.car WHERE d.orderId = :orderId")
     List<OrderDetail> findByOrderIdWithCar(@Param("orderId") Integer orderId);
 
+    @Query("SELECT d FROM OrderDetail d JOIN FETCH d.car WHERE d.orderId IN :orderIds")
+    List<OrderDetail> findByOrderIdInWithCar(@Param("orderIds") List<Integer> orderIds);
+
     boolean existsByCar_Id(Integer carId);
 
     // Doanh thu chỉ lấy đơn đã cọc; loại đơn chờ và đơn hủy để số liệu không bị cộng sai.

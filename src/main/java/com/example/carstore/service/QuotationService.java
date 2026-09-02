@@ -96,26 +96,26 @@ public class QuotationService {
     public Quotation update(Integer id, QuotationRequestDto request) {
         Quotation q = get(id);
         Date now = new Date();
-        if ((CONVERTED.equals(q.getStatus()) || q.getOrderId() != null)
-                && request.getStatus() != null
-                && !CONVERTED.equals(request.getStatus())) {
-            throw new IllegalArgumentException("Không thể thay đổi trạng thái báo giá đã chuyển thành đơn hàng.");
-        }
-        double discount = request.getDiscount() == null ? 0D : request.getDiscount();
-        if (discount < 0 || discount > q.getCarPrice()) {
-            throw new IllegalArgumentException("Giảm giá không hợp lệ.");
-        }
         if (request.getStatus() != null
                 && !List.of(PENDING, APPROVED, REJECTED).contains(request.getStatus())) {
             throw new IllegalArgumentException("Trạng thái báo giá không hợp lệ.");
+        }
+        if (request.getStatus() != null && !request.getStatus().equals(q.getStatus())) {
+            validateAdminStatusTransition(q.getStatus(), request.getStatus(), q.getOrderId());
+        }
+        String previousStatus = q.getStatus();
+        double discount = request.getDiscount() == null ? 0D : request.getDiscount();
+        if (discount < 0 || discount > q.getCarPrice()) {
+            throw new IllegalArgumentException("Giảm giá không hợp lệ.");
         }
         q.setDiscount(discount);
         if (request.getNote() != null) {
             q.setNote(request.getNote());
         }
         if (request.getStatus() != null) {
-            if (APPROVED.equals(request.getStatus()) && !APPROVED.equals(q.getStatus())) {
-                // Schema không có approved_at; quotationDate là mốc phát hành cố định sau khi duyệt.
+            if (APPROVED.equals(request.getStatus()) && !APPROVED.equals(previousStatus)) {
+                // quotationDate is the issued-at value used by the seven-day price lock.
+                // It is reset exactly once when the dealer approves the quotation.
                 q.setQuotationDate(now);
             }
             q.setStatus(request.getStatus());
@@ -132,6 +132,17 @@ public class QuotationService {
             q.setTotalPrice(q.getCarPrice() - discount);
         }
         return repo.save(q);
+    }
+
+    private void validateAdminStatusTransition(String currentStatus, String targetStatus, Integer orderId) {
+        if (CONVERTED.equals(currentStatus) || orderId != null) {
+            throw new IllegalArgumentException("Không thể thay đổi trạng thái báo giá đã chuyển thành đơn hàng.");
+        }
+        if (!PENDING.equals(currentStatus)
+                || !(APPROVED.equals(targetStatus) || REJECTED.equals(targetStatus))) {
+            throw new IllegalArgumentException(
+                    "Báo giá chỉ được duyệt hoặc từ chối một lần khi đang chờ xác nhận.");
+        }
     }
 
     @Transactional
@@ -244,11 +255,11 @@ public class QuotationService {
     }
 
     public List<Quotation> mine(String username) {
-        return repo.findByCustomerUsernameOrderByQuotationDateDesc(username);
+        return repo.findByCustomerUsernameWithItems(username);
     }
 
     public List<Quotation> all() {
-        return repo.findAll();
+        return repo.findAllWithItems();
     }
 
     public List<Quotation> getAll() {

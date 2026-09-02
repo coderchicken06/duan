@@ -75,7 +75,7 @@
           <button class="btn cs-btn cs-btn-ghost w-100" type="button" :disabled="clearing" @click="clearCart">
             {{ clearing ? 'Đang xóa...' : 'Xóa toàn bộ xe đã chọn' }}
           </button>
-          <p class="cart-hold-note">Phiếu cọc có hiệu lực giữ chỗ trong 07 ngày làm việc.</p>
+          <p class="cart-hold-note">Thời gian giữ chỗ thanh toán cọc: 03 phút (Quá hạn hệ thống tự động hoàn xe về kho)</p>
           <router-link class="cart-continue" to="/car/list">← Tiếp tục xem xe</router-link>
         </aside>
       </div>
@@ -88,6 +88,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { carImageUrl, cartApi, formatPrice, useDefaultCarImage } from '../api'
+import { notifyDataUpdated, useAutoRefresh } from '../composables/useAutoRefresh'
 import { useCartStore } from '../stores/cart'
 
 const cart = useCartStore()
@@ -125,10 +126,13 @@ function formatDiscount(item) {
 }
 
 onMounted(loadCart)
+useAutoRefresh(() => loadCart(true))
 
-async function loadCart() {
-  loading.value = true
-  loadError.value = ''
+async function loadCart(silent = false) {
+  if (!silent) {
+    loading.value = true
+    loadError.value = ''
+  }
   try {
     if (cart.depositItem) {
       items.value = [cart.depositItem]
@@ -141,9 +145,9 @@ async function loadCart() {
     cart.setItems(items.value)
     total.value = Number(data.total || 0)
   } catch {
-    loadError.value = 'Không thể tải phiếu đặt cọc. Vui lòng kiểm tra kết nối máy chủ.'
+    if (!silent) loadError.value = 'Không thể tải phiếu đặt cọc. Vui lòng kiểm tra kết nối máy chủ.'
   } finally {
-    loading.value = false
+    if (!silent) loading.value = false
   }
 }
 
@@ -157,6 +161,7 @@ async function updateQuantity(id, action) {
       return
     }
     await loadCart()
+    notifyDataUpdated()
   } catch {
     message.value = 'Không thể cập nhật phiếu đặt cọc. Vui lòng thử lại.'
   } finally {
@@ -169,6 +174,7 @@ async function remove(id) {
     cart.clearDepositItem()
     items.value = []
     total.value = 0
+    notifyDataUpdated()
     return
   }
   return updateQuantity(id, () => cartApi.remove(id))
@@ -182,10 +188,12 @@ async function clearCart() {
       cart.clearDepositItem()
       items.value = []
       total.value = 0
+      notifyDataUpdated()
       return
     }
     await cartApi.clear()
     await loadCart()
+    notifyDataUpdated()
   } catch {
     message.value = 'Không thể xóa phiếu đặt cọc. Vui lòng thử lại.'
   } finally {

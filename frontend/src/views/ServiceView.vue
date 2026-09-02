@@ -40,8 +40,9 @@
           </div>
           <div class="field">
             <label for="service-phone">Số điện thoại *</label>
-            <input id="service-phone" v-model.trim="form.phone" class="form-control" inputmode="tel" maxlength="12"
-              autocomplete="tel" placeholder="+84xxxxxxxxx" />
+            <input id="service-phone" v-model.trim="form.phone" class="form-control" inputmode="tel" maxlength="14"
+              autocomplete="tel" placeholder="Ví dụ: 0912 345 678"
+              @blur="form.phone = normalizeVietnamesePhone(form.phone)" />
           </div>
           <div class="field">
             <label for="service-car">Thông tin xe / biển số *</label>
@@ -94,6 +95,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { carApi, supportApi } from '../api'
 import DatePickerInput from '../components/DatePickerInput.vue'
+import { notifyDataUpdated } from '../composables/useAutoRefresh'
 import { isValidVietnamesePhone, normalizeVietnamesePhone } from '../utils/phone'
 import { useAuthStore } from '../stores/auth'
 
@@ -214,7 +216,7 @@ function validateForm() {
   if (!form.value.appointmentDate) return 'Vui lòng chọn ngày hẹn.'
   if (!form.value.appointmentTime) return 'Vui lòng chọn giờ hẹn từ 07:30 đến 18:30.'
   if (!isValidVietnamesePhone(form.value.phone)) {
-    return 'Số điện thoại phải có 9 chữ số, 10 chữ số bắt đầu bằng 0, hoặc bắt đầu bằng +84/84.'
+    return 'Vui lòng nhập số điện thoại hợp lệ (10 chữ số, bắt đầu bằng số 0).'
   }
   if (form.value.appointmentDate < minimumAppointmentDate.value) {
     return 'Hôm nay đã hết khung giờ nhận lịch, vui lòng chọn từ ngày mai.'
@@ -255,6 +257,7 @@ async function submit() {
       form.value.carInfo = ''
       form.value.serviceType = ''
       selectedFromCatalog.value = false
+      notifyDataUpdated()
     }
   } catch (error) {
     ok.value = false

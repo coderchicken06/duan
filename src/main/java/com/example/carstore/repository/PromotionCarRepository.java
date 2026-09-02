@@ -10,4 +10,5 @@ public interface PromotionCarRepository extends JpaRepository<PromotionCar, Prom
     void deleteByPromotionIdAndCarId(Integer promotionId, Integer carId);
     void deleteByPromotionId(Integer promotionId);
     List<PromotionCar> findByPromotionId(Integer promotionId);
+    boolean existsByCarId(Integer carId);
 }

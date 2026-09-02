@@ -1,7 +1,60 @@
 <template>
   <header ref="header" class="ford-header" :class="{ 'is-admin-header': auth.isAdmin }">
-    <div class="ford-header-inner">
-      <nav v-if="!auth.isAdmin" class="ford-nav-left" aria-label="Điều hướng khách hàng">
+    <div v-if="!auth.isAdmin" class="customer-header">
+      <div class="customer-header-topbar">
+        <router-link class="ford-logo" to="/" aria-label="CarStore - Trang chủ">CarStore</router-link>
+
+        <div class="ford-nav-right">
+          <button v-if="showSearch" type="button" class="ford-icon-btn" title="Tìm kiếm" aria-label="Mở ô tìm kiếm"
+            :aria-expanded="searchOpen" @click="searchOpen = !searchOpen">
+            <svg viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8" />
+              <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            </svg>
+          </button>
+
+          <router-link v-if="!auth.isLoggedIn" to="/login" class="ford-icon-btn" title="Đăng nhập" aria-label="Đăng nhập">
+            <svg viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </router-link>
+
+          <details v-if="auth.isUser" class="role-dropdown" ref="userMenuDetails">
+            <summary class="ford-icon-btn" title="Lịch sử" aria-label="Mở menu lịch sử">
+              <svg viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.7" />
+                <polyline points="3 3 3 9 9 9" />
+                <polyline points="12 7 12 12 16 14" />
+              </svg>
+            </summary>
+            <div class="role-menu-panel">
+              <router-link to="/my-orders" @click="closeUserMenu">📦 Lịch sử đơn hàng</router-link>
+              <router-link to="/quotation-history" @click="closeUserMenu">📋 Xem Lịch sử yêu cầu báo giá</router-link>
+              <router-link to="/history" @click="closeUserMenu">📋 Lịch sử yêu cầu hỗ trợ</router-link>
+            </div>
+          </details>
+
+          <router-link v-if="auth.isLoggedIn" to="/profile" class="ford-icon-btn" title="Hồ sơ"
+            aria-label="Hồ sơ cá nhân">
+            <svg viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+              <circle cx="12" cy="7" r="4" />
+            </svg>
+          </router-link>
+
+          <button v-if="auth.isLoggedIn" type="button" class="ford-icon-btn" title="Đăng xuất" aria-label="Đăng xuất"
+            @click="handleLogout">
+            <svg viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 0-4-4H8a2 2 0 0 0-4 4v2" />
+              <polyline points="16 17 21 12 16 7" />
+              <line x1="21" y1="12" x2="9" y2="12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <nav class="customer-header-nav ford-nav-left" aria-label="Điều hướng khách hàng">
         <router-link to="/news">Tin tức</router-link>
         <router-link to="/cars">Sản phẩm</router-link>
         <router-link class="cart-nav-link" to="/cart/view">
@@ -13,51 +66,20 @@
         <router-link to="/service">Dịch vụ</router-link>
         <router-link to="/support">Hỗ trợ</router-link>
       </nav>
-      <div v-if="auth.isAdmin" class="admin-header-spacer" aria-hidden="true"></div>
-      <router-link class="ford-logo" :to="auth.isAdmin ? '/admin/dashboard' : '/'"
-        :aria-label="auth.isAdmin ? 'CarStore - Trang quản trị' : 'CarStore - Trang chủ'">CarStore</router-link>
+    </div>
 
+    <div v-else class="ford-header-inner">
+      <div class="admin-header-spacer" aria-hidden="true"></div>
+      <router-link class="ford-logo" to="/admin/dashboard" aria-label="CarStore - Trang quản trị">CarStore</router-link>
       <div class="ford-nav-right">
-        <button v-if="showSearch && !auth.isAdmin" type="button" class="ford-icon-btn" title="Tìm kiếm" aria-label="Mở ô tìm kiếm"
-          :aria-expanded="searchOpen" @click="searchOpen = !searchOpen">
-          <svg viewBox="0 0 24 24">
-            <circle cx="11" cy="11" r="8" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-        </button>
-
-        <router-link v-if="!auth.isLoggedIn" to="/login" class="ford-icon-btn" title="Đăng nhập" aria-label="Đăng nhập">
+        <router-link to="/profile" class="ford-icon-btn" title="Hồ sơ" aria-label="Hồ sơ cá nhân">
           <svg viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
             <circle cx="12" cy="7" r="4" />
           </svg>
         </router-link>
 
-        <details v-if="auth.isUser" class="role-dropdown" ref="userMenuDetails">
-          <summary class="ford-icon-btn" title="Lịch sử" aria-label="Mở menu lịch sử">
-            <svg viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M3 12a9 9 0 1 0 3-6.7" />
-              <polyline points="3 3 3 9 9 9" />
-              <polyline points="12 7 12 12 16 14" />
-            </svg>
-          </summary>
-          <div class="role-menu-panel">
-            <router-link to="/my-orders" @click="closeUserMenu">📦 Lịch sử đơn hàng</router-link>
-            <router-link to="/quotation-history" @click="closeUserMenu">📋 Xem Lịch sử yêu cầu báo giá</router-link>
-            <router-link to="/history" @click="closeUserMenu">📋 Lịch sử yêu cầu hỗ trợ</router-link>
-          </div>
-        </details>
-
-        <router-link v-if="auth.isLoggedIn" to="/profile" class="ford-icon-btn" title="Hồ sơ"
-          aria-label="Hồ sơ cá nhân">
-          <svg viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-          </svg>
-        </router-link>
-
-        <button v-if="auth.isLoggedIn" type="button" class="ford-icon-btn" title="Đăng xuất" aria-label="Đăng xuất"
-          @click="handleLogout">
+        <button type="button" class="ford-icon-btn" title="Đăng xuất" aria-label="Đăng xuất" @click="handleLogout">
           <svg viewBox="0 0 24 24">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
             <polyline points="16 17 21 12 16 7" />
@@ -204,8 +226,7 @@ function handleSearchInput() {
 
 async function handleLogout() {
   await auth.logout()
-  cart.reset()
-  router.push('/')
+  router.push('/login')
 }
 
 function doSearch() {
@@ -224,8 +245,83 @@ function selectSuggestion(item) {
 </script>
 
 <style scoped>
+.ford-header {
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 4px 14px rgb(15 23 42 / 6%);
+  isolation: isolate;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+}
+
 .ford-header-inner {
   height: 72px;
+}
+
+.customer-header {
+  margin: 0 auto;
+  max-width: 1280px;
+}
+
+.customer-header-topbar {
+  align-items: center;
+  display: flex;
+  height: 72px;
+  justify-content: space-between;
+  padding: 0 24px;
+}
+
+.customer-header-nav {
+  border-top: 1px solid #f1f5f9;
+  box-sizing: border-box;
+  min-width: 0;
+  overflow-x: auto;
+  padding: .55rem 24px;
+  scrollbar-width: none;
+  white-space: nowrap;
+}
+
+.customer-header-nav::-webkit-scrollbar {
+  display: none;
+}
+
+@media (min-width: 1024px) {
+  .customer-header {
+    height: 72px;
+    padding: 0 24px;
+    position: relative;
+  }
+
+  .customer-header-topbar {
+    display: contents;
+  }
+
+  .customer-header .ford-logo {
+    left: 50%;
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+  }
+
+  .customer-header-nav {
+    border-top: 0;
+    left: 24px;
+    overflow: visible;
+    padding: 0;
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    width: auto;
+  }
+
+  .customer-header .ford-nav-right {
+    position: absolute;
+    right: 24px;
+    top: 50%;
+    transform: translateY(-50%);
+  }
 }
 
 .ford-header.is-admin-header .ford-header-inner {
@@ -414,11 +510,14 @@ function selectSuggestion(item) {
   white-space: nowrap;
 }
 
-@media (max-width: 768px) {
+@media (max-width: 1023.98px) {
   .ford-header.is-admin-header .ford-header-inner {
     display: grid;
-    height: 64px;
-    padding: 0 16px;
+    grid-template-areas: "logo actions";
+    grid-template-columns: minmax(0, 1fr) auto;
+    height: auto;
+    min-height: 64px;
+    padding: .7rem 1rem;
   }
 
   .search-suggestions {
@@ -426,38 +525,95 @@ function selectSuggestion(item) {
   }
 
   .ford-header-inner {
-    grid-template-columns: auto 1fr auto;
+    display: grid;
+    grid-template-areas:
+      "logo actions"
+      "menu menu";
+    grid-template-columns: minmax(0, 1fr) auto;
     height: auto;
-    gap: 0.65rem;
-    padding: 0.7rem 1rem 0;
+    min-height: 64px;
+    align-items: center;
+    gap: .65rem .75rem;
+    padding: .7rem 1rem .5rem;
+  }
+
+  .customer-header-topbar {
+    height: 64px;
+    padding: 0 16px;
+  }
+
+  .customer-header-nav {
+    gap: 1.5rem;
+    justify-content: center;
+    padding: .55rem 16px;
+    width: 100%;
   }
 
   .ford-logo {
-    grid-column: 1;
-    grid-row: 1;
+    grid-area: logo;
+    grid-column: auto;
+    grid-row: auto;
     justify-self: start;
+    min-width: 0;
   }
 
   .ford-nav-right {
-    grid-column: 3;
-    grid-row: 1;
+    grid-area: actions;
+    grid-column: auto;
+    grid-row: auto;
     justify-self: end;
+    min-width: max-content;
   }
 
   .ford-nav-left {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    grid-area: menu;
+    grid-column: auto;
+    grid-row: auto;
+    min-width: 0;
     width: 100%;
     justify-content: flex-start;
     gap: 1.1rem;
     overflow-x: auto;
-    padding-bottom: 0.45rem;
+    padding: .1rem 0 .45rem;
     scrollbar-width: none;
     white-space: nowrap;
   }
 
+  .customer-header .customer-header-nav {
+    gap: 1.5rem;
+    grid-area: auto;
+    grid-column: auto;
+    grid-row: auto;
+    justify-content: center;
+    padding: .55rem 16px;
+  }
+
+  .ford-header.is-admin-header .admin-header-spacer {
+    display: none;
+  }
+
+  .ford-header.is-admin-header .ford-logo {
+    grid-area: logo;
+    grid-column: auto;
+    justify-self: start;
+  }
+
+  .ford-header.is-admin-header .ford-nav-right {
+    grid-area: actions;
+    grid-column: auto;
+    justify-self: end;
+  }
+
   .ford-nav-left::-webkit-scrollbar {
     display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .customer-header .customer-header-nav {
+    gap: 1rem;
+    justify-content: flex-start;
+    min-width: max-content;
   }
 }
 </style>

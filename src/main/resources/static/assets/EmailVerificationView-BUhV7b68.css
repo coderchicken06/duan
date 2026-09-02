@@ -1,0 +1,32 @@
+
+.verification-card[data-v-47f0aaa2] {
+  max-width: 560px;
+  margin: auto;
+  box-shadow: 0 16px 40px rgba(31, 41, 55, .1)
+}
+.eyebrow[data-v-47f0aaa2] {
+  color: #dc2626;
+  font-size: .75rem;
+  font-weight: 800;
+  letter-spacing: .08em
+}
+.form-label[data-v-47f0aaa2] {
+  font-weight: 600;
+  color: #374151
+}
+.form-control[data-v-47f0aaa2] {
+  min-height: 48px;
+  background: #fff;
+  color: #111827;
+  border-color: #d1d5db
+}
+.code-input[data-v-47f0aaa2] {
+  text-align: center;
+  font-size: 1.3rem;
+  font-weight: 800;
+  letter-spacing: .25em
+}
+.cs-btn[data-v-47f0aaa2] {
+  min-height: 44px;
+  font-weight: 600
+}

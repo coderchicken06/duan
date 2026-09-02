@@ -53,8 +53,9 @@
             </div>
             <div class="field">
               <label for="support-phone">Số điện thoại *</label>
-              <input id="support-phone" v-model.trim="form.phone" class="form-control" inputmode="tel" maxlength="12"
-                autocomplete="tel" placeholder="+84xxxxxxxxx" />
+              <input id="support-phone" v-model.trim="form.phone" class="form-control" inputmode="tel" maxlength="14"
+                autocomplete="tel" placeholder="Ví dụ: 0912 345 678"
+                @blur="form.phone = normalizeVietnamesePhone(form.phone)" />
             </div>
             <div class="field">
               <label for="support-type">Loại yêu cầu *</label>
@@ -98,6 +99,7 @@
 <script setup>
 import { ref } from 'vue'
 import { supportApi } from '../api'
+import { notifyDataUpdated } from '../composables/useAutoRefresh'
 import { isValidVietnamesePhone, normalizeVietnamesePhone } from '../utils/phone'
 import { useAuthStore } from '../stores/auth'
 
@@ -112,7 +114,7 @@ function validateForm() {
     return 'Vui lòng điền đầy đủ các trường bắt buộc.'
   }
   if (!isValidVietnamesePhone(form.value.phone)) {
-    return 'Số điện thoại phải có 9 chữ số, 10 chữ số bắt đầu bằng 0, hoặc bắt đầu bằng +84/84.'
+    return 'Vui lòng nhập số điện thoại hợp lệ (10 chữ số, bắt đầu bằng số 0).'
   }
   return ''
 }
@@ -138,6 +140,7 @@ async function submit() {
     if (data.success) {
       form.value.carInfo = ''
       form.value.content = ''
+      notifyDataUpdated()
     }
   } catch (error) {
     ok.value = false

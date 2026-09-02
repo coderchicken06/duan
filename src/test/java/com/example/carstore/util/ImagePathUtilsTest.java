@@ -17,7 +17,7 @@ class ImagePathUtilsTest {
     void preservesRemoteUrlsAndUsesNeutralPlaceholderForMissingImage() {
         assertEquals("https://cdn.example.test/car.jpg",
                 ImagePathUtils.normalizeForStorage("https://cdn.example.test/car.jpg"));
-        assertEquals("/images/default-car.jpg", ImagePathUtils.resolve(" "));
+        assertEquals("/images/car-placeholder.svg", ImagePathUtils.resolve(" "));
         assertNull(ImagePathUtils.normalizeForStorage(null));
     }
 

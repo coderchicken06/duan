@@ -4,9 +4,12 @@ import com.example.carstore.repository.SupportRequestRepository;
 import com.example.carstore.entity.SupportRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -29,7 +32,7 @@ class SupportRequestServiceTest {
         IllegalArgumentException error = assertThrows(IllegalArgumentException.class,
                 () -> service.createSupport("Nguyễn Văn A", "123", "chat", "Cần hỗ trợ", null));
 
-        assertEquals("Số điện thoại phải có 9 chữ số, 10 chữ số bắt đầu bằng 0, hoặc bắt đầu bằng +84/84.", error.getMessage());
+        assertEquals("Số điện thoại không hợp lệ, vui lòng nhập 10 chữ số bắt đầu bằng số 0.", error.getMessage());
     }
 
     @Test
@@ -39,13 +42,13 @@ class SupportRequestServiceTest {
         when(auth.getName()).thenReturn("user1");
         when(repository.save(any(SupportRequest.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        for (String phone : new String[]{"0941895900", "941895900", "84941895900", "+84941895900"}) {
+        for (String phone : new String[]{"0941895900", "84941895900", "+84941895900"}) {
             SupportRequest saved = service.createSupport(
                     "Nguyễn Văn A", phone, "chat", "Cần hỗ trợ", auth);
-            assertEquals("+84941895900", saved.getPhone());
+            assertEquals("0941895900", saved.getPhone());
         }
 
-        verify(repository, times(4)).save(any(SupportRequest.class));
+        verify(repository, times(3)).save(any(SupportRequest.class));
     }
 
     @Test
@@ -95,5 +98,34 @@ class SupportRequestServiceTest {
                         "Bảo dưỡng định kỳ", null, null, null));
 
         assertEquals("Thông tin xe không được vượt quá 255 ký tự.", error.getMessage());
+    }
+
+    @Test
+    void rejectsStatusChangesAfterRequestIsDoneOrCancelled() {
+        SupportRequest request = new SupportRequest();
+        request.setStatus(SupportRequestService.STATUS_DONE);
+        when(repository.findById(1)).thenReturn(Optional.of(request));
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.updateStatus(1, SupportRequestService.STATUS_PROCESSING));
+
+        assertEquals(HttpStatus.BAD_REQUEST, error.getStatus());
+        assertEquals("Yêu cầu đã kết thúc, không thể thay đổi trạng thái.", error.getReason());
+        verify(repository, never()).save(any());
+    }
+
+    @Test
+    void rejectsPendingOrCancelledAfterProcessingBegins() {
+        SupportRequest request = new SupportRequest();
+        request.setStatus(SupportRequestService.STATUS_PROCESSING);
+        when(repository.findById(1)).thenReturn(Optional.of(request));
+
+        for (String target : new String[]{SupportRequestService.STATUS_PENDING, SupportRequestService.STATUS_CANCELLED}) {
+            ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                    () -> service.updateStatus(1, target));
+            assertEquals(HttpStatus.BAD_REQUEST, error.getStatus());
+            assertEquals("Yêu cầu đang được xử lý, không thể hủy hoặc quay lại trạng thái chờ.", error.getReason());
+        }
+        verify(repository, never()).save(any());
     }
 }

@@ -8,6 +8,7 @@ import com.example.carstore.dto.OrderResponseDto;
 import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.repository.CarRepository;
+import com.example.carstore.util.ImagePathUtils;
 import com.example.carstore.util.OrderStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +19,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 @Service
 public class OrderService {
@@ -141,12 +143,23 @@ public class OrderService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
         String current = order.getStatus();
         if (targetStatus.equals(current)) return order;
+        if (OrderStatus.PENDING.equals(targetStatus)
+                && (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())
+                || OrderStatus.PROCESSING.equals(current)
+                || OrderStatus.DELIVERED.equals(current)
+                || "COMPLETED".equals(current))) {
+            throw new IllegalArgumentException(
+                    "Không thể chuyển đơn hàng đã thanh toán về trạng thái Chờ xử lý!");
+        }
         if (OrderStatus.CANCELLED.equals(current) || OrderStatus.DELIVERED.equals(current)) {
             throw new IllegalArgumentException("Không thể thay đổi đơn đã kết thúc.");
         }
         if (OrderStatus.CANCELLED.equals(targetStatus)) {
             if (OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus())) {
                 throw new IllegalArgumentException("Không thể hủy đơn đã thanh toán cọc.");
+            }
+            if (!OrderStatus.PENDING.equals(current)) {
+                throw new IllegalArgumentException("Chỉ đơn đang chờ thanh toán cọc mới được hủy thủ công.");
             }
             restoreStock(detailRepo.findByOrderId(orderId));
             if (contractService != null) {
@@ -247,6 +260,16 @@ public class OrderService {
 
     public List<OrderResponseDto> toOrderResponses(List<Orders> orders) {
         List<OrderResponseDto> responses = new ArrayList<>();
+        List<Integer> orderIds = orders.stream().map(Orders::getId).toList();
+        Map<Integer, Object[]> productsByOrderId = new HashMap<>();
+
+        if (!orderIds.isEmpty()) {
+            for (Object[] product : orderRepo.findProductSummariesByOrderIds(orderIds)) {
+                Integer orderId = ((Number) product[0]).intValue();
+                productsByOrderId.putIfAbsent(orderId, product);
+            }
+        }
+
         for (Orders order : orders) {
             OrderResponseDto response = new OrderResponseDto();
             response.setId(order.getId());
@@ -263,15 +286,11 @@ public class OrderService {
             response.setPaidAt(depositPaidAt);
             response.setPaymentTime(depositPaidAt);
 
-            List<OrderDetail> details = detailRepo.findByOrderIdWithCar(order.getId());
-            for (OrderDetail detail : details) {
-                Car car = detail.getCar();
-                if (car != null && StringUtils.hasText(car.getName())) {
-                    response.setCarName(car.getName());
-                    response.setProductName(car.getName());
-                    response.setCarImage(car.getImageUrl());
-                    break;
-                }
+            Object[] product = productsByOrderId.get(order.getId());
+            if (product != null && product[1] instanceof String carName && StringUtils.hasText(carName)) {
+                response.setCarName(carName);
+                response.setProductName(carName);
+                response.setCarImage(ImagePathUtils.resolve((String) product[2]));
             }
             responses.add(response);
         }

@@ -88,7 +88,7 @@ import { useRoute } from 'vue-router'
 import { cartApi } from '../api'
 import CarCard from '../components/CarCard.vue'
 import { showCartToast } from '../composables/useCartToast'
-import { useAutoRefresh } from '../composables/useAutoRefresh'
+import { notifyDataUpdated, useAutoRefresh } from '../composables/useAutoRefresh'
 import { useCartStore } from '../stores/cart'
 import { useCatalogStore } from '../stores/catalog'
 
@@ -139,10 +139,11 @@ const filteredCars = computed(() => {
 
 watch(() => route.fullPath, () => {
   q.value = String(route.query.q || '')
+  loadCars(true, true)
 })
 
 onMounted(loadCars)
-useAutoRefresh(() => loadCars(true, true), 0)
+useAutoRefresh(() => loadCars(true, true))
 
 async function loadCars(silent = false, force = false) {
   if (!silent) {
@@ -186,6 +187,7 @@ async function addToCart(id) {
     const { data } = await cartApi.add(id)
     if (data.success) {
       await cart.refresh()
+      notifyDataUpdated()
       showCartToast('Thêm vào phiếu đặt cọc xe thành công!')
       message.value = ''
     } else {

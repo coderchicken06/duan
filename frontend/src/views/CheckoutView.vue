@@ -18,6 +18,7 @@
           </div>
           <div class="order-total"><span>Tổng giá trị xe</span><strong>{{ formatPrice(total) }} VNĐ</strong>
           </div>
+          <p class="checkout-hold-note">Thời gian giữ chỗ thanh toán cọc: 03 phút (Quá hạn hệ thống tự động hoàn xe về kho)</p>
           <div v-if="error" class="alert alert-danger cart-alert show error">{{ error }}</div>
           <div v-if="success" class="alert alert-success cart-alert show">Gửi yêu cầu đặt xe thành công! Mã đơn: #{{ orderId
           }}</div>
@@ -34,9 +35,13 @@ import { ref, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { cartApi, orderApi, quotationApi, formatPrice } from '../api'
 import { useCartStore } from '../stores/cart'
+import { useAuthStore } from '../stores/auth'
+import { showCartToast } from '../composables/useCartToast'
+import { notifyDataUpdated } from '../composables/useAutoRefresh'
 
 const router = useRouter()
 const cart = useCartStore()
+const auth = useAuthStore()
 const address = ref('')
 const paymentMethod = 'SePay'
 const total = ref(0)
@@ -46,6 +51,11 @@ const orderId = ref(null)
 const submitting = ref(false)
 
 onMounted(async () => {
+  if (auth.isAdmin) {
+    showCartToast('Tài khoản Quản trị viên không thực hiện đặt hàng. Vui lòng sử dụng tài khoản Khách hàng!', 'error')
+    router.replace('/admin/dashboard')
+    return
+  }
   if (cart.depositItem?.quotationId) {
     total.value = Number(cart.depositItem.finalPrice || 0)
     return
@@ -56,6 +66,11 @@ onMounted(async () => {
 })
 
 async function submit() {
+  if (auth.isAdmin) {
+    showCartToast('Tài khoản Quản trị viên không thực hiện đặt hàng. Vui lòng sử dụng tài khoản Khách hàng!', 'error')
+    router.replace('/admin/dashboard')
+    return
+  }
   if (submitting.value) return
   submitting.value = true
   error.value = ''
@@ -69,6 +84,7 @@ async function submit() {
       : await orderApi.checkout(address.value, paymentMethod)
     if (data.success) {
       await clearDepositCart()
+      notifyDataUpdated()
       success.value = true
       orderId.value = isQuotationDeposit ? data.data.id : data.orderId
       router.push({ path: `/orders/${orderId.value}/payment`, query: { method: 'sepay' } })
@@ -133,6 +149,12 @@ async function clearDepositCart() {
 .order-total strong {
   color: #dc2626;
   font-size: 1.2rem
+}
+
+.checkout-hold-note {
+  color: #6b7280;
+  font-size: .875rem;
+  margin: 0;
 }
 
 .cs-btn {

@@ -29,6 +29,11 @@
             <td>{{ o.depositAmount != null ? `${formatPrice(o.depositAmount)} VNĐ` : 'Chưa xác định' }}</td>
             <td>
               <router-link :to="`/order/detail/${o.id}`">Chi tiết</router-link>
+              <button v-if="canCancel(o)" class="btn btn-outline-danger btn-sm ms-2" type="button"
+                :disabled="cancellingOrderId === o.id" @click="cancelOrder(o)">
+                <span v-if="cancellingOrderId === o.id" class="spinner-border spinner-border-sm me-1"></span>
+                {{ cancellingOrderId === o.id ? 'Đang hủy...' : 'Hủy đơn hàng' }}
+              </button>
               <span v-if="isCompleted(o) && isOrderReviewed(o)" class="badge bg-secondary ms-2">Đã đánh giá</span>
               <button v-else-if="isCompleted(o)" class="btn btn-danger btn-sm ms-2" type="button" @click="openReview(o)">
                 Đánh giá xe
@@ -80,12 +85,15 @@
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { carImageUrl, formatPrice, orderApi, reviewApi, useDefaultCarImage } from '../api'
 import api from '../api/client'
 import { showCartToast } from '../composables/useCartToast'
+import { notifyDataUpdated, useAutoRefresh } from '../composables/useAutoRefresh'
 
 const orders = ref([])
+const route = useRoute()
 const reviewedCarIds = ref([])
 const pendingReviewCarIds = ref([])
 const orderCarIds = ref({})
@@ -97,6 +105,7 @@ const rating = ref(0)
 const hoverRating = ref(0)
 const reviewError = ref('')
 const reviewSubmitting = ref(false)
+const cancellingOrderId = ref(null)
 const satisfactionLabel = computed(() => ({
   0: 'Vui lòng chọn mức độ hài lòng',
   1: 'Rất không hài lòng',
@@ -106,9 +115,11 @@ const satisfactionLabel = computed(() => ({
   5: 'Rất hài lòng',
 }[rating.value]))
 
-let pollTimer = null
+let loadingOrders = false
 
 async function loadOrders() {
+  if (loadingOrders) return
+  loadingOrders = true
   try {
     const [ordersResponse, reviewedResponse] = await Promise.all([
       orderApi.getMyOrders(),
@@ -125,15 +136,14 @@ async function loadOrders() {
     orderCarIds.value = Object.fromEntries(details)
   } catch {
     // Giữ dữ liệu gần nhất nếu một lượt polling tạm thời mất kết nối.
+  } finally {
+    loadingOrders = false
   }
 }
 
-onMounted(() => {
-  loadOrders()
-  pollTimer = window.setInterval(loadOrders, 2000)
-})
-
-onBeforeUnmount(() => window.clearInterval(pollTimer))
+onMounted(loadOrders)
+useAutoRefresh(loadOrders)
+watch(() => route.fullPath, () => loadOrders())
 
 function formatDate(d) {
   return d ? new Date(d).toLocaleDateString('vi-VN') : ''
@@ -155,6 +165,32 @@ function formatDepositPaidAt(order) {
 
 function isCompleted(order) {
   return ['COMPLETED', 'DELIVERED'].includes(order.status)
+}
+
+function canCancel(order) {
+  return String(order.status || '').toUpperCase() === 'PENDING'
+    && String(order.depositStatus || '').toUpperCase() !== 'PAID'
+}
+
+async function cancelOrder(order) {
+  if (!canCancel(order) || cancellingOrderId.value || !window.confirm('Bạn có chắc chắn muốn hủy yêu cầu đặt cọc này không?')) {
+    return
+  }
+
+  cancellingOrderId.value = order.id
+  try {
+    const { data } = await orderApi.updateStatus(order.id, 'CANCELLED')
+    if (!data?.success) {
+      throw new Error(data?.message || 'Không thể hủy đơn hàng.')
+    }
+    order.status = 'CANCELLED'
+    notifyDataUpdated()
+    showCartToast('Đã hủy đơn hàng và hoàn trả xe về kho thành công!')
+  } catch (error) {
+    showCartToast(error.response?.data?.message || error.message || 'Không thể hủy đơn hàng. Vui lòng thử lại.', 'error')
+  } finally {
+    cancellingOrderId.value = null
+  }
 }
 
 function isOrderReviewed(order) {
@@ -208,6 +244,7 @@ async function submitReview() {
   showCartToast('Cảm ơn bạn đã gửi đánh giá!')
   try {
     await reviewApi.create(carId, payload)
+    notifyDataUpdated()
   } catch (error) {
     pendingReviewCarIds.value = pendingReviewCarIds.value.filter((id) => id !== carId)
     reviewedCarIds.value = reviewedCarIds.value.filter((id) => id !== carId)

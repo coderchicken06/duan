@@ -43,6 +43,7 @@ import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { adminApi } from '../../api'
 import { showCartToast } from '../../composables/useCartToast'
+import { notifyDataUpdated, useAutoRefresh } from '../../composables/useAutoRefresh'
 
 const users = ref([])
 const route = useRoute()
@@ -52,7 +53,8 @@ onMounted(() => {
   window.addEventListener('focus', load)
 })
 onBeforeUnmount(() => window.removeEventListener('focus', load))
-watch(() => route.path, load)
+useAutoRefresh(load)
+watch(() => route.fullPath, load)
 
 async function load() {
   const { data } = await adminApi.getUsers()
@@ -70,6 +72,7 @@ async function remove(username) {
       showCartToast(data.message || 'Không thể xóa người dùng', 'error')
       return
     }
+    notifyDataUpdated()
     showCartToast(data.message || 'Đã xóa người dùng')
   } catch (error) {
     users.value = previousUsers

@@ -24,12 +24,16 @@
           </nav>
         </aside>
         <section class="admin-main-content">
-          <router-view />
+          <div class="admin-route-content">
+            <router-view />
+          </div>
+          <AdminFooter />
         </section>
       </div>
       <router-view v-else />
     </main>
-    <AppFooter v-if="!isAdminArea" />
+    <AdminFooter v-if="isAdminProfile" />
+    <AppFooter v-else-if="!isAdminArea" />
     <CompareBar />
 
     <Transition name="toast">
@@ -48,6 +52,7 @@ import { computed, onMounted, onBeforeUnmount, ref } from 'vue'
 import { useRoute } from 'vue-router'
 import AppHeader from './components/AppHeader.vue'
 import AppFooter from './components/AppFooter.vue'
+import AdminFooter from './components/AdminFooter.vue'
 import CompareBar from './components/CompareBar.vue'
 import Chatbot from './components/Chatbot.vue'
 import { useAuthStore } from './stores/auth'
@@ -55,6 +60,7 @@ import { useAuthStore } from './stores/auth'
 const route = useRoute()
 const auth = useAuthStore()
 const isAdminArea = computed(() => auth.isAdmin && route.path.startsWith('/admin/'))
+const isAdminProfile = computed(() => auth.isAdmin && route.path.startsWith('/profile'))
 const isAdminRoute = computed(() => route.path.startsWith('/admin'))
 const isHideChatbot = computed(() => isAdminRoute.value || auth.isAdmin)
 
@@ -215,12 +221,19 @@ onBeforeUnmount(() => {
 
 .admin-main-content {
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
   height: 100%;
   margin-left: 260px;
   min-width: 0;
   overflow-y: auto;
   padding: 24px;
   width: calc(100% - 260px);
+}
+
+.admin-route-content {
+  flex: 1;
+  min-width: 0;
 }
 
 .admin-main-content :deep(.cs-container) {

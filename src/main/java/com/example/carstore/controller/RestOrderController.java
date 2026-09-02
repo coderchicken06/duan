@@ -7,6 +7,7 @@ import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.CartService;
 import com.example.carstore.service.OrderService;
+import com.example.carstore.util.OrderStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.CrossOrigin;
@@ -101,6 +102,10 @@ public class RestOrderController {
         if (auth == null) {
             return fail("Not authenticated");
         }
+        if (isAdmin(auth)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Tài khoản Quản trị viên không được tạo đơn đặt cọc.");
+        }
         if (cartPayload == null || cartPayload.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Phiếu đặt cọc chưa có xe được chọn.");
         }
@@ -138,6 +143,10 @@ public class RestOrderController {
                                         HttpSession session) {
         if (auth == null) {
             return fail("Not authenticated");
+        }
+        if (isAdmin(auth)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Tài khoản Quản trị viên không được thực hiện đặt cọc.");
         }
 
         try {
@@ -195,16 +204,29 @@ public class RestOrderController {
     public Map<String, Object> updateOrderStatus(@PathVariable int id,
                                                  @RequestBody Map<String, String> payload,
                                                  Authentication auth) {
-        if (!isAdmin(auth)) {
-            return fail("Access denied");
-        }
-
         String status = payload == null ? null : payload.get("status");
         if (status == null || status.trim().isEmpty()) {
             return fail("Status is required");
         }
+
+        Optional<Orders> orderOpt = orderRepo.findById(id);
+        if (orderOpt.isEmpty()) {
+            return fail("Order not found");
+        }
+
+        Orders order = orderOpt.get();
+        String targetStatus = status.trim().toUpperCase();
+        boolean customerCancellingOwnPendingOrder = auth != null
+                && auth.getName().equals(order.getUsername())
+                && OrderStatus.CANCELLED.equals(targetStatus)
+                && OrderStatus.PENDING.equals(order.getStatus())
+                && !OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus());
+        if (!isAdmin(auth) && !customerCancellingOwnPendingOrder) {
+            return fail("Access denied");
+        }
+
         try {
-            orderService.updateStatus(id, status.trim());
+            orderService.updateStatus(id, targetStatus);
             return Map.of("success", true, "message", "Order status updated successfully");
         } catch (IllegalArgumentException exception) {
             return fail(exception.getMessage());

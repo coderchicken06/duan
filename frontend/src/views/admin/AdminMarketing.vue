@@ -108,8 +108,8 @@ async function action(fn, success) {
             showCartToast(response.data.message || 'Không thể thực hiện', 'error')
             return false
         }
-        await load()
         notifyDataUpdated()
+        await load()
         showCartToast(success)
         return true
     }
@@ -169,8 +169,8 @@ async function saveNews() {
 }
 async function removeNews(id) { if (confirm('Xóa tin tức này?')) await action(() => newsApi.delete(id), 'Đã xóa tin tức') }
 onMounted(load)
-useAutoRefresh(load, 0)
-watch(() => route.path, load)
+useAutoRefresh(load)
+watch(() => route.fullPath, load)
 </script>
 <style scoped>
 .marketing-grid {
