@@ -8,7 +8,10 @@ import com.example.carstore.util.SecurityUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
@@ -24,6 +27,24 @@ public class RestServiceController {
     }
 
     @GetMapping
+    public Map<String, Object> getAllSupportRequests(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        if (page == null && size == null) {
+            return getAllSupportRequests();
+        }
+        validatePagination(page, size);
+        Page<SupportRequest> result = supportRequestService.findAll(PageRequest.of(page, size));
+        return Map.of(
+                "success", true,
+                "data", result.getContent(),
+                "page", result.getNumber(),
+                "size", result.getSize(),
+                "totalPages", result.getTotalPages(),
+                "totalElements", result.getTotalElements());
+    }
+
+    // Giữ tương thích với các lời gọi Java và payload cũ khi không phân trang.
     public Map<String, Object> getAllSupportRequests() {
         return Map.of(
                 "success", true,
@@ -35,7 +56,8 @@ public class RestServiceController {
     public Map<String, Object> getSupportRequest(@PathVariable int id) {
         java.util.Optional<SupportRequest> requestOpt = supportRequestService.findById(id);
         if (requestOpt.isEmpty()) {
-            return ResponseUtils.fail("Support request not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Không tìm thấy yêu cầu hỗ trợ.");
         }
         return Map.of("success", true, "data", requestOpt.get());
     }
@@ -54,23 +76,24 @@ public class RestServiceController {
             Authentication auth) {
 
         if (!SecurityUtils.isLoggedIn(auth)) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ResponseUtils.fail("Not authenticated"));
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(ResponseUtils.fail("Bạn cần đăng nhập để gửi yêu cầu hỗ trợ."));
         }
 
         if (request == null) {
-            return ResponseEntity.badRequest().body(ResponseUtils.fail("Support request is required"));
+            return ResponseEntity.badRequest().body(ResponseUtils.fail("Thông tin yêu cầu hỗ trợ là bắt buộc."));
         }
 
         if (!hasText(request.getName())) {
-            return ResponseEntity.badRequest().body(ResponseUtils.fail("Name is required"));
+            return ResponseEntity.badRequest().body(ResponseUtils.fail("Họ tên là bắt buộc."));
         }
 
         if (!hasText(request.getPhone())) {
-            return ResponseEntity.badRequest().body(ResponseUtils.fail("Phone is required"));
+            return ResponseEntity.badRequest().body(ResponseUtils.fail("Số điện thoại là bắt buộc."));
         }
 
         if (!hasText(request.getContent())) {
-            return ResponseEntity.badRequest().body(ResponseUtils.fail("Content is required"));
+            return ResponseEntity.badRequest().body(ResponseUtils.fail("Nội dung yêu cầu là bắt buộc."));
         }
         if (!hasText(request.getType())) {
             request.setType("chat");
@@ -115,19 +138,22 @@ public class RestServiceController {
             Authentication auth) {
 
         if (!SecurityUtils.isAdmin(auth)) {
-            return ResponseUtils.fail("Access denied");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền cập nhật yêu cầu hỗ trợ.");
         }
 
         String status = payload == null ? null : payload.get("status");
 
         if (status == null || status.trim().isEmpty()) {
-            return ResponseUtils.fail("Status is required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Trạng thái yêu cầu là bắt buộc.");
         }
 
         boolean updated = supportRequestService.updateStatus(id, status);
 
         if (!updated) {
-            return ResponseUtils.fail("Support request not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Không tìm thấy yêu cầu hỗ trợ.");
         }
 
         return ResponseUtils.ok("Support request status updated successfully");
@@ -139,13 +165,15 @@ public class RestServiceController {
             Authentication auth) {
 
         if (!SecurityUtils.isAdmin(auth)) {
-            return ResponseUtils.fail("Access denied");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền xóa yêu cầu hỗ trợ.");
         }
 
         boolean deleted = supportRequestService.delete(id);
 
         if (!deleted) {
-            return ResponseUtils.fail("Support request not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
+                    "Không tìm thấy yêu cầu hỗ trợ.");
         }
 
         return ResponseUtils.ok("Support request deleted successfully");
@@ -157,7 +185,8 @@ public class RestServiceController {
             Authentication auth) {
 
         if (!SecurityUtils.isAdmin(auth)) {
-            return ResponseUtils.fail("Access denied");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền xem danh sách yêu cầu này.");
         }
 
         return Map.of(
@@ -169,7 +198,8 @@ public class RestServiceController {
     @GetMapping("/stats")
     public Map<String, Object> getSupportStats(Authentication auth) {
         if (!SecurityUtils.isAdmin(auth)) {
-            return ResponseUtils.fail("Access denied");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền xem thống kê hỗ trợ.");
         }
 
         long total = supportRequestService.count();
@@ -183,5 +213,12 @@ public class RestServiceController {
                 "pending", pending,
                 "resolved", resolved
         );
+    }
+
+    private void validatePagination(Integer page, Integer size) {
+        if (page == null || size == null || page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "page phải từ 0 và size phải trong khoảng 1 đến 100.");
+        }
     }
 }

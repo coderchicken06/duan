@@ -7,7 +7,6 @@ export function notifyDataUpdated() {
   if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return
 
   const channel = new BroadcastChannel(SYNC_CHANNEL)
-  console.log('[SYNC] >>> Đã PHÁT tín hiệu DATA_UPDATED lúc:', new Date().toLocaleTimeString())
   channel.postMessage({ type: 'DATA_UPDATED' })
   channel.close()
 }
@@ -63,7 +62,6 @@ export function useAutoRefresh(refresh) {
       channel = new BroadcastChannel(SYNC_CHANNEL)
       channel.addEventListener('message', (event) => {
         if (event.data?.type === 'DATA_UPDATED') {
-          console.log('[SYNC] <<< Đã NHẬN tín hiệu DATA_UPDATED lúc:', new Date().toLocaleTimeString())
           run({ bypassThrottle: true })
         }
       })

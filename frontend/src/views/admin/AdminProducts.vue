@@ -26,7 +26,7 @@
             <td>{{ brandName(car.brandId) }}</td>
             <td>{{ formatPrice(car.price) }} đ</td>
             <td><span class="stock-badge" :class="{ low: car.stock <= 3 }">{{ car.stock }}</span></td>
-            <td><span class="status-badge" :class="statusClass(car.status)">{{ statusLabel(car.status) }}</span></td>
+            <td><span class="status-badge" :class="statusClass(car)">{{ statusLabel(car) }}</span></td>
             <td class="text-end action-cell">
               <router-link :to="`/car/edit/${car.id}`" class="btn btn-sm cs-btn-ghost">Sửa</router-link>
               <button class="btn btn-sm cs-btn-danger" type="button" :disabled="submitting" @click="remove(car)">
@@ -96,15 +96,21 @@ async function remove(car) {
 }
 
 const brandName = (brandId) => brandMap.value.get(Number(brandId)) || 'Chưa xác định'
-const statusLabel = (status) => ({
-  AVAILABLE: 'Có sẵn',
+const displayStatus = (car) => {
+  const status = String(car?.status || '').toUpperCase()
+  if (Number(car?.stock || 0) <= 0 || status === 'OUT_OF_STOCK' || status === 'SOLD') return 'OUT_OF_STOCK'
+  if (status === 'DEPOSITED') return 'DEPOSITED'
+  return status || 'UNKNOWN'
+}
+const statusLabel = (car) => ({
+  AVAILABLE: 'Còn hàng',
   DEPOSITED: 'Đã đặt cọc',
-  SOLD: 'Đã bán',
+  OUT_OF_STOCK: 'Hết hàng',
   INACTIVE: 'Ngừng kinh doanh',
-}[status] || status || 'Chưa xác định')
-const statusClass = (status) => String(status || '').toLowerCase()
+}[displayStatus(car)] || 'Chưa xác định')
+const statusClass = (car) => displayStatus(car).toLowerCase().replaceAll('_', '-')
 </script>
 
 <style scoped>
-.page-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;margin-bottom:1.5rem}.admin-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:#dc2626}.page-description{margin-top:.4rem;color:#6b7280}.cs-card{box-shadow:0 10px 30px rgba(31,41,55,.08)}.cs-table{color:#374151}.cs-table thead th{color:#6b7280;background:#f9fafb;white-space:nowrap}.cs-table tbody tr:hover{background:#fffafa}.car-cell{display:flex;align-items:center;gap:.75rem;min-width:220px}.car-cell img{width:72px;height:48px;object-fit:cover;border-radius:8px;background:#f3f4f6}.car-cell strong,.car-cell small{display:block}.car-cell small{margin-top:.15rem;color:#9ca3af}.stock-badge,.status-badge{display:inline-block;border-radius:999px;font-weight:700}.stock-badge{min-width:38px;padding:.3rem .55rem;text-align:center;background:#dcfce7;color:#166534}.stock-badge.low{background:#fee2e2;color:#991b1b}.status-badge{padding:.35rem .65rem;background:#f3f4f6;color:#4b5563;white-space:nowrap}.status-badge.available{background:#dcfce7;color:#166534}.status-badge.deposited{background:#fef3c7;color:#92400e}.status-badge.sold,.status-badge.inactive{background:#fee2e2;color:#991b1b}.action-cell{white-space:nowrap}.action-cell .btn+.btn{margin-left:.4rem}.empty-cell{text-align:center;color:#6b7280;padding:2.5rem!important}.btn:disabled{cursor:wait;opacity:.65}@media(max-width:575.98px){.page-heading{align-items:stretch;flex-direction:column}.page-heading .btn{width:100%}}
+.page-heading{display:flex;justify-content:space-between;align-items:flex-end;gap:1rem;margin-bottom:1.5rem}.admin-eyebrow{font-size:.72rem;font-weight:800;letter-spacing:.08em;color:#dc2626}.page-description{margin-top:.4rem;color:#6b7280}.cs-card{box-shadow:0 10px 30px rgba(31,41,55,.08)}.cs-table{color:#374151}.cs-table thead th{color:#6b7280;background:#f9fafb;white-space:nowrap}.cs-table tbody tr:hover{background:#fffafa}.car-cell{display:flex;align-items:center;gap:.75rem;min-width:220px}.car-cell img{width:72px;height:48px;object-fit:cover;border-radius:8px;background:#f3f4f6}.car-cell strong,.car-cell small{display:block}.car-cell small{margin-top:.15rem;color:#9ca3af}.stock-badge,.status-badge{display:inline-block;border-radius:999px;font-weight:700}.stock-badge{min-width:38px;padding:.3rem .55rem;text-align:center;background:#dcfce7;color:#166534}.stock-badge.low{background:#fee2e2;color:#991b1b}.status-badge{padding:.35rem .65rem;background:#f3f4f6;color:#4b5563;white-space:nowrap}.status-badge.available{background:#dcfce7;color:#166534}.status-badge.deposited{background:#fef3c7;color:#92400e}.status-badge.sold,.status-badge.inactive,.status-badge.out-of-stock{background:#fee2e2;color:#991b1b}.action-cell{white-space:nowrap}.action-cell .btn+.btn{margin-left:.4rem}.empty-cell{text-align:center;color:#6b7280;padding:2.5rem!important}.btn:disabled{cursor:wait;opacity:.65}@media(max-width:575.98px){.page-heading{align-items:stretch;flex-direction:column}.page-heading .btn{width:100%}}
 </style>

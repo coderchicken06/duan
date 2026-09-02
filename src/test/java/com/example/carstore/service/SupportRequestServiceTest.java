@@ -128,4 +128,18 @@ class SupportRequestServiceTest {
         }
         verify(repository, never()).save(any());
     }
+
+    @Test
+    void requiresProcessingBeforeRequestCanBeCompleted() {
+        SupportRequest request = new SupportRequest();
+        request.setStatus(SupportRequestService.STATUS_PENDING);
+        when(repository.findById(1)).thenReturn(Optional.of(request));
+
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> service.updateStatus(1, SupportRequestService.STATUS_DONE));
+
+        assertEquals(HttpStatus.BAD_REQUEST, error.getStatus());
+        assertEquals("Yêu cầu phải chuyển sang Đang xử lý trước khi hoàn tất.", error.getReason());
+        verify(repository, never()).save(any());
+    }
 }

@@ -9,7 +9,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.example.carstore.entity.Account;
 import com.example.carstore.dto.AccountDto;
@@ -103,22 +106,22 @@ public class RestAdminController {
     public Map<String, Object> createUser(@RequestBody Account account) {
         try {
             if (account.getUsername() == null || account.getUsername().trim().isEmpty()) {
-                return Map.of("success", false, "message", "Username is required");
+                throw badRequest("Tên đăng nhập là bắt buộc.");
             }
 
             if (accountRepo.existsById(account.getUsername())) {
-                return Map.of("success", false, "message", "Username already exists");
+                throw badRequest("Tên đăng nhập đã tồn tại.");
             }
 
             if (account.getPassword() == null || account.getPassword().trim().isEmpty()) {
-                return Map.of("success", false, "message", "Password is required");
+                throw badRequest("Mật khẩu là bắt buộc.");
             }
 
             if (account.getRole() == null || account.getRole().trim().isEmpty()) {
                 account.setRole("ROLE_USER");
             }
             if (!List.of("ROLE_USER", "ROLE_ADMIN").contains(account.getRole())) {
-                return Map.of("success", false, "message", "Role must be ROLE_USER or ROLE_ADMIN");
+                throw badRequest("Vai trò phải là ROLE_USER hoặc ROLE_ADMIN.");
             }
             account.setEnabled(true);
             account.setVerificationCode(null);
@@ -133,8 +136,11 @@ public class RestAdminController {
             accountRepo.save(account);
 
             return Map.of("success", true, "message", "User created successfully");
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error creating user: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Không thể tạo tài khoản.", e);
         }
     }
 
@@ -147,7 +153,7 @@ public class RestAdminController {
         try {
             java.util.Optional<Account> existingOpt = accountRepo.findById(username);
             if (existingOpt.isEmpty()) {
-                return Map.of("success", false, "message", "User not found");
+                throw notFound("Không tìm thấy tài khoản.");
             }
             Account existing = existingOpt.get();
             String previousRole = existing.getRole();
@@ -162,12 +168,12 @@ public class RestAdminController {
 
             if (account.getRole() != null) {
                 if (!List.of("ROLE_USER", "ROLE_ADMIN").contains(account.getRole())) {
-                    return Map.of("success", false, "message", "Role must be ROLE_USER or ROLE_ADMIN");
+                    throw badRequest("Vai trò phải là ROLE_USER hoặc ROLE_ADMIN.");
                 }
                 if ("ROLE_ADMIN".equals(existing.getRole())
                         && !"ROLE_ADMIN".equals(account.getRole())
                         && accountRepo.countByRole("ROLE_ADMIN") <= 1) {
-                    return Map.of("success", false, "message", "Cannot demote the last administrator.");
+                    throw badRequest("Không thể hạ quyền quản trị viên cuối cùng.");
                 }
                 existing.setRole(account.getRole());
             }
@@ -197,8 +203,11 @@ public class RestAdminController {
                     "roleChanged", roleChanged,
                     "sessionUpdated", sessionUpdated,
                     "requiresRelogin", requiresRelogin);
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error updating user: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Không thể cập nhật tài khoản.", e);
         }
     }
 
@@ -234,8 +243,67 @@ public class RestAdminController {
     // ===== ORDERS MANAGEMENT =====
 
     @GetMapping("/orders")
+    public Object getOrders(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        if (page == null && size == null) {
+            return getOrders();
+        }
+        validatePagination(page, size);
+        Page<com.example.carstore.entity.Orders> result = orderRepo.findAll(PageRequest.of(page, size));
+        List<OrderResponseDto> data = orderService.toOrderResponses(result.getContent());
+        return Map.of(
+                "success", true,
+                "data", data,
+                "page", result.getNumber(),
+                "size", result.getSize(),
+                "totalPages", result.getTotalPages(),
+                "totalElements", result.getTotalElements());
+    }
+
+    // Giữ nguyên kiểu phản hồi danh sách cũ khi client không truyền page/size.
     public List<OrderResponseDto> getOrders() {
         return orderService.toOrderResponses(orderRepo.findAll());
+    }
+
+    // ===== CONTRACTS MANAGEMENT =====
+
+    @GetMapping("/contracts")
+    public Object getContracts(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        if (page == null && size == null) {
+            return contractRepo.findAll();
+        }
+        validatePagination(page, size);
+        Page<com.example.carstore.entity.Contract> result = contractRepo.findAll(PageRequest.of(page, size));
+        return Map.of(
+                "success", true,
+                "data", result.getContent(),
+                "page", result.getNumber(),
+                "size", result.getSize(),
+                "totalPages", result.getTotalPages(),
+                "totalElements", result.getTotalElements());
+    }
+
+    // ===== SUPPORT REQUESTS MANAGEMENT =====
+
+    @GetMapping({"/support-requests", "/support"})
+    public Object getSupportRequests(
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        if (page == null && size == null) {
+            return supportRequestRepo.findAll();
+        }
+        validatePagination(page, size);
+        Page<com.example.carstore.entity.SupportRequest> result = supportRequestRepo.findAll(PageRequest.of(page, size));
+        return Map.of(
+                "success", true,
+                "data", result.getContent(),
+                "page", result.getNumber(),
+                "size", result.getSize(),
+                "totalPages", result.getTotalPages(),
+                "totalElements", result.getTotalElements());
     }
 
         @PutMapping("/orders/{id}/status")
@@ -245,11 +313,13 @@ public class RestAdminController {
 
         try {
             String status = payload == null ? null : payload.get("status");
-            if (status == null) return Map.of("success", false, "message", "Status is required");
+            if (status == null || status.trim().isEmpty()) {
+                throw badRequest("Trạng thái đơn hàng là bắt buộc.");
+            }
             orderService.updateStatus(id, status.trim());
             return Map.of("success", true, "message", "Order status updated successfully");
         } catch (IllegalArgumentException e) {
-            return Map.of("success", false, "message", e.getMessage());
+            throw badRequest(e.getMessage());
         }
     }
 
@@ -260,12 +330,20 @@ public class RestAdminController {
         return carRepo.findAll();
     }
 
+    @GetMapping("/cars/{id}")
+    public ResponseEntity<Map<String, Object>> getCarByIdForAdmin(@PathVariable int id) {
+        return carRepo.findById(id)
+                .map(car -> ResponseEntity.ok(Map.<String, Object>of("success", true, "data", car)))
+                .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND)
+                        .body(Map.of("success", false, "message", "Không tìm thấy xe.")));
+    }
+
     @PostMapping("/cars")
     public Map<String, Object> createCar(@RequestBody Car car) {
         try {
             String validation = validateCar(car);
             if (validation != null) {
-                return Map.of("success", false, "message", validation);
+                throw badRequest(validation);
             }
             car.setImage(ImagePathUtils.normalizeForStorage(car.getImage()));
             synchronizeStatusWithStock(car);
@@ -276,35 +354,40 @@ public class RestAdminController {
                     "success", true,
                     "message", "Car created successfully",
                     "data", saved);
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error creating car: " + e.getMessage());
+            String msg = e.getMessage() != null ? e.getMessage() : "Không thể tạo xe.";
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, msg, e);
         }
     }
 
-        @PutMapping("/cars/{id}")
-        public Map<String, Object> updateCar(
+    @PutMapping("/cars/{id}")
+    public Map<String, Object> updateCar(
             @PathVariable int id,
             @RequestBody Car car) {
 
         try {
             java.util.Optional<Car> existingOpt = carRepo.findById(id);
-            if (existingOpt.isEmpty()) return Map.of("success", false, "message", "Car not found");
+            if (existingOpt.isEmpty()) {
+                throw notFound("Không tìm thấy xe.");
+            }
             Car existing = existingOpt.get();
 
             if (car.getName() == null || car.getName().trim().isEmpty()) {
-                return Map.of("success", false, "message", "Car name is required");
+                throw badRequest("Tên xe là bắt buộc.");
             }
             if (car.getPrice() == null || car.getPrice() <= 0) {
-                return Map.of("success", false, "message", "Invalid car price");
+                throw badRequest("Giá xe không hợp lệ.");
             }
             if (car.getBrandId() == null) {
-                return Map.of("success", false, "message", "Brand is required");
+                throw badRequest("Thương hiệu là bắt buộc.");
             }
             if (!brandRepo.existsById(car.getBrandId())) {
-                return Map.of("success", false, "message", "Brand does not exist");
+                throw badRequest("Thương hiệu không tồn tại.");
             }
             if (car.getStock() != null && car.getStock() < 0) {
-                return Map.of("success", false, "message", "Stock cannot be negative");
+                throw badRequest("Tồn kho không được âm.");
             }
 
             existing.setName(car.getName());
@@ -344,8 +427,11 @@ public class RestAdminController {
                     "success", true,
                     "message", "Car updated successfully",
                     "data", updated);
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error updating car: " + e.getMessage());
+            String msg = e.getMessage() != null ? e.getMessage() : "Không thể cập nhật xe.";
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, msg, e);
         }
     }
 
@@ -408,7 +494,7 @@ public class RestAdminController {
                     "message", "Brand created successfully",
                     "data", saved);
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error creating brand: " + e.getMessage());
+            throw badRequest("Không thể tạo thương hiệu: " + e.getMessage());
         }
     }
 
@@ -419,7 +505,9 @@ public class RestAdminController {
 
         try {
             java.util.Optional<Brand> existingOpt = brandRepo.findById(id);
-            if (existingOpt.isEmpty()) return Map.of("success", false, "message", "Brand not found");
+            if (existingOpt.isEmpty()) {
+                throw notFound("Không tìm thấy thương hiệu.");
+            }
             Brand existing = existingOpt.get();
 
             if (brand.getName() != null) {
@@ -432,8 +520,10 @@ public class RestAdminController {
                     "success", true,
                     "message", "Brand updated successfully",
                     "data", updated);
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error updating brand: " + e.getMessage());
+            throw badRequest("Không thể cập nhật thương hiệu: " + e.getMessage());
         }
     }
 
@@ -441,20 +531,20 @@ public class RestAdminController {
     public Map<String, Object> deleteBrand(@PathVariable int id) {
         try {
             if (!brandRepo.existsById(id)) {
-                return Map.of("success", false, "message", "Brand not found");
+                throw notFound("Không tìm thấy thương hiệu.");
             }
 
             if (carRepo.countByBrandId(id) > 0) {
-                return Map.of(
-                        "success", false,
-                        "message", "Cannot delete this brand because it is being used by cars. Delete or move those cars first.");
+                throw badRequest("Không thể xóa thương hiệu đang được xe sử dụng.");
             }
 
             brandRepo.deleteById(id);
 
             return Map.of("success", true, "message", "Brand deleted successfully");
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error deleting brand: " + e.getMessage());
+            throw badRequest("Không thể xóa thương hiệu vì dữ liệu còn liên kết.");
         }
     }
 
@@ -482,7 +572,8 @@ public class RestAdminController {
                     "totalBrands", totalBrands,
                     "revenue", revenue);
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error fetching stats: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Không thể tải thống kê.", e);
         }
     }
 
@@ -499,7 +590,8 @@ public class RestAdminController {
                     "success", true,
                     "revenue", revenue);
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error fetching revenue: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Không thể tải doanh thu.", e);
         }
     }
 
@@ -512,7 +604,8 @@ public class RestAdminController {
                     "success", true,
                     "data", topCars);
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error fetching top cars: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Không thể tải danh sách xe bán chạy.", e);
         }
     }
 
@@ -547,7 +640,8 @@ public class RestAdminController {
                     "topCars", detailRepo.topCars());
 
         } catch (Exception e) {
-            return Map.of("success", false, "message", "Error fetching dashboard info: " + e.getMessage());
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Không thể tải dữ liệu tổng quan.", e);
         }
     }
 
@@ -565,6 +659,20 @@ public class RestAdminController {
             return "Stock cannot be negative";
         }
         return null;
+    }
+
+    private void validatePagination(Integer page, Integer size) {
+        if (page == null || size == null || page < 0 || size < 1 || size > 100) {
+            throw badRequest("page phải từ 0 và size phải trong khoảng 1 đến 100.");
+        }
+    }
+
+    private ResponseStatusException badRequest(String message) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    }
+
+    private ResponseStatusException notFound(String message) {
+        return new ResponseStatusException(HttpStatus.NOT_FOUND, message);
     }
 
     private void refreshAuthentication(Authentication authentication, String role) {
@@ -591,8 +699,8 @@ public class RestAdminController {
 
     /**
      * Stock is the source of truth for sellable inventory. Keep explicit INACTIVE
-     * untouched, and preserve the terminal SOLD/DEPOSITED distinction while stock
-     * remains zero. Replenishing either stock-depleted state makes the car
+     * untouched, and preserve explicit SOLD/DEPOSITED states while stock remains
+     * zero. Replenishing a stock-depleted state makes the car
      * available again.
      */
     private void synchronizeStatusWithStock(Car car) {
@@ -605,13 +713,13 @@ public class RestAdminController {
         }
         if (stock <= 0) {
             if ("AVAILABLE".equals(status)) {
-                car.setStatus("DEPOSITED");
+                car.setStatus("OUT_OF_STOCK");
             } else {
                 car.setStatus(status);
             }
             return;
         }
-        if ("DEPOSITED".equals(status) || "SOLD".equals(status)) {
+        if ("DEPOSITED".equals(status) || "SOLD".equals(status) || "OUT_OF_STOCK".equals(status)) {
             car.setStatus("AVAILABLE");
         } else {
             car.setStatus(status);

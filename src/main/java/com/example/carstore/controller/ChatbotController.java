@@ -111,12 +111,10 @@ public class ChatbotController {
         // 1. Nhận diện Hãng xe (Toyota, Ford, Honda, Hyundai, Kia, Mazda, Mercedes,
         // BMW...)
         Integer targetBrandId = null;
-        String targetBrandName = null;
         for (Map.Entry<Integer, String> entry : brandMap.entrySet()) {
             String bName = entry.getValue().toLowerCase();
             if (lowerText.contains(bName)) {
                 targetBrandId = entry.getKey();
-                targetBrandName = entry.getValue();
                 break;
             }
         }

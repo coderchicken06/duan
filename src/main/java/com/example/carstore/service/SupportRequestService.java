@@ -9,6 +9,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -207,6 +209,10 @@ public class SupportRequestService {
         return supportRepo.findAll();
     }
 
+    public Page<SupportRequest> findAll(Pageable pageable) {
+        return supportRepo.findAll(pageable);
+    }
+
     public long count() {
         return supportRepo.count();
     }
@@ -238,6 +244,10 @@ public class SupportRequestService {
                     && (STATUS_PENDING.equals(target) || STATUS_CANCELLED.equals(target))) {
                 throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                         "Yêu cầu đang được xử lý, không thể hủy hoặc quay lại trạng thái chờ.");
+            }
+            if (STATUS_PENDING.equals(current) && STATUS_DONE.equals(target)) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                        "Yêu cầu phải chuyển sang Đang xử lý trước khi hoàn tất.");
             }
             if (current.equals(target)) {
                 return true;

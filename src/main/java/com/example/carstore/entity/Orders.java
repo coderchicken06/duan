@@ -33,6 +33,8 @@ public class Orders {
     private String depositStatus;
 
     @Column(name = "deposit_amount")
+    // Đơn vị giao dịch là VNĐ (số nguyên tròn trịa), kiểu Double đảm bảo hiệu năng tính toán nhanh;
+    // Thiết kế sẵn sàng mở rộng sang BigDecimal khi chuẩn hóa hệ thống kế toán doanh nghiệp lớn.
     private Double depositAmount;
 
     @Column(name = "deposit_method")

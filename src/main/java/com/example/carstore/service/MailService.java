@@ -91,7 +91,6 @@ public class MailService {
             String productName = firstCarName(details, orderId);
             String transferNote = escapeHtml(transferContent == null || transferContent.isBlank()
                     ? "VELOR" + orderId : transferContent);
-            String contractUrl = contractUrl(orderId);
             String carRows = details == null || details.isEmpty()
                     ? "<tr><td colspan='3' style='padding:12px; border:1px solid #e5e7eb;'>Chi tiết xe đang được cập nhật.</td></tr>"
                     : details.stream().map(this::carRow).collect(Collectors.joining());
@@ -113,8 +112,7 @@ public class MailService {
                     + "<table style='width:100%; border-collapse:collapse;'><thead><tr style='background:#f3f4f6;'><th style='padding:10px; border:1px solid #e5e7eb; text-align:left;'>Tên xe</th><th style='padding:10px; border:1px solid #e5e7eb; text-align:left;'>Hãng xe</th><th style='padding:10px; border:1px solid #e5e7eb; text-align:right;'>Số tiền</th></tr></thead><tbody>"
                     + carRows + "</tbody></table>"
                     + "<h3 style='margin:24px 0 8px; color:#1f2937;'>Hợp đồng &amp; nhận xe</h3>"
-                    + "<p>Hợp đồng mua bán điện tử của bạn đã được kích hoạt. Vui lòng xem và lưu lại hợp đồng trước khi đến showroom.</p>"
-                    + "<p><a href='" + contractUrl + "' style='display:inline-block; padding:12px 24px; background-color:#ef4444; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold;'>Xem hợp đồng điện tử</a></p>"
+                    + "<p>Hợp đồng mua bán điện tử của bạn đã được kích hoạt trên hệ thống CarStore. Quý khách có thể xem và quản lý hợp đồng trực tiếp tại mục Hợp đồng trên website khi đăng nhập tài khoản.</p>"
                     + "<p>Chuẩn bị khi nhận xe: CCCD/CMND, giấy tờ theo thông tin đăng ký xe, biên nhận thanh toán và email xác nhận này.</p>"
                     + "<p style='margin-top: 18px;'>Cảm ơn bạn đã tin tưởng CarStore.</p>"
                     + "</div></body></html>";
@@ -128,9 +126,7 @@ public class MailService {
         }
     }
 
-    private String contractUrl(String orderId) {
-        return frontendBaseUrl.replaceAll("/+$", "") + "/orders/" + orderId + "/contract";
-    }
+
 
     private String carRow(OrderDetail detail) {
         String carName = detail.getCar() == null ? "Chưa xác định" : detail.getCar().getName();

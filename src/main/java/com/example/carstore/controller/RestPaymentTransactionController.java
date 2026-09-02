@@ -23,12 +23,18 @@ public class RestPaymentTransactionController {
 
     @GetMapping("/orders/{orderId}")
     public Map<String, Object> byOrder(@PathVariable Integer orderId, Authentication auth) {
+        if (auth == null) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
         Orders order = orders.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
-        boolean admin = auth != null && auth.getAuthorities().stream()
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng."));
+        boolean admin = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        if (auth == null || (!admin && !order.getUsername().equals(auth.getName()))) {
-            throw new IllegalArgumentException("Bạn không có quyền xem giao dịch.");
+        if (!admin && !order.getUsername().equals(auth.getName())) {
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Bạn không có quyền xem giao dịch.");
         }
         return Map.of("success", true, "data", service.byOrder(orderId));
     }
@@ -36,42 +42,46 @@ public class RestPaymentTransactionController {
     @PostMapping("/create-qr")
     public Map<String, Object> createQr(@RequestBody Map<String, Object> payload, Authentication auth) {
         if (auth == null) {
-            throw new IllegalArgumentException("Not authenticated");
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
         Integer orderId;
         try {
             orderId = Integer.valueOf(String.valueOf(payload.get("orderId")));
         } catch (Exception exception) {
-            throw new IllegalArgumentException("orderId không hợp lệ.");
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.BAD_REQUEST, "orderId không hợp lệ.");
         }
         Orders order = orders.findById(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đơn hàng."));
+                .orElseThrow(() -> new org.springframework.web.server.ResponseStatusException(
+                        org.springframework.http.HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng."));
         boolean admin = auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
         if (!admin && !order.getUsername().equals(auth.getName())) {
-            throw new IllegalArgumentException("Bạn không có quyền thanh toán đơn hàng này.");
+            throw new org.springframework.web.server.ResponseStatusException(
+                    org.springframework.http.HttpStatus.FORBIDDEN, "Bạn không có quyền thanh toán đơn hàng này.");
         }
         return Map.of("success", true, "data", service.createQr(order));
     }
 
-    @PostMapping("/sepay/webhook")
+    @PostMapping({ "/sepay/webhook", "/webhook" })
     public ResponseEntity<?> sePayWebhook(@RequestBody(required = false) Map<String, Object> payload) {
         try {
             // Nếu SePay chỉ gửi request kiểm tra mà không có body
             if (payload == null) {
-                return ResponseEntity.ok(Map.of(
-                        "success", true));
+                return ResponseEntity.ok(Map.of("success", true));
             }
 
             service.processSePayWebhook(payload);
 
-            return ResponseEntity.ok(Map.of(
-                    "success", true));
+            return ResponseEntity.ok(Map.of("success", true));
 
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(Map.of(
+            org.slf4j.LoggerFactory.getLogger(RestPaymentTransactionController.class)
+                    .error("Lỗi xử lý SePay Webhook: {}", e.getMessage(), e);
+            return ResponseEntity.ok(Map.of(
                     "success", false,
-                    "error", e.getMessage()));
+                    "error", e.getMessage() != null ? e.getMessage() : "Internal error"));
         }
     }
 

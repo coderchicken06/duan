@@ -4,8 +4,10 @@ import com.example.carstore.dto.QuotationRequestDto;
 import com.example.carstore.entity.Quotation;
 import com.example.carstore.entity.Orders;
 import com.example.carstore.service.QuotationService;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -46,17 +48,22 @@ public class RestQuotationController {
 
     @GetMapping({"/my", "/my-quotations"})
     public Map<String, Object> mine(Authentication auth) {
-        if (auth == null) return fail("Not authenticated");
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
         List<Quotation> data = service.mine(auth.getName());
         return Map.of("success", true, "data", data, "count", data.size());
     }
 
     @GetMapping("/{id}")
     public Map<String, Object> get(@PathVariable Integer id, Authentication auth) {
-        if (auth == null) return fail("Not authenticated");
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
         Quotation quotation = service.get(id);
         if (!admin(auth) && !quotation.getCustomerUsername().equals(auth.getName())) {
-            return fail("Bạn không có quyền xem báo giá.");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền xem báo giá này.");
         }
         return Map.of("success", true, "data", quotation);
     }
@@ -65,14 +72,20 @@ public class RestQuotationController {
     public Map<String, Object> update(@PathVariable Integer id,
                                       @RequestBody QuotationRequestDto request,
                                       Authentication auth) {
-        if (!admin(auth)) return fail("Access denied");
+        if (!admin(auth)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền cập nhật báo giá.");
+        }
         return Map.of("success", true, "message", "Cập nhật báo giá thành công",
                 "data", service.update(id, request));
     }
 
     @DeleteMapping("/{id}")
     public Map<String, Object> delete(@PathVariable Integer id, Authentication auth) {
-        if (!admin(auth)) return fail("Access denied");
+        if (!admin(auth)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền xóa báo giá.");
+        }
         service.deleteQuotation(id);
         return Map.of("success", true, "message", "Xóa báo giá thành công");
     }
@@ -95,12 +108,10 @@ public class RestQuotationController {
 
     @GetMapping
     public Map<String, Object> all(Authentication auth) {
-        if (auth == null) return fail("Not authenticated");
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
         List<Quotation> data = admin(auth) ? service.all() : service.mine(auth.getName());
         return Map.of("success", true, "data", data, "count", data.size());
-    }
-
-    private Map<String, Object> fail(String message) {
-        return Map.of("success", false, "message", message);
     }
 }

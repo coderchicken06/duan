@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 
 function Get-CarStoreNgrokTunnel {
     try {
-        $response = Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels" -TimeoutSec 1
+        $response = Invoke-RestMethod -Uri "http://127.0.0.1:4040/api/tunnels" -TimeoutSec 1 -ErrorAction SilentlyContinue
         return @($response.tunnels) | Where-Object {
             $address = [string]$_.config.addr
             $_.proto -eq "https" -and $address -match "(^|:)$Port$"
@@ -19,9 +19,9 @@ function Get-CarStoreNgrokTunnel {
 
 $tunnel = Get-CarStoreNgrokTunnel
 if ($null -ne $tunnel) {
-    Write-Host "Ngrok dang chay, tai su dung tunnel cong 8082." -ForegroundColor Yellow
+    Write-Host "Ngrok dang chay, tai su dung tunnel cong $Port." -ForegroundColor Yellow
     Write-Host "Forwarding URL: $($tunnel.public_url)" -ForegroundColor Green
-    Write-Host "SePay Webhook: $($tunnel.public_url)/api/payment/sepay/webhook" -ForegroundColor Cyan
+    Write-Host "SePay Webhook : $($tunnel.public_url)/api/payment/sepay/webhook" -ForegroundColor Cyan
     return [pscustomobject]@{
         PublicUrl = [string]$tunnel.public_url
         ProcessId = $null
@@ -29,9 +29,33 @@ if ($null -ne $tunnel) {
     }
 }
 
-$ngrokCommand = Get-Command ngrok -ErrorAction SilentlyContinue
-if ($null -eq $ngrokCommand) {
-    Write-Host "[WARNING] Khong tim thay ngrok trong PATH. Bo qua Ngrok va chay local..." -ForegroundColor Yellow
+$ngrokPath = $null
+$cmd = Get-Command ngrok -ErrorAction SilentlyContinue
+if ($null -ne $cmd) {
+    $ngrokPath = $cmd.Source
+}
+
+if (-not $ngrokPath -or -not (Test-Path $ngrokPath)) {
+    $possiblePaths = @(
+        "$PSScriptRoot\..\ngrok.exe",
+        "$PSScriptRoot\ngrok.exe",
+        "$env:LOCALAPPDATA\Programs\ngrok-latest\ngrok.exe",
+        "$env:LOCALAPPDATA\ngrok\ngrok.exe",
+        "$env:USERPROFILE\Downloads\ngrok.exe",
+        "C:\ngrok\ngrok.exe",
+        "D:\ngrok.exe"
+    )
+
+    foreach ($path in $possiblePaths) {
+        if (Test-Path $path) {
+            $ngrokPath = (Resolve-Path $path).Path
+            break
+        }
+    }
+}
+
+if (-not $ngrokPath) {
+    Write-Host "[WARNING] Khong tim thay ngrok trong PATH hay thu muc du an. Bo qua Ngrok va chay local..." -ForegroundColor Yellow
     return $null
 }
 
@@ -40,7 +64,7 @@ if (Get-Process ngrok -ErrorAction SilentlyContinue) {
     return $null
 }
 
-$ngrokProcess = Start-Process -FilePath $ngrokCommand.Source `
+$ngrokProcess = Start-Process -FilePath $ngrokPath `
     -ArgumentList @("http", "$Port") `
     -WindowStyle Normal `
     -PassThru
@@ -64,11 +88,10 @@ if ($null -eq $tunnel) {
 }
 
 Write-Host "Forwarding URL: $($tunnel.public_url)" -ForegroundColor Green
-Write-Host "SePay Webhook: $($tunnel.public_url)/api/payment/sepay/webhook" -ForegroundColor Cyan
+Write-Host "SePay Webhook : $($tunnel.public_url)/api/payment/sepay/webhook" -ForegroundColor Cyan
 
 return [pscustomobject]@{
     PublicUrl = [string]$tunnel.public_url
     ProcessId = $ngrokProcess.Id
     Started   = $true
 }
-

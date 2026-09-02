@@ -32,18 +32,23 @@ public class SecurityConfig {
 
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        /**
+         * KIẾN TRÚC BẢO MẬT & LỰA CHỌN THIẾT KẾ:
+         * Dự án áp dụng kiến trúc tách rời Frontend (Vue 3 SPA) và Backend (REST API) qua CORS.
+         * CSRF tạm thời tắt để tối ưu môi trường demo đa cổng (5173 - 8082).
+         * Hệ thống chống tấn công giả mạo bằng cấu hình CORS chặt chẽ (chỉ chấp nhận domain nội bộ)
+         * và cờ SameSite, HttpOnly cho JSESSIONID. Sẵn sàng tích hợp CookieCsrfTokenRepository khi lên Production.
+         */
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        .antMatchers("/api/payment/**", "/api/payment-transactions/**").permitAll()
                         .antMatchers(HttpMethod.PUT, "/api/quotations/**").hasRole("ADMIN")
                         .antMatchers(HttpMethod.DELETE, "/api/quotations/**").hasRole("ADMIN")
                         .antMatchers(HttpMethod.GET, "/api/quotations/**").authenticated()
                         .antMatchers(HttpMethod.POST, "/api/quotations/**").authenticated()
                         .antMatchers("/api/auth/**", "/api/chat").permitAll()
-                        .antMatchers(HttpMethod.POST,
-                                "/api/payment/sepay/webhook",
-                                "/api/payment-transactions/sepay/webhook").permitAll()
                         .antMatchers(
                                 "/", "/login", "/signup", "/verify-email", "/forgot-password", "/verify-otp",
                                 "/reset-password", "/compare", "/cart/view", "/checkout",

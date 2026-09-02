@@ -1,6 +1,7 @@
 package com.example.carstore.controller;
 
 import com.example.carstore.entity.Account;
+import com.example.carstore.entity.Car;
 import com.example.carstore.repository.AccountRepository;
 import com.example.carstore.repository.BrandRepository;
 import com.example.carstore.repository.CarRepository;
@@ -27,6 +28,8 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
 import java.util.Map;
@@ -35,6 +38,7 @@ import java.util.Optional;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -105,9 +109,10 @@ class RestAdminControllerTest {
         when(accountRepo.countByRole("ROLE_ADMIN")).thenReturn(1L);
         Authentication authentication = authentication("admin", "ROLE_ADMIN");
 
-        Map<String, Object> result = controller.updateUser("admin", update, authentication);
+        ResponseStatusException error = assertThrows(ResponseStatusException.class,
+                () -> controller.updateUser("admin", update, authentication));
 
-        assertEquals(false, result.get("success"));
+        assertEquals(HttpStatus.BAD_REQUEST, error.getStatus());
         assertEquals("ROLE_ADMIN", existing.getRole());
         verify(accountRepo, never()).save(any());
     }
@@ -158,6 +163,23 @@ class RestAdminControllerTest {
         assertTrue(String.valueOf(result.get("message")).contains("đăng nhập lại"));
         assertTrue(hasAuthority(SecurityContextHolder.getContext().getAuthentication(), "ROLE_ADMIN"));
         verify(accountRepo).save(existing);
+    }
+
+    @Test
+    void creatingZeroStockCarMarksItOutOfStockInsteadOfDeposited() {
+        Car car = new Car(null, "Xe hết hàng", 500_000_000D, "car.jpg", "Mô tả", 1, 2025, "Đen", 0);
+        when(brandRepo.existsById(1)).thenReturn(true);
+        when(carRepo.save(any(Car.class))).thenAnswer(invocation -> {
+            Car saved = invocation.getArgument(0);
+            saved.setId(10);
+            return saved;
+        });
+
+        Map<String, Object> result = controller.createCar(car);
+
+        assertEquals(true, result.get("success"));
+        assertEquals("OUT_OF_STOCK", car.getStatus());
+        verify(carRepo).save(car);
     }
 
     private Account account(String username, String role) {

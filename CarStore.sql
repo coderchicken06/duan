@@ -1,4 +1,4 @@
-﻿USE master;
+USE master;
 GO
 
 -- LOCAL RESET/SEED SCRIPT: xóa và tạo lại toàn bộ database CarStore.
@@ -68,7 +68,7 @@ CREATE TABLE dbo.Car (
     CONSTRAINT FK_Car_Brand FOREIGN KEY (brand_id) REFERENCES dbo.Brand(id),
     CONSTRAINT CK_Car_Price CHECK (price >= 0),
     CONSTRAINT CK_Car_Stock CHECK (stock >= 0),
-    CONSTRAINT CK_Car_Status CHECK (status IN ('AVAILABLE', 'DEPOSITED', 'SOLD', 'INACTIVE')),
+    CONSTRAINT CK_Car_Status CHECK (status IN ('AVAILABLE', 'DEPOSITED', 'OUT_OF_STOCK', 'SOLD', 'INACTIVE')),
     CONSTRAINT CK_Car_Mileage CHECK (mileage IS NULL OR mileage >= 0),
     CONSTRAINT CK_Car_Seats CHECK (seats IS NULL OR seats > 0)
 );
@@ -474,12 +474,6 @@ VALUES
 ('user1', 2, 3500000000, 50000000, 3450000000, N'Áp dụng chính sách ưu đãi của đại lý', N'Đã duyệt', N'BG-002');
 GO
 
--- Đồng bộ dữ liệu mẫu cũ nếu script được chạy trên cơ sở dữ liệu đã tồn tại.
-UPDATE dbo.Quotation
-SET note = N'Áp dụng chính sách ưu đãi của đại lý'
-WHERE note = N'Ưu đãi tháng 7';
-GO
-
 INSERT INTO dbo.QuotationItem
 (quotation_id, car_id, quantity, unit_price, discount, total)
 VALUES
@@ -528,20 +522,11 @@ VALUES
 (N'Ưu đãi khai trương', 'PERCENT', 15, N'Tặng bảo hiểm thân vỏ', '2026-08-01', '2026-12-31', 1);
 GO
 
-UPDATE dbo.Promotion
-SET title = N'Ưu đãi mùa thu 2026', start_date = '2026-08-01', end_date = '2026-12-31'
-WHERE title = N'Khuyến mãi tháng 7';
-
-UPDATE dbo.Promotion
-SET start_date = '2026-08-01', end_date = '2026-12-31'
-WHERE title = N'Ưu đãi khai trương';
-GO
-
 -- =============================================================
 -- 23. SEED DATA CHUẨN HÓA CHO DEMO (CHẠY LẠI AN TOÀN)
 -- =============================================================
 
--- 23.1. Thêm 4 thương hiệu nếu chưa có
+-- 23.1. Bổ sung các thương hiệu nếu chưa có
 IF NOT EXISTS (SELECT 1 FROM dbo.Brand WHERE name = N'Ford')
 BEGIN
     INSERT INTO dbo.Brand(name) VALUES (N'Ford');
@@ -566,7 +551,31 @@ BEGIN
 END;
 GO
 
--- 23.2. Thêm 3 tài khoản mẫu (schema hiện tại chỉ cho ROLE_ADMIN / ROLE_USER)
+IF NOT EXISTS (SELECT 1 FROM dbo.Brand WHERE name = N'Audi')
+BEGIN
+    INSERT INTO dbo.Brand(name) VALUES (N'Audi');
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Brand WHERE name = N'Porsche')
+BEGIN
+    INSERT INTO dbo.Brand(name) VALUES (N'Porsche');
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Brand WHERE name = N'Mazda')
+BEGIN
+    INSERT INTO dbo.Brand(name) VALUES (N'Mazda');
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Brand WHERE name = N'Lexus')
+BEGIN
+    INSERT INTO dbo.Brand(name) VALUES (N'Lexus');
+END;
+GO
+
+-- 23.2. Thêm tài khoản mẫu (schema hiện tại chỉ cho ROLE_ADMIN / ROLE_USER)
 IF NOT EXISTS (SELECT 1 FROM dbo.Account WHERE username = 'admin' OR email = 'admin@carstore.com')
 BEGIN
     INSERT INTO dbo.Account(username, password, fullname, email, role, enabled)
@@ -588,7 +597,7 @@ BEGIN
 END;
 GO
 
--- 23.3. Thêm 3 xe mẫu bổ sung (tổng cộng đúng 9 xe trong toàn bộ dữ liệu mẫu)
+-- 23.3. Bổ sung dữ liệu xe mẫu nếu chưa có
 IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'Ford Ranger Wildtrak 2025')
 BEGIN
     INSERT INTO dbo.Car (
@@ -646,6 +655,215 @@ BEGIN
 END;
 GO
 
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'Audi Q7 2024')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'Audi Q7 2024', 3400000000, N'audiQ7.png',
+           N'SUV 7 chỗ hạng sang, công nghệ Quattro, hệ thống treo khí nén', b.id, 2024, N'Trắng', 4,
+           N'Tháng 02/2024', 8500, N'Xăng', N'3.0L V6 Turbo', N'Nâu', N'SUV', 7, N'AWD', N'Tự động 8 cấp', 340,
+           N'500 Nm', N'Xăng', N'8.9 L/100km', N'24 tháng', N'CarStore Hà Nội', N'Cầu Giấy, Hà Nội', N'Premium Certified',
+           N'Xe nhập khẩu Đức, hồ sơ gốc chính chủ', N'ABS, ESC, 8 túi khí, cảnh báo va chạm, giữ làn đường', N'Điều hòa 4 vùng, màn hình kép MMI Touch, loa Bang & Olufsen'
+    FROM dbo.Brand b WHERE b.name = N'Audi';
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'Porsche Macan 2024')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'Porsche Macan 2024', 3800000000, N'porscheMacan.png',
+           N'SUV thể thao Đức, cảm giác lái đỉnh cao, thiết kế cuốn hút', b.id, 2024, N'Đỏ', 3,
+           N'Tháng 04/2024', 5000, N'Xăng', N'2.0L Turbo', N'Đen', N'SUV', 5, N'AWD', N'Tự động 7 cấp PDK', 265,
+           N'400 Nm', N'Xăng', N'8.8 L/100km', N'36 tháng', N'CarStore HCM', N'Q7, TP.HCM', N'Premium Certified',
+           N'Lịch sử bảo dưỡng chính hãng Porsche', N'ABS, PASM, hỗ trợ chuyển làn, phanh khoảng cách', N'Cửa sổ trời toàn cảnh, ghế thể thao 14 hướng, âm thanh Bose'
+    FROM dbo.Brand b WHERE b.name = N'Porsche';
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'Ford Everest Titanium 2025')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'Ford Everest Titanium 2025', 1468000000, N'fordEverest.png',
+           N'SUV 7 chỗ việt dã, động cơ Bi-Turbo mạnh mẽ, nhiều công nghệ thông minh', b.id, 2025, N'Xám', 5,
+           N'Tháng 01/2025', 3000, N'Diesel', N'2.0L Bi-Turbo', N'Đen', N'SUV', 7, N'4WD', N'Tự động 10 cấp', 210,
+           N'500 Nm', N'Diesel', N'8.0 L/100km', N'36 tháng', N'CarStore HCM', N'Bình Thạnh, TP.HCM', N'CarStore Certified',
+           N'Mới chạy lướt, bảo hành chính hãng', N'Ford Co-Pilot360, hỗ trợ đỗ xe tự động, camera 360', N'Cửa sổ trời Panorama, màn hình 12 inch SYNC 4, sạc không dây'
+    FROM dbo.Brand b WHERE b.name = N'Ford';
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'VinFast VF 9 2025')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'VinFast VF 9 2025', 1980000000, N'VF9.png',
+           N'E-SUV full-size điện hạng sang, hàng ghế cơ trưởng, quãng đường di chuyển vượt trội', b.id, 2025, N'Xanh lá', 2,
+           N'Tháng 02/2025', 2500, N'Điện', N'300 kW', N'Be', N'SUV', 6, N'AWD', N'Tự động', 402,
+           N'620 Nm', N'Điện', N'Không tiêu hao xăng', N'10 năm', N'CarStore HN', N'Nam Từ Liêm, Hà Nội', N'Green Certified',
+           N'Bản Thương gia 6 chỗ, pin thuê/sở hữu linh hoạt', N'ADAS level 2+, 11 túi khí, tự động gọi cứu hộ', N'Ghế massage thương gia, màn hình 15.6 inch, hệ thống lọc HEPA'
+    FROM dbo.Brand b WHERE b.name = N'VinFast';
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'Hyundai SantaFe 2025')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'Hyundai SantaFe 2025', 1350000000, N'santafe.png',
+           N'SUV thế hệ mới thiết kế vuông vức độc đáo, không gian rộng rãi tối đa', b.id, 2025, N'Đen', 6,
+           N'Tháng 01/2025', 4000, N'Xăng', N'2.5L Turbo', N'Nâu', N'SUV', 7, N'AWD', N'Tự động 8 cấp Ly hợp kép', 281,
+           N'422 Nm', N'Xăng', N'8.5 L/100km', N'36 tháng', N'CarStore Đà Nẵng', N'Hải Châu, Đà Nẵng', N'CarStore Certified',
+           N'Đã kiểm định 100%, trang bị đầy đủ', N'Hyundai SmartSense, hỗ trợ tránh va chạm cắt ngang, camera 360', N'Màn hình cong kép 12.3 inch, sạc không dây đôi, cửa sổ trời kép'
+    FROM dbo.Brand b WHERE b.name = N'Hyundai';
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'Mercedes-Maybach S450 2024')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'Mercedes-Maybach S450 2024', 8200000000, N'maybachS450.png',
+           N'Sedan siêu sang đỉnh cao dành cho doanh nhân, nội thất hàng gia thượng đẳng', b.id, 2024, N'Đen 2 tông', 1,
+           N'Tháng 03/2024', 6000, N'Xăng Mild-Hybrid', N'3.0L Turbo', N'Be Maybach', N'Sedan', 4, N'4MATIC', N'Tự động 9G-TRONIC', 367,
+           N'500 Nm', N'Xăng', N'9.5 L/100km', N'36 tháng', N'CarStore HCM', N'Q7, TP.HCM', N'Ultra Luxury Certified',
+           N'Xe nhập khẩu chính hãng, đầy đủ option cao cấp nhất', N'Túi khí hàng ghế sau, phanh tự động PRE-SAFE, hỗ trợ lái bán tự động', N'Ghế thương gia ngả 43.5 độ, ly champagne bạc, âm thanh Burmester 4D'
+    FROM dbo.Brand b WHERE b.name = N'Mercedes';
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'BMW X7 xDrive40i 2025')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'BMW X7 xDrive40i 2025', 6200000000, N'bmwX7.png',
+           N'SUV full-size sang trọng nhất của BMW, 3 hàng ghế cao cấp, thiết kế mặt ca-lăng ấn tượng', b.id, 2025, N'Xanh Phytonic', 2,
+           N'Tháng 01/2025', 1800, N'Xăng Mild-Hybrid', N'3.0L I6 Turbo', N'Nâu Tartufo', N'SUV', 7, N'AWD', N'Tự động 8 cấp Sport', 380,
+           N'540 Nm', N'Xăng', N'9.8 L/100km', N'36 tháng', N'CarStore HN', N'Cầu Giấy, Hà Nội', N'Premium Certified',
+           N'Xe chạy lướt như mới, nguyên bản 100%', N'Driving Assistant Professional, camera 360, hỗ trợ lùi xe tự động 50m', N'Màn hình cong Curved Display, trần sao Sky Lounge, điều hòa 5 vùng'
+    FROM dbo.Brand b WHERE b.name = N'BMW';
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'Toyota Land Cruiser Prado 2025')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'Toyota Land Cruiser Prado 2025', 3480000000, N'landCruiserPrado.png',
+           N'SUV địa hình huyền thoại tái thiết kế phong cách việt dã retro, độ bền bỉ vượt trội', b.id, 2025, N'Vàng Cát', 2,
+           N'Tháng 02/2025', 1200, N'Xăng', N'2.4L Turbo', N'Đen', N'SUV', 7, N'4WD', N'Tự động 8 cấp', 281,
+           N'430 Nm', N'Xăng', N'9.6 L/100km', N'36 tháng', N'CarStore HCM', N'Q7, TP.HCM', N'CarStore Certified',
+           N'Mới giao xe, nguyên nilon nội thất', N'Toyota Safety Sense 3.0, hỗ trợ đổ đèo, lựa chọn địa hình Multi-Terrain', N'Màn hình 12.3 inch, JBL 14 loa, làm mát & sưởi tất cả hàng ghế'
+    FROM dbo.Brand b WHERE b.name = N'Toyota';
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'Honda CR-V e:HEV RS 2024')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'Honda CR-V e:HEV RS 2024', 1259000000, N'hondaCRV.png',
+           N'SUV Hybrid cao cấp tiết kiệm nhiên liệu vượt trội, phong cách thể thao RS năng động', b.id, 2024, N'Đỏ Đô', 5,
+           N'Tháng 06/2024', 9800, N'Hybrid (e:HEV)', N'2.0L i-VTEC + Motor', N'Đen chỉ đỏ', N'SUV', 5, N'FWD', N'E-CVT', 204,
+           N'335 Nm', N'Xăng Hybrid', N'4.8 L/100km', N'36 tháng', N'CarStore Cần Thơ', N'Ninh Kiều, Cần Thơ', N'CarStore Certified',
+           N'Bảo dưỡng đầy đủ, ODO chuẩn', N'Honda Sensing đầy đủ tính năng, LaneWatch, 8 túi khí', N'Loa Bose 12 chiếc, HUD hiển thị kính lái, mở cốp rảnh tay'
+    FROM dbo.Brand b WHERE b.name = N'Honda';
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'Mazda CX-5 2.5 Turbo 2024')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'Mazda CX-5 2.5 Turbo 2024', 979000000, N'mazdaCX5.png',
+           N'Crossover thiết kế KODO tinh tế, động cơ Turbo tăng tốc thể thao đầy phấn khích', b.id, 2024, N'Đỏ Crystal', 7,
+           N'Tháng 05/2024', 11500, N'Xăng Turbo', N'2.5L SkyActiv-G', N'Đen da Nappa', N'Crossover', 5, N'AWD', N'Tự động 6 cấp', 256,
+           N'420 Nm', N'Xăng', N'7.8 L/100km', N'36 tháng', N'CarStore Đà Nẵng', N'Hải Châu, Đà Nẵng', N'CarStore Certified',
+           N'Đã kiểm định 110 chi tiết, thân vỏ sơn zin', N'i-Activesense, SBS phanh thông minh, cảnh báo chệch làn', N'Ghế bọc da Nappa, âm thanh Bose 10 loa, cửa sổ trời'
+    FROM dbo.Brand b WHERE b.name = N'Mazda';
+END;
+GO
+
+IF NOT EXISTS (SELECT 1 FROM dbo.Car WHERE name = N'Lexus RX350 Luxury 2024')
+BEGIN
+    INSERT INTO dbo.Car (
+        name, price, image, description, brand_id, [year], color, stock,
+        first_registration, mileage, engine_type, engine_capacity,
+        interior_color, body_type, seats, drivetrain, transmission,
+        horsepower, torque, fuel_type, fuel_consumption, warranty,
+        dealer_name, dealer_address, inspection_level, inspection_note,
+        safety_features, comfort_features
+    )
+    SELECT N'Lexus RX350 Luxury 2024', 4340000000, N'lexusRX350.png',
+           N'SUV hạng sang Nhật Bản êm ái tuyệt đối, giữ giá vượt trội, vận hành vô cùng tin cậy', b.id, 2024, N'Trắng Ngọc Trai', 3,
+           N'Tháng 03/2024', 7200, N'Xăng Turbo', N'2.4L Turbo', N'Nâu Semi-Aniline', N'SUV', 5, N'AWD', N'Tự động 8 cấp', 275,
+           N'430 Nm', N'Xăng', N'8.4 L/100km', N'36 tháng', N'CarStore Hà Nội', N'Nam Từ Liêm, Hà Nội', N'Premium Certified',
+           N'Chính chủ từ đầu, bảo dưỡng định kỳ Lexus', N'Lexus Safety System+ 3.0, hỗ trợ đỗ xe tự động, camera 360', N'Màn hình 14 inch, âm thanh Mark Levinson 21 loa, ghế chỉnh điện 10 hướng'
+    FROM dbo.Brand b WHERE b.name = N'Lexus';
+END;
+GO
+
 -- Đồng bộ ảnh chính và thư viện ảnh theo đúng tên file trong static/images.
 SET ANSI_NULLS ON;
 SET QUOTED_IDENTIFIER ON;
@@ -672,6 +890,17 @@ INSERT INTO @CarImageSeed (car_name, image_url, sort_order, is_primary) VALUES
 (N'Ford Ranger Wildtrak 2025', N'Wildtrak2025.png', 0, 1),
 (N'VinFast VF 8 2025', N'VF8.png', 0, 1),
 (N'Hyundai Tucson 2024', N'Tucson.png', 0, 1),
+(N'Audi Q7 2024', N'audiQ7.png', 0, 1),
+(N'Porsche Macan 2024', N'porscheMacan.png', 0, 1),
+(N'Ford Everest Titanium 2025', N'fordEverest.png', 0, 1),
+(N'VinFast VF 9 2025', N'VF9.png', 0, 1),
+(N'Hyundai SantaFe 2025', N'santafe.png', 0, 1),
+(N'Mercedes-Maybach S450 2024', N'maybachS450.png', 0, 1),
+(N'BMW X7 xDrive40i 2025', N'bmwX7.png', 0, 1),
+(N'Toyota Land Cruiser Prado 2025', N'landCruiserPrado.png', 0, 1),
+(N'Honda CR-V e:HEV RS 2024', N'hondaCRV.png', 0, 1),
+(N'Mazda CX-5 2.5 Turbo 2024', N'mazdaCX5.png', 0, 1),
+(N'Lexus RX350 Luxury 2024', N'lexusRX350.png', 0, 1),
 
 (N'Toyota Camry', N'camry-gallery1.jpg', 1, 0),
 (N'Toyota Camry', N'camry-gallery2.png', 2, 0),
@@ -883,7 +1112,7 @@ INSERT INTO dbo.PromotionCar(promotion_id, car_id) VALUES
 GO
 
 -- =============================================================
--- 23. DỮ LIỆU MẪU TIN TỨC
+-- 24. DỮ LIỆU MẪU TIN TỨC
 -- =============================================================
 INSERT INTO dbo.News(title, slug, image, summary, content, status, author)
 VALUES
@@ -904,8 +1133,14 @@ END
 WHERE slug IN ('ford-ranger-2026-ra-mat', 'bmw-giam-gia-mua-he');
 GO
 
+-- Chuẩn hóa xe hết tồn kho nhưng không nằm trong một giao dịch giữ chỗ hợp lệ.
+UPDATE dbo.Car
+SET status = 'OUT_OF_STOCK'
+WHERE stock <= 0 AND status = 'AVAILABLE';
+GO
+
 -- =============================================================
--- 24. KIỂM TRA TOÀN BỘ DATABASE & HOÀN TẤT
+-- 25. KIỂM TRA TOÀN BỘ DATABASE & HOÀN TẤT
 -- =============================================================
 PRINT N'=============================================================';
 PRINT N'CARSTORE ĐÃ ĐƯỢC TẠO VÀ GỘP THÀNH CÔNG';
@@ -919,6 +1154,7 @@ UNION ALL SELECT N'Orders', COUNT(*) FROM dbo.Orders
 UNION ALL SELECT N'OrderDetail', COUNT(*) FROM dbo.OrderDetail
 UNION ALL SELECT N'support_request', COUNT(*) FROM dbo.support_request
 UNION ALL SELECT N'Quotation', COUNT(*) FROM dbo.Quotation
+UNION ALL SELECT N'QuotationItem', COUNT(*) FROM dbo.QuotationItem
 UNION ALL SELECT N'Review', COUNT(*) FROM dbo.Review
 UNION ALL SELECT N'PaymentTransaction', COUNT(*) FROM dbo.PaymentTransaction
 UNION ALL SELECT N'Contract', COUNT(*) FROM dbo.Contract
@@ -935,6 +1171,7 @@ SELECT * FROM dbo.Orders;
 SELECT * FROM dbo.OrderDetail;
 SELECT * FROM dbo.support_request;
 SELECT * FROM dbo.Quotation;
+SELECT * FROM dbo.QuotationItem;
 SELECT * FROM dbo.Review;
 SELECT * FROM dbo.PaymentTransaction;
 SELECT * FROM dbo.Contract;

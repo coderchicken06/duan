@@ -66,7 +66,6 @@ const q = ref(route.query.q || '')
 
 onMounted(loadCars)
 useAutoRefresh(() => {
-  console.log('[HOME] Đang tự động làm mới dữ liệu từ Broadcast...')
   return loadCars(true, true)
 })
 

@@ -62,7 +62,7 @@ public class RestOrderController {
     private void ensureCanViewOrder(Orders order, Authentication auth) {
         if (!canViewOrder(order, auth)) {
             if (order == null || auth == null) {
-                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Not authenticated");
+                throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
             }
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Bạn không có quyền xem đơn hàng này.");
         }
@@ -71,7 +71,7 @@ public class RestOrderController {
     @GetMapping
     public Map<String, Object> getAllOrders(Authentication auth) {
         if (auth == null) {
-            return fail("Not authenticated");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
 
         List<Orders> orders = isAdmin(auth)
@@ -85,7 +85,9 @@ public class RestOrderController {
     @GetMapping("/{id}")
     public Map<String, Object> getOrderById(@PathVariable int id, Authentication auth) {
         Optional<Orders> orderOpt = orderRepo.findById(id);
-        if (orderOpt.isEmpty()) return fail("Order not found");
+        if (orderOpt.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng.");
+        }
         Orders order = orderOpt.get();
         ensureCanViewOrder(order, auth);
         return Map.of("success", true, "data", order);
@@ -100,7 +102,7 @@ public class RestOrderController {
                                                      Authentication auth,
                                                      HttpSession session) {
         if (auth == null) {
-            return fail("Not authenticated");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
         if (isAdmin(auth)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -130,10 +132,13 @@ public class RestOrderController {
 
             Orders order = orderService.checkout(auth.getName(), "Đặt hàng từ API /api/orders", cart);
             return Map.of("success", true, "data", order, "orderId", order.getId());
+        } catch (ResponseStatusException e) {
+            throw e;
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         } catch (Exception e) {
-            return fail("Error creating order: " + e.getMessage());
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Không thể tạo đơn hàng.", e);
         }
     }
 
@@ -142,7 +147,7 @@ public class RestOrderController {
                                         Authentication auth,
                                         HttpSession session) {
         if (auth == null) {
-            return fail("Not authenticated");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
         if (isAdmin(auth)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN,
@@ -170,14 +175,15 @@ public class RestOrderController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         } catch (Exception e) {
-            return fail("Error placing order: " + e.getMessage());
+            throw new ResponseStatusException(
+                    HttpStatus.INTERNAL_SERVER_ERROR, "Không thể đặt cọc xe.", e);
         }
     }
 
     @GetMapping("/my-orders")
     public Map<String, Object> getMyOrders(Authentication auth) {
         if (auth == null) {
-            return fail("Not authenticated");
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
         }
 
         List<Orders> orders = orderRepo.findByUsername(auth.getName());
@@ -188,7 +194,9 @@ public class RestOrderController {
     @GetMapping("/{id}/details")
     public Map<String, Object> getOrderDetail(@PathVariable int id, Authentication auth) {
         Optional<Orders> orderOpt = orderRepo.findById(id);
-        if (orderOpt.isEmpty()) return fail("Order not found");
+        if (orderOpt.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng.");
+        }
         Orders order = orderOpt.get();
         ensureCanViewOrder(order, auth);
 
@@ -206,12 +214,12 @@ public class RestOrderController {
                                                  Authentication auth) {
         String status = payload == null ? null : payload.get("status");
         if (status == null || status.trim().isEmpty()) {
-            return fail("Status is required");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trạng thái đơn hàng là bắt buộc.");
         }
 
         Optional<Orders> orderOpt = orderRepo.findById(id);
         if (orderOpt.isEmpty()) {
-            return fail("Order not found");
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng.");
         }
 
         Orders order = orderOpt.get();
@@ -222,21 +230,24 @@ public class RestOrderController {
                 && OrderStatus.PENDING.equals(order.getStatus())
                 && !OrderStatus.DEPOSIT_PAID.equals(order.getDepositStatus());
         if (!isAdmin(auth) && !customerCancellingOwnPendingOrder) {
-            return fail("Access denied");
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền cập nhật đơn hàng này.");
         }
 
         try {
             orderService.updateStatus(id, targetStatus);
             return Map.of("success", true, "message", "Order status updated successfully");
         } catch (IllegalArgumentException exception) {
-            return fail(exception.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, exception.getMessage(), exception);
         }
     }
 
     @GetMapping("/summary/{id}")
     public Map<String, Object> getOrderSummary(@PathVariable int id, Authentication auth) {
         Optional<Orders> orderOpt = orderRepo.findById(id);
-        if (orderOpt.isEmpty()) return fail("Order not found");
+        if (orderOpt.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Không tìm thấy đơn hàng.");
+        }
         Orders order = orderOpt.get();
         ensureCanViewOrder(order, auth);
 
@@ -266,14 +277,16 @@ public class RestOrderController {
     public Map<String, Object> payDeposit(@PathVariable int id,
                                           @RequestBody Map<String, String> payload,
                                           Authentication auth) {
-        if (auth == null) return fail("Not authenticated");
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
         try {
             String method = payload == null ? null : payload.get("method");
             Orders order = orderService.payDeposit(id, auth.getName(), method, isAdmin(auth));
             return Map.of("success", true, "message", "Thanh toán tiền cọc thành công",
                     "data", order, "depositAmount", order.getDepositAmount());
         } catch (IllegalArgumentException e) {
-            return fail(e.getMessage());
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, e.getMessage(), e);
         }
     }
 
@@ -294,7 +307,4 @@ public class RestOrderController {
         return result;
     }
 
-    private Map<String, Object> fail(String message) {
-        return Map.of("success", false, "message", message);
-    }
 }

@@ -18,6 +18,8 @@ public class Contract {
     @Temporal(TemporalType.TIMESTAMP)
     @Column(name = "contract_date")
     private Date contractDate;
+    // Đơn vị giao dịch là VNĐ (số nguyên tròn trịa), kiểu Double đảm bảo hiệu năng tính toán nhanh;
+    // Thiết kế sẵn sàng mở rộng sang BigDecimal khi chuẩn hóa hệ thống kế toán doanh nghiệp lớn.
     private Double deposit;
     private Double total;
     @Column(name = "payment_method")

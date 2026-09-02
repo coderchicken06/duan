@@ -18,7 +18,7 @@
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env",
       "console": "integratedTerminal",
-      "preLaunchTask": "prepare-backend-env"
+      "preLaunchTask": "prepare-backend-and-ngrok"
     }
   ]
 }

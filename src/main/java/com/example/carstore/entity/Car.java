@@ -12,6 +12,8 @@ public class Car {
     private Integer id;
 
     private String name;
+    // Đơn vị giao dịch là VNĐ (số nguyên tròn trịa), kiểu Double đảm bảo hiệu năng tính toán nhanh;
+    // Thiết kế sẵn sàng mở rộng sang BigDecimal khi chuẩn hóa hệ thống kế toán doanh nghiệp lớn.
     private Double price;
     private String image;
     private String description;

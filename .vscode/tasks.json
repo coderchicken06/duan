@@ -23,6 +23,39 @@
         "clear": true
       },
       "problemMatcher": []
+    },
+    {
+      "label": "start-ngrok",
+      "type": "shell",
+      "command": "& '${workspaceFolder}\\scripts\\start-ngrok-terminal.ps1' -Port 8082",
+      "options": {
+        "cwd": "${workspaceFolder}",
+        "shell": {
+          "executable": "powershell.exe",
+          "args": [
+            "-NoProfile",
+            "-ExecutionPolicy",
+            "Bypass",
+            "-Command"
+          ]
+        }
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "dedicated",
+        "focus": false,
+        "clear": false
+      },
+      "problemMatcher": []
+    },
+    {
+      "label": "prepare-backend-and-ngrok",
+      "dependsOn": [
+        "prepare-backend-env",
+        "start-ngrok"
+      ],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
     }
   ]
 }

@@ -45,7 +45,7 @@ public class RestCarController {
     @GetMapping("/{id}")
     public ResponseEntity<Map<String, Object>> getCarById(@PathVariable int id) {
         return carRepo.findById(id)
-                .filter(this::isAvailable)
+                .filter(car -> car != null && !"INACTIVE".equalsIgnoreCase(car.getStatus()))
                 .map(car -> ResponseEntity.ok(Map.<String, Object>of("success", true, "data", car)))
                 .orElseGet(() -> ResponseEntity.status(404).body(ResponseUtils.fail("Car not found")));
     }

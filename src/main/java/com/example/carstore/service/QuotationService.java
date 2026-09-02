@@ -19,6 +19,7 @@ import org.springframework.util.StringUtils;
 import java.util.Date;
 import java.util.Calendar;
 import java.util.List;
+import javax.persistence.EntityNotFoundException;
 
 @Service
 public class QuotationService {
@@ -251,7 +252,7 @@ public class QuotationService {
 
     public Quotation get(Integer id) {
         return repo.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy báo giá."));
+                .orElseThrow(() -> new EntityNotFoundException("Không tìm thấy báo giá."));
     }
 
     public List<Quotation> mine(String username) {

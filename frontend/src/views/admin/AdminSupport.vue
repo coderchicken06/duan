@@ -73,7 +73,7 @@ function isTerminal(status) {
 function availableStatuses(status) {
   const current = String(status || '').trim()
   if (current === STATUS_PROCESSING) return [STATUS_PROCESSING, STATUS_DONE]
-  if (current === STATUS_PENDING) return [STATUS_PENDING, STATUS_PROCESSING, STATUS_DONE, STATUS_CANCELLED]
+  if (current === STATUS_PENDING) return [STATUS_PENDING, STATUS_PROCESSING, STATUS_CANCELLED]
   return [current]
 }
 

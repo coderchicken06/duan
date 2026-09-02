@@ -10,6 +10,8 @@ import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.repository.PaymentTransactionRepository;
 import com.example.carstore.repository.QuotationRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -80,8 +82,16 @@ public class ContractService {
         return contractRepo.findByCustomerUsernameOrderByContractDateDesc(username);
     }
 
+    public Page<Contract> getByCustomer(String username, Pageable pageable) {
+        return contractRepo.findByCustomerUsernameOrderByContractDateDesc(username, pageable);
+    }
+
     public List<Contract> getAll() {
         return contractRepo.findAll();
+    }
+
+    public Page<Contract> getAll(Pageable pageable) {
+        return contractRepo.findAll(pageable);
     }
 
     public List<ContractResponseDto> toResponses(List<Contract> contracts) {

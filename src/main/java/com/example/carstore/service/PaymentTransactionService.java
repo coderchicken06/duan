@@ -275,8 +275,14 @@ public class PaymentTransactionService {
         if (matcher.find()) {
             try {
                 return Integer.parseInt(matcher.group(1));
-            } catch (NumberFormatException e) {
-                return null;
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        Matcher digitMatcher = Pattern.compile("\\b(\\d{1,6})\\b").matcher(content);
+        if (digitMatcher.find()) {
+            try {
+                return Integer.parseInt(digitMatcher.group(1));
+            } catch (NumberFormatException ignored) {
             }
         }
         return null;

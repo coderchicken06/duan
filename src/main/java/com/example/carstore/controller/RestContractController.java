@@ -6,8 +6,12 @@ import com.example.carstore.repository.AccountRepository;
 import com.example.carstore.repository.OrderDetailRepository;
 import com.example.carstore.repository.OrderRepository;
 import com.example.carstore.service.ContractService;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.List;
@@ -57,18 +61,53 @@ public class RestContractController {
     }
 
     @GetMapping
-    public Map<String, Object> list(Authentication auth) {
-        if (auth == null) throw new IllegalArgumentException("Vui lòng đăng nhập.");
+    public Map<String, Object> list(
+            Authentication auth,
+            @RequestParam(required = false) Integer page,
+            @RequestParam(required = false) Integer size) {
+        if (auth == null) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Vui lòng đăng nhập.");
+        }
         boolean admin = auth.getAuthorities().stream().anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+        if (page != null || size != null) {
+            validatePagination(page, size);
+            Page<Contract> result = admin
+                    ? contractService.getAll(PageRequest.of(page, size))
+                    : contractService.getByCustomer(auth.getName(), PageRequest.of(page, size));
+            List<?> data = contractService.toResponses(result.getContent());
+            return Map.of(
+                    "success", true,
+                    "data", data,
+                    "count", data.size(),
+                    "page", result.getNumber(),
+                    "size", result.getSize(),
+                    "totalPages", result.getTotalPages(),
+                    "totalElements", result.getTotalElements());
+        }
         List<Contract> contracts = admin ? contractService.getAll() : contractService.getByCustomer(auth.getName());
         return Map.of("success", true, "data", contractService.toResponses(contracts), "count", contracts.size());
+    }
+
+    // Giữ tương thích với các unit test/lời gọi Java cũ.
+    public Map<String, Object> list(Authentication auth) {
+        return list(auth, null, null);
     }
 
     @PutMapping("/manage/{id}")
     public Map<String, Object> update(@PathVariable Integer id, @RequestBody Contract payload, Authentication auth) {
         boolean admin = auth != null && auth.getAuthorities().stream()
                 .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-        if (!admin) throw new IllegalArgumentException("Bạn không có quyền cập nhật hợp đồng.");
+        if (!admin) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                    "Bạn không có quyền cập nhật hợp đồng.");
+        }
         return Map.of("success", true, "data", contractService.toResponse(contractService.update(id, payload)));
+    }
+
+    private void validatePagination(Integer page, Integer size) {
+        if (page == null || size == null || page < 0 || size < 1 || size > 100) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "page phải từ 0 và size phải trong khoảng 1 đến 100.");
+        }
     }
 }

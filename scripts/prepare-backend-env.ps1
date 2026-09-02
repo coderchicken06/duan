@@ -42,4 +42,3 @@ if ($remaining) {
 }
 
 Write-Host "Cong $Port da san sang cho CarStore Backend." -ForegroundColor Green
-& "$ProjectRoot\scripts\start-ngrok.ps1" -Port $Port

@@ -42,7 +42,7 @@ public class GeminiService {
             String loadedKey = loadKeyFromEnvFile();
             if (StringUtils.hasText(loadedKey)) {
                 this.apiKey = loadedKey;
-                logger.info(">>> Đã nạp thành công GEMINI_API_KEY từ file .env: {}...", apiKey.substring(0, Math.min(8, apiKey.length())));
+                logger.info(">>> Đã nạp thành công GEMINI_API_KEY từ file .env.");
             }
         }
 

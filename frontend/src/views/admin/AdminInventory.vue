@@ -43,7 +43,7 @@
             </td>
             <td>{{ brandName(car.brandId) }}</td>
             <td><span class="stock-badge" :class="stockClass(car.stock)">{{ car.stock }}</span></td>
-            <td><span class="status-badge" :class="statusClass(car.status)">{{ statusLabel(car.status) }}</span></td>
+            <td><span class="status-badge" :class="statusClass(car)">{{ statusLabel(car) }}</span></td>
           </tr>
           <tr v-if="!loading && cars.length === 0">
             <td colspan="4" class="empty-cell">Chưa có xe trong kho.</td>
@@ -109,13 +109,19 @@ async function load(silent = false) {
 
 const brandName = (brandId) => brandMap.value.get(Number(brandId)) || 'Chưa xác định'
 const stockClass = (stock) => ({ low: Number(stock) > 0 && Number(stock) <= 3, empty: Number(stock || 0) === 0 })
-const statusLabel = (status) => ({
-  AVAILABLE: 'Có sẵn',
+const displayStatus = (car) => {
+  const status = String(car?.status || '').toUpperCase()
+  if (Number(car?.stock || 0) <= 0 || status === 'OUT_OF_STOCK' || status === 'SOLD') return 'OUT_OF_STOCK'
+  if (status === 'DEPOSITED') return 'DEPOSITED'
+  return status || 'UNKNOWN'
+}
+const statusLabel = (car) => ({
+  AVAILABLE: 'Còn hàng',
   DEPOSITED: 'Đã đặt cọc',
-  SOLD: 'Đã bán',
+  OUT_OF_STOCK: 'Hết hàng',
   INACTIVE: 'Ngừng kinh doanh',
-}[status] || status || 'Chưa xác định')
-const statusClass = (status) => String(status || '').toLowerCase()
+}[displayStatus(car)] || 'Chưa xác định')
+const statusClass = (car) => displayStatus(car).toLowerCase().replaceAll('_', '-')
 </script>
 
 <style scoped>
@@ -270,6 +276,7 @@ const statusClass = (status) => String(status || '').toLowerCase()
 }
 
 .status-badge.sold,
+.status-badge.out-of-stock,
 .status-badge.inactive {
   background: #fee2e2;
   color: #991b1b

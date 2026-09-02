@@ -12,7 +12,8 @@ try {
 
     Write-Host "[2/3] Starting Ngrok tunnel for port 8082..." -ForegroundColor Cyan
     Set-Location $Root
-    $ngrokSession = & "$Root\scripts\prepare-backend-env.ps1" -Port 8082
+    & "$Root\scripts\prepare-backend-env.ps1" -Port 8082
+    $ngrokSession = & "$Root\scripts\start-ngrok.ps1" -Port 8082
 
     Write-Host "[3/3] Starting Spring Boot with SQL Server configuration..." -ForegroundColor Cyan
     & mvn spring-boot:run
