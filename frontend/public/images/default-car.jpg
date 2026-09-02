@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" role="img" aria-labelledby="title description">
+  <title id="title">Chưa có ảnh xe</title>
+  <desc id="description">Ảnh giữ chỗ trung tính cho xe chưa được tải ảnh</desc>
+  <rect width="800" height="500" fill="#eef1f5"/>
+  <path d="M215 322h370l-35-94c-9-25-32-42-59-42H309c-27 0-50 17-59 42l-35 94Z" fill="#aab3c0"/>
+  <path d="M270 256h260l-21-52a25 25 0 0 0-23-16H314a25 25 0 0 0-23 16l-21 52Z" fill="#dce2e9"/>
+  <circle cx="285" cy="331" r="39" fill="#535f70"/>
+  <circle cx="515" cy="331" r="39" fill="#535f70"/>
+  <text x="400" y="420" text-anchor="middle" font-family="Arial, sans-serif" font-size="26" fill="#535f70">Chưa có ảnh</text>
+</svg>
